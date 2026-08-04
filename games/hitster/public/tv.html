@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hitster — TV</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/theme.css" />
+  <link rel="stylesheet" href="/tv.css" />
+</head>
+<body class="tv">
+
+  <!-- Spotify connection gate ------------------------------------------- -->
+  <section id="auth" class="gate" hidden>
+    <div class="gate__inner">
+      <div class="record record--idle" aria-hidden="true"><span class="record__label"></span></div>
+      <p class="eyebrow">Step one</p>
+      <h1 class="display gate__title">Connect Spotify</h1>
+      <p class="gate__body">
+        This screen plays the music, so it needs a Spotify Premium account.
+        Phones join without signing in to anything.
+      </p>
+      <button id="auth-btn" class="btn">Connect Spotify</button>
+      <p id="auth-error" class="gate__error" role="alert"></p>
+    </div>
+  </section>
+
+  <!-- Connecting ----------------------------------------------------------- -->
+  <!-- A signed-in TV has nothing else to show between page load and the first
+       game state: the Spotify gate is already dismissed and the room does not
+       exist yet. Without this the screen is simply blank for that stretch —
+       and stays blank if the SDK never loads at all, which looks identical to
+       a broken page. -->
+  <section id="booting" class="gate" hidden>
+    <div class="gate__inner">
+      <div class="record record--idle" aria-hidden="true"><span class="record__label"></span></div>
+      <p class="eyebrow">Starting up</p>
+      <h1 class="display gate__title">Warming up the record player</h1>
+      <p class="gate__body" id="booting-status">Loading the Spotify player…</p>
+      <div class="booting__actions" id="booting-actions" hidden>
+        <button id="booting-reload" class="btn" type="button">Reload the screen</button>
+        <button id="booting-signout" class="btn btn--ghost" type="button">Sign in to Spotify again</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Audio fallback ------------------------------------------------------- -->
+  <!-- Browsers refuse to let a page start audio until it has been interacted
+       with. That is normally taken care of quietly — any click or key press on
+       this page counts, and one is tried the moment the player is ready — so
+       this screen is a last resort, shown only when a song is actually waiting
+       and the browser has refused every attempt. -->
+  <section id="audio" class="gate" hidden>
+    <div class="gate__inner">
+      <div class="record record--idle" aria-hidden="true"><span class="record__label"></span></div>
+      <p class="eyebrow">Nearly there</p>
+      <h1 class="display gate__title">Tap to allow sound</h1>
+      <p class="gate__body">
+        This browser is holding the music back until someone touches the page.
+        One tap and it starts, and it stays unlocked for the rest of the night.
+      </p>
+      <button id="audio-btn" class="btn">Play the music</button>
+      <p id="audio-error" class="gate__error" role="alert"></p>
+    </div>
+  </section>
+
+  <!-- Lobby --------------------------------------------------------------- -->
+  <section id="lobby" class="gate" hidden>
+    <div class="lobby">
+      <div class="lobby__left">
+        <p class="eyebrow">Room code</p>
+        <p id="lobby-code" class="lobby__code">····</p>
+        <p class="eyebrow">Join from your phone</p>
+        <div class="qr"><img id="lobby-qr" alt="" /></div>
+        <p id="lobby-url" class="lobby__url readout"></p>
+      </div>
+      <div class="lobby__right">
+        <h1 class="display lobby__wordmark">Hitster</h1>
+        <p class="lobby__tag">Name the year. Build the timeline. First to <span id="lobby-target">10</span> wins.</p>
+        <p class="eyebrow lobby__players-label">In the room</p>
+        <ul id="lobby-players" class="lobby__players"></ul>
+        <p id="lobby-hint" class="lobby__hint"></p>
+
+        <!-- What music is actually going to be dealt. Asked before every game,
+             so it says so plainly rather than living only in /resolve. -->
+        <div class="setsline">
+          <p class="eyebrow">Music in play</p>
+          <div class="setsline__row">
+            <div id="lobby-sets" class="setsline__chips"></div>
+            <button id="sets-btn" class="setsline__edit" type="button">Change</button>
+          </div>
+          <p id="lobby-sets-count" class="setsline__count"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Game ---------------------------------------------------------------- -->
+  <main id="game" class="stage" hidden>
+
+    <header class="topbar">
+      <span class="display topbar__mark">Hitster</span>
+      <span class="topbar__meta readout">
+        <span id="round-label">Round 1</span>
+        <span class="topbar__dot">·</span>
+        <span id="turn-label" class="topbar__turn">—</span>
+      </span>
+      <!-- Also the way into the sets panel mid-game: what's playing is the
+           question people ask while a song is on, not before it. -->
+      <button id="topbar-sets" class="setstag" type="button" title="Which song sets are switched on">
+        <span class="setstag__label" id="topbar-sets-label">—</span>
+        <span class="setstag__n" id="topbar-sets-count"></span>
+      </button>
+      <div class="volume">
+        <span class="eyebrow">Vol</span>
+        <input id="volume" type="range" min="0" max="100" value="60" aria-label="Playback volume" />
+      </div>
+      <button id="new-room-btn" class="tv-reset" type="button" title="Abandon this game and open a fresh room">New room</button>
+    </header>
+
+    <section class="nowplaying">
+      <div id="disc" class="record" aria-hidden="true">
+        <img id="disc-art" class="record__art" alt="" hidden />
+        <span class="record__label"></span>
+      </div>
+      <div class="nowplaying__text">
+        <p class="eyebrow" id="np-eyebrow">Now playing</p>
+        <p class="display nowplaying__title" id="np-title">??? — ?????</p>
+        <p class="nowplaying__sub" id="np-sub">Nobody knows the year yet.</p>
+        <div class="nowplaying__wave" aria-hidden="true">
+          <div class="wave is-idle" id="wave"></div>
+        </div>
+        <div class="progress" aria-hidden="true">
+          <div class="progress__fill" id="progress-fill"></div>
+        </div>
+        <p class="readout nowplaying__time"><span id="np-elapsed">0:00</span></p>
+      </div>
+
+      <!-- Counts down to the moment stealing opens, then reports it's live.
+           Kept on the right, away from the now-playing column. -->
+      <div class="stealclock" id="steal-clock" hidden>
+        <span class="stealclock__label" id="steal-clock-label">Steals open in</span>
+        <span class="stealclock__value" id="steal-clock-value">10</span>
+      </div>
+    </section>
+
+    <!-- Signature element: the groove -->
+    <section class="groove-wrap" aria-label="Timeline">
+      <p class="eyebrow groove-owner"><span id="groove-owner-name">—</span>'s timeline</p>
+      <div class="groove-scroll" id="groove-scroll">
+        <div class="groove" id="groove">
+          <div class="groove__surface" aria-hidden="true"></div>
+          <div class="groove__cards" id="groove-cards"></div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="playerbar" id="playerbar"></footer>
+  </main>
+
+  <!-- Reveal / steal / winner overlays -------------------------------------- -->
+  <div id="overlay" class="overlay" hidden>
+    <div class="overlay__inner" id="overlay-inner"></div>
+  </div>
+
+  <!-- Song sets panel ------------------------------------------------------ -->
+  <!-- The half of /resolve worth having on the TV: which music is switched on.
+       Matching songs to Spotify stays on the full page — it is a long table and
+       a job for a laptop, not something to do with a room waiting. -->
+  <div id="sets-panel" class="sheet" hidden>
+    <div class="sheet__inner" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <header class="sheet__head">
+        <div>
+          <p class="eyebrow">Setup</p>
+          <h2 class="display sheet__title" id="sheet-title">Song sets</h2>
+        </div>
+        <button id="sets-close" class="sheet__close" type="button" aria-label="Close">Done</button>
+      </header>
+
+      <p class="sheet__lede">
+        Sets stack rather than narrow — Pop <strong>and</strong> 2000s gives you all the
+        pop <strong>plus</strong> all the 2000s, not just where they overlap.
+      </p>
+
+      <div class="sheet__body">
+        <p class="eyebrow sheet__group">The whole catalogue</p>
+        <div class="chips" id="sheet-special"></div>
+        <p class="eyebrow sheet__group">Genres</p>
+        <div class="chips" id="sheet-genre"></div>
+        <p class="eyebrow sheet__group">Eras</p>
+        <div class="chips" id="sheet-era"></div>
+      </div>
+
+      <footer class="sheet__foot">
+        <p class="sheet__tally" id="sheet-tally">—</p>
+        <p class="sheet__note" id="sheet-note"></p>
+        <a class="sheet__link" href="/hitster/resolve" target="_blank" rel="noopener">Match more songs to Spotify →</a>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Match point ---------------------------------------------------------- -->
+  <!-- Sits above the reveal overlay: the moment someone comes within one card
+       of winning is the moment the rest of the table needs to know, and that
+       moment happens while the reveal is still on screen. -->
+  <div id="announce" class="announce" role="status" hidden>
+    <span class="announce__flare" aria-hidden="true"></span>
+    <span class="announce__name" id="announce-name"></span>
+    <span class="announce__text">has <strong>1 card</strong> remaining</span>
+  </div>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <script src="https://sdk.scdn.co/spotify-player.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/spotify-auth.js"></script>
+  <script src="/sfx.js"></script>
+  <script src="/confetti.js"></script>
+  <script src="/tv.js"></script>
+</body>
+</html>

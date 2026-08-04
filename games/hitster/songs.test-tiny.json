@@ -1,0 +1,29 @@
+[
+  {
+    "title": "Tiny One",
+    "artist": "Test Artist A",
+    "year": 1970,
+    "genre": "pop",
+    "classic": true,
+    "id": "spotify:track:tiny000000000000000000",
+    "albumArt": "https://i.scdn.co/x0"
+  },
+  {
+    "title": "Tiny Two",
+    "artist": "Test Artist B",
+    "year": 1980,
+    "genre": "pop",
+    "classic": true,
+    "id": "spotify:track:tiny000000000000000001",
+    "albumArt": "https://i.scdn.co/x1"
+  },
+  {
+    "title": "Tiny Three",
+    "artist": "Test Artist C",
+    "year": 1990,
+    "genre": "pop",
+    "classic": true,
+    "id": "spotify:track:tiny000000000000000002",
+    "albumArt": "https://i.scdn.co/x2"
+  }
+]

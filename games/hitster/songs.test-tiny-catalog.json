@@ -1,0 +1,5 @@
+[
+  { "title": "Tiny One", "artist": "Test Artist A", "year": 1970, "genre": "pop", "classic": true },
+  { "title": "Tiny Two", "artist": "Test Artist B", "year": 1980, "genre": "pop", "classic": true },
+  { "title": "Tiny Three", "artist": "Test Artist C", "year": 1990, "genre": "pop", "classic": true }
+]

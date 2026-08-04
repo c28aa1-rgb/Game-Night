@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Game night</title>
+<link rel="icon" type="image/svg+xml" href="/hub/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Karla:wght@400;500;700&family=Syne:wght@700;800&display=swap" />
+<style>
+  :root {
+    --ink: #14101B;
+    --surface: #1E1826;
+    --rule: #322A3D;
+    --text: #F3EFE9;
+    --muted: #9A8FA8;
+    /* Whichever game the pointer is on lends the page its colour. */
+    --lit: #6E6280;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--ink);
+    color: var(--text);
+    font-family: Karla, system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 clamp(20px, 5vw, 56px) 72px;
+  }
+
+  /* --- the marquee ------------------------------------------------------- */
+
+  .bulbs {
+    display: flex;
+    gap: clamp(10px, 2.2vw, 20px);
+    justify-content: center;
+    padding: clamp(22px, 4vw, 34px) 0;
+  }
+
+  .bulb {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--rule);
+    transition: background 240ms ease, box-shadow 240ms ease;
+  }
+
+  body.is-lit .bulb {
+    background: var(--lit);
+    box-shadow: 0 0 12px 1px color-mix(in srgb, var(--lit) 55%, transparent);
+  }
+
+  /* --- masthead ---------------------------------------------------------- */
+
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 18px;
+  }
+
+  h1 {
+    font-family: Syne, sans-serif;
+    font-weight: 800;
+    font-size: clamp(2.7rem, 9vw, 6.4rem);
+    line-height: 0.94;
+    letter-spacing: -0.02em;
+    margin: 0 0 20px;
+  }
+
+  .standfirst {
+    max-width: 34ch;
+    color: var(--muted);
+    margin: 0 0 clamp(40px, 7vw, 76px);
+    font-size: clamp(1rem, 1.6vw, 1.15rem);
+  }
+
+  /* --- the listing ------------------------------------------------------- */
+
+  .listing { border-top: 1px solid var(--rule); }
+
+  .tile {
+    --accent: var(--muted);
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px clamp(16px, 4vw, 48px);
+    padding: clamp(26px, 4vw, 40px) 0 clamp(26px, 4vw, 40px) clamp(18px, 3vw, 32px);
+    border-bottom: 1px solid var(--rule);
+    color: inherit;
+    text-decoration: none;
+    transition: background 220ms ease, padding-left 220ms ease;
+  }
+
+  /* The accent rail is the game's identity on this page — it grows on approach. */
+  .tile::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    transform: scaleY(0.34);
+    transition: transform 220ms ease, width 220ms ease;
+  }
+
+  .tile:hover,
+  .tile:focus-visible {
+    background: var(--surface);
+    padding-left: clamp(26px, 4vw, 44px);
+    outline: none;
+  }
+
+  .tile:hover::before,
+  .tile:focus-visible::before {
+    transform: scaleY(1);
+    width: 5px;
+  }
+
+  .tile:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+
+  .tile__name {
+    font-family: Syne, sans-serif;
+    font-weight: 700;
+    font-size: clamp(1.9rem, 4.6vw, 3.1rem);
+    line-height: 1;
+    letter-spacing: -0.015em;
+    margin: 0 0 10px;
+  }
+
+  .tile__tagline { margin: 0 0 10px; max-width: 46ch; }
+
+  .tile__players {
+    margin: 0;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .tile__go {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    align-self: center;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  .tile__go::after {
+    content: " \2192";
+    display: inline-block;
+    transition: transform 220ms ease;
+  }
+
+  .tile:hover .tile__go::after { transform: translateX(5px); }
+
+  footer {
+    margin-top: 56px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  footer code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--text);
+  }
+
+  @media (max-width: 600px) {
+    .tile { grid-template-columns: 1fr; }
+    .tile__go { grid-column: 1; grid-row: auto; align-self: start; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: 1ms !important; transition-delay: 0ms !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="bulbs" id="bulbs" aria-hidden="true"></div>
+
+  <main class="shell">
+    <p class="eyebrow">Game night</p>
+    <h1>What are<br />we playing?</h1>
+    <p class="standfirst">Pick one, then get everyone looking at the same screen.</p>
+
+    <nav class="listing">
+      <!--TILES-->
+    </nav>
+
+    <footer>Another game goes in <code>games/registry.js</code>.</footer>
+  </main>
+
+<script>
+  // Bulbs are decoration, so they are built here rather than shipped in markup.
+  const strip = document.getElementById('bulbs');
+  const COUNT = 21;
+  for (let i = 0; i < COUNT; i++) {
+    const bulb = document.createElement('span');
+    bulb.className = 'bulb';
+    // Staggered from the centre out, so the light runs across the strip.
+    bulb.style.transitionDelay = `${Math.abs(i - (COUNT - 1) / 2) * 22}ms`;
+    strip.append(bulb);
+  }
+
+  const light = (tile) => {
+    document.body.classList.add('is-lit');
+    document.body.style.setProperty('--lit', getComputedStyle(tile).getPropertyValue('--accent'));
+  };
+  const dim = () => document.body.classList.remove('is-lit');
+
+  for (const tile of document.querySelectorAll('.tile')) {
+    tile.addEventListener('pointerenter', () => light(tile));
+    tile.addEventListener('focus', () => light(tile));
+    tile.addEventListener('pointerleave', dim);
+    tile.addEventListener('blur', dim);
+  }
+</script>
+</body>
+</html>

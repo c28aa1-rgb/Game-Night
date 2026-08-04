@@ -1,0 +1,20 @@
+{
+  "name": "arcade",
+  "version": "1.0.0",
+  "description": "Party games under one roof: a hub landing page in front of Hitster and Codenames.",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1"
+  }
+}

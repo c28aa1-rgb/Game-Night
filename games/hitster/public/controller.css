@@ -1,0 +1,589 @@
+/* ==========================================================================
+   Controller — phone view.
+   Portrait for joining and waiting; the placement screen is built for the
+   phone turned sideways, which is how you actually hold it to read a timeline.
+   ========================================================================== */
+
+.phone {
+  min-height: 100dvh;
+}
+
+.shell {
+  position: relative;
+  z-index: 1;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  animation: screen-in 260ms var(--ease) both;
+}
+
+.screen__title {
+  margin: 0.2rem 0 0.5rem;
+  font-size: 2.1rem;
+  color: var(--text);
+}
+
+.section-label { display: block; margin: 1.6rem 0 0.6rem; }
+
+.note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.error {
+  min-height: 1.2rem;
+  margin: 0.75rem 0 0;
+  color: var(--danger);
+  font-size: 0.88rem;
+}
+
+@keyframes screen-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.dock {
+  margin-top: auto;
+  padding-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+/* --------------------------------------------------------------------------
+   Join
+   -------------------------------------------------------------------------- */
+
+.join {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: center;
+  gap: 0.9rem;
+}
+
+.join__mark {
+  margin: 0;
+  font-size: 3.2rem;
+  color: var(--accent);
+}
+
+.join__tag {
+  margin: 0 0 1.4rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.field input {
+  width: 100%;
+  min-height: 56px;
+  padding: 0 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+}
+
+.field input::placeholder { color: var(--muted); opacity: 0.65; }
+
+.field input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+#code-input {
+  font-family: var(--font-mono);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------------------
+   Roster
+   -------------------------------------------------------------------------- */
+
+.roster {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roster__item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-weight: 600;
+}
+
+.roster__item--you { border-color: var(--accent); }
+.roster__item--offline { opacity: 0.4; }
+
+.roster__tag {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.roster__score {
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.roster__action {
+  margin-left: auto;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.roster__action:hover,
+.roster__action:active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* --------------------------------------------------------------------------
+   Steal — one question per screen, six seconds for both.
+   -------------------------------------------------------------------------- */
+
+.stealbar {
+  flex: 0 0 auto;
+  margin-bottom: 1.2rem;
+}
+
+.stealbar .note { margin-top: 0.5rem; }
+
+.quiz__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.quiz__clock {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--accent-2);
+}
+
+.quiz__clock--urgent {
+  color: var(--danger);
+  animation: urgent-tick 500ms ease-in-out infinite;
+}
+
+@keyframes urgent-tick {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.quiz__bar {
+  height: 4px;
+  margin: 0.7rem 0 0.2rem;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.quiz__bar i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: var(--accent-2);
+  transform-origin: left center;
+  transition: transform 100ms linear, background 200ms var(--ease);
+}
+
+.quiz__bar--urgent i { background: var(--danger); }
+
+/* Answers stack full width: one thumb, six seconds, no hunting. */
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.9rem 0 0;
+  overflow-y: auto;
+}
+
+.choice {
+  min-height: 56px;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms var(--ease), background 160ms var(--ease), transform 140ms var(--spring);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.choice:active {
+  transform: scale(0.97);
+  border-color: var(--accent);
+  background: var(--surface-hi);
+}
+
+/* --------------------------------------------------------------------------
+   Waiting timeline (vertical — you're only reading it)
+   -------------------------------------------------------------------------- */
+
+.mytimeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.trow {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.trow__year {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--accent);
+  min-width: 3.4rem;
+}
+
+.trow__meta { min-width: 0; }
+
+.trow__title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.92rem;
+  line-height: 1.25;
+}
+
+.trow__artist {
+  margin: 0.1rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.waiting__wave {
+  height: 44px;
+  margin-top: 1.2rem;
+}
+
+/* The steal button earns its glow only while the window is open. */
+.btn--steal {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  letter-spacing: 0.06em;
+}
+
+.btn--steal:not(:disabled) {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  color: var(--on-accent-2);
+  animation: steal-glow 2.2s ease-in-out infinite;
+}
+
+.btn--steal:not(:disabled):hover {
+  box-shadow: 0 0 0 4px var(--accent-2-glow);
+}
+
+@keyframes steal-glow {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 24px 3px var(--accent-2-glow); }
+}
+
+/* ==========================================================================
+   PLACEMENT — the wheel
+
+   The new card is fixed in the centre and the years scroll past it, parting
+   around it as they cross. There is only ever one gap, so a long timeline
+   stays as tight as a short one — and since a year is never itself a target,
+   there's nothing to select but the space between two of them.
+   ========================================================================== */
+
+.screen--place {
+  gap: 0.4rem;
+  overflow: hidden;
+}
+
+.place__head { flex: 0 0 auto; }
+
+.place__title {
+  margin: 0.15rem 0 0;
+  font-size: 1.6rem;
+  color: var(--text);
+}
+
+.wheel {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  /* Years fade out top and bottom, so the list can run off the edge without
+     looking cut off. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+}
+
+/*
+ * Pinned rather than height:100% — as a percentage it resolved against an
+ * indefinite flex height and the scroller grew with its own content, which
+ * broke the padding maths that centres the ends.
+ */
+.wheel__scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  outline: none;
+}
+
+.wheel__scroll::-webkit-scrollbar { display: none; }
+
+.wheel__rail {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* An existing card. Year only — titles are noise when you're placing by date. */
+.wrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 62px;
+  flex: 0 0 auto;
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  color: var(--text);
+  /* --shift parts the years around the card; --s and --o fall off with
+     distance. All three are driven from JS as the list scrolls. */
+  transform: translateY(var(--shift, 0px)) scale(var(--s, 1));
+  opacity: var(--o, 1);
+  transition: transform 200ms var(--ease);
+  will-change: transform, opacity;
+}
+
+/*
+ * Zero-height markers sitting on each boundary between years, including
+ * before the first and after the last. They're what the scroll snaps to —
+ * a boundary is the actual choice, and no year is ever a target.
+ */
+.wmark {
+  height: 0;
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+}
+
+/* The card being placed. Fixed dead centre; the years move around it. */
+.wheel__card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 92px;
+  height: 58px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(27, 42, 63, 0.22), 0 0 0 6px var(--accent-glow);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.wheel__card span {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  color: var(--accent);
+}
+
+/* Spacers so the first and last boundary can reach the centre. */
+.wheel__pad { flex: 0 0 auto; }
+
+.wheel__readout {
+  margin: 0 0 0.2rem;
+  text-align: center;
+  color: var(--accent);
+}
+
+/* --------------------------------------------------------------------------
+   Reveal
+   -------------------------------------------------------------------------- */
+
+.reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 0.6rem;
+  text-align: center;
+}
+
+.reveal__emoji { font-size: 3rem; line-height: 1; }
+
+.reveal__headline {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+.reveal__headline--good { color: var(--accent); }
+.reveal__headline--bad { color: var(--danger); }
+
+.reveal--bad { animation: nudge 400ms var(--ease) both; }
+
+@keyframes nudge {
+  25% { transform: translateX(-6px); }
+  50% { transform: translateX(6px); }
+  75% { transform: translateX(-3px); }
+  100% { transform: none; }
+}
+
+.reveal__art {
+  width: 104px;
+  height: 104px;
+  border-radius: var(--radius);
+  object-fit: cover;
+}
+
+.reveal__year {
+  font-family: var(--font-display);
+  font-size: 3.4rem;
+  line-height: 0.95;
+  color: var(--accent);
+}
+
+.reveal__track { margin: 0; font-weight: 700; font-size: 1.05rem; }
+.reveal__artist { margin: 0; color: var(--muted); font-size: 0.9rem; }
+
+/* Countdown to the automatic next turn. */
+.nextbar {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.nextbar i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent));
+  transform-origin: left center;
+  animation: drain linear forwards;
+}
+
+@keyframes drain {
+  to { transform: scaleX(0); }
+}
+
+/* --------------------------------------------------------------------------
+   Confetti
+   -------------------------------------------------------------------------- */
+
+.confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.confetti i {
+  position: absolute;
+  top: -12px;
+  width: 8px;
+  height: 14px;
+  border-radius: 1px;
+  animation: fall linear forwards;
+}
+
+@keyframes fall {
+  to { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+}
+
+/* --------------------------------------------------------------------------
+   Toast
+   -------------------------------------------------------------------------- */
+
+.phone-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 60;
+  width: calc(100% - 2.5rem);
+  max-width: 380px;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface-hi);
+  color: var(--text);
+  font-size: 0.88rem;
+  text-align: center;
+  animation: screen-in 220ms var(--ease) both;
+}

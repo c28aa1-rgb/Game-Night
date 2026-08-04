@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#10161e" />
+  <title>Codenames</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg?v=safelight1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap"
+  />
+  <link rel="stylesheet" href="style.css?v=safelight1" />
+</head>
+<body>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="safelight-wash" aria-hidden="true"></div>
+  <div class="victory-wash" aria-hidden="true"></div>
+
+  <main class="app-shell">
+
+    <!-- ── HOME ─────────────────────────────────────────────── -->
+    <section id="homeScreen" class="screen active" data-screen="home">
+      <div class="home-layout">
+        <div class="home-hero">
+          <div class="ambient-grid" id="ambientGrid" aria-hidden="true"></div>
+          <div class="home-lede">
+            <p class="notation">Word association · 2 spymasters · 25 agents</p>
+            <h1 class="wordmark">Codenames</h1>
+            <p class="home-sub">
+              Put the board on a TV. Each spymaster joins on their own phone and sees the key.
+            </p>
+          </div>
+        </div>
+
+        <div class="home-actions">
+          <p class="notation notation-rule">Choose a station</p>
+
+          <button id="hostBoardChoice" class="entry-card entry-primary" type="button">
+            <span class="entry-role">Host</span>
+            <strong class="entry-title">New board</strong>
+            <span class="entry-desc">Creates a room and shows the public board plus the join code.</span>
+          </button>
+
+          <button id="spymasterChoice" class="entry-card" type="button">
+            <span class="entry-role">Join</span>
+            <strong class="entry-title">Spymaster</strong>
+            <span class="entry-desc">Enter a code, take Red or Blue, and see the full key.</span>
+          </button>
+
+          <button id="joinBoardChoice" class="entry-card" type="button">
+            <span class="entry-role">Join</span>
+            <strong class="entry-title">Existing board</strong>
+            <span class="entry-desc">Open a room's public board on a second screen.</span>
+          </button>
+
+          <p id="homeMessage" class="message" role="status"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CODE ENTRY ───────────────────────────────────────── -->
+    <section id="joinScreen" class="screen" data-screen="join">
+      <div class="slab slab-narrow">
+        <p class="notation" id="joinEyebrow">Spymaster</p>
+        <h2 id="joinScreenTitle">Enter the room code</h2>
+        <p class="slab-sub" id="joinScreenSubtitle">Four characters, shown on the board screen.</p>
+
+        <label class="field">
+          <span class="field-label">Room code</span>
+          <input
+            id="joinCodeInput"
+            class="code-input"
+            type="text"
+            inputmode="latin"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            placeholder="····"
+            maxlength="8"
+          />
+        </label>
+
+        <div class="button-row">
+          <button id="joinCodeButton" class="btn btn-primary" type="button">Open room</button>
+          <button id="backToHomeFromJoin" class="btn btn-ghost" type="button">Back</button>
+        </div>
+
+        <p id="joinMessage" class="message" role="status"></p>
+      </div>
+    </section>
+
+    <!-- ── TEAM PICK ────────────────────────────────────────── -->
+    <section id="teamScreen" class="screen" data-screen="teams">
+      <div class="slab slab-narrow">
+        <p class="notation" id="teamScreenLabel">Room ····</p>
+        <h2>Take a side</h2>
+        <p class="slab-sub">One spymaster per side. Whoever is already in shows as taken.</p>
+
+        <div class="team-grid">
+          <button id="redTeamButton" class="side-card side-red" type="button">
+            <span class="side-mark" aria-hidden="true"></span>
+            <span class="side-name">Red</span>
+            <span id="redTeamStatus" class="side-status">Open</span>
+          </button>
+          <button id="blueTeamButton" class="side-card side-blue" type="button">
+            <span class="side-mark" aria-hidden="true"></span>
+            <span class="side-name">Blue</span>
+            <span id="blueTeamStatus" class="side-status">Open</span>
+          </button>
+        </div>
+
+        <div class="button-row">
+          <button id="confirmTeamButton" class="btn btn-primary" type="button" disabled>Take this side</button>
+          <button id="backToJoinButton" class="btn btn-ghost" type="button">Back</button>
+        </div>
+
+        <p id="teamMessage" class="message" role="status"></p>
+      </div>
+    </section>
+
+    <!-- ── PUBLIC BOARD ─────────────────────────────────────── -->
+    <section id="boardScreen" class="screen" data-screen="board">
+      <header class="bar">
+        <div class="bar-left">
+          <p class="notation">Station</p>
+          <div class="code-row">
+            <strong id="boardTitle" class="room-code">····</strong>
+            <button
+              id="showQrButton"
+              class="qr-trigger"
+              type="button"
+              title="Show join code"
+              aria-haspopup="dialog"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M3 3h7v7H3V3zm2 2v3h3V5H5zM14 3h7v7h-7V3zm2 2v3h3V5h-3zM3 14h7v7H3v-7zm2 2v3h3v-3H5z" />
+                <path d="M14 14h3v3h-3v-3zM18 14h3v3h-3v-3zM14 18h3v3h-3v-3zM18 18h3v3h-3v-3z" />
+              </svg>
+              <span class="sr-only">Show join code</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="bar-center">
+          <p id="boardStatus" class="bar-status" role="status">Public board</p>
+        </div>
+
+        <div class="bar-right">
+          <div class="bar-buttons">
+            <button id="soundToggleBoard" class="btn btn-icon" type="button" aria-pressed="true" title="Sound">
+              <span class="sound-on" aria-hidden="true">♪</span><span class="sr-only">Toggle sound</span>
+            </button>
+            <button id="boardNewGameButton" class="btn btn-ghost" type="button">New game</button>
+            <button id="backToHomeFromBoard" class="btn btn-ghost" type="button">Exit</button>
+          </div>
+        </div>
+      </header>
+
+      <div class="occupancy-strip">
+        <button id="boardRedOccupancyCard" class="occ-card occ-red" type="button">
+          <span class="occ-label">Red spymaster</span>
+          <strong id="boardRedOccupancy" class="occ-value">Waiting</strong>
+        </button>
+        <div class="link-state" id="linkState">
+          <span class="link-dot" aria-hidden="true"></span>
+          <span id="linkStateText" class="link-text">Live</span>
+        </div>
+        <button id="boardBlueOccupancyCard" class="occ-card occ-blue" type="button">
+          <span class="occ-label">Blue spymaster</span>
+          <strong id="boardBlueOccupancy" class="occ-value">Waiting</strong>
+        </button>
+      </div>
+
+      <div id="boardWaiting" class="waiting-plate">
+        <div class="waiting-art" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <p class="waiting-title">Board is dark</p>
+        <p id="boardWaitingMessage" class="message">Waiting for both spymasters.</p>
+      </div>
+
+      <div class="table-plane">
+        <div id="board" class="board" aria-label="Codenames board"></div>
+      </div>
+
+      <footer class="readout" aria-label="Agents remaining">
+        <div id="boardRedChip" class="score-chip chip-red">
+          <span class="chip-label">Red</span>
+          <strong id="boardRedRemaining" class="counter">—</strong>
+        </div>
+        <div id="resultBanner" class="result-banner" role="status">
+          <strong id="resultBannerText">—</strong>
+        </div>
+        <div id="boardBlueChip" class="score-chip chip-blue">
+          <span class="chip-label">Blue</span>
+          <strong id="boardBlueRemaining" class="counter">—</strong>
+        </div>
+      </footer>
+    </section>
+
+    <!-- ── SPYMASTER ────────────────────────────────────────── -->
+    <section id="spymasterScreen" class="screen" data-screen="spymaster">
+      <header class="bar bar-compact">
+        <div class="bar-left">
+          <p class="notation" id="spymasterRole">Spymaster</p>
+          <strong id="spymasterTitle" class="room-code">····</strong>
+        </div>
+        <div class="bar-right">
+          <button id="startGameButton" class="btn btn-primary" type="button">Start game</button>
+          <button id="leaveTeamButton" class="btn btn-ghost" type="button">Leave</button>
+        </div>
+      </header>
+
+      <p id="spymasterStatus" class="bar-status spy-status" role="status">Reveal cards from here.</p>
+
+      <div class="occupancy-strip strip-compact">
+        <div class="occ-card occ-red occ-static">
+          <span class="occ-label">Red</span>
+          <strong id="spyRedOccupancy" class="occ-value">Waiting</strong>
+        </div>
+        <div class="occ-card occ-blue occ-static">
+          <span class="occ-label">Blue</span>
+          <strong id="spyBlueOccupancy" class="occ-value">Waiting</strong>
+        </div>
+      </div>
+
+      <div class="tab-row" role="tablist" aria-label="Spymaster views">
+        <button id="keyTabButton" class="tab" role="tab" aria-selected="true" type="button">Key</button>
+        <button id="boardTabButton" class="tab" role="tab" aria-selected="false" type="button">Board</button>
+        <button id="listTabButton" class="tab" role="tab" aria-selected="false" type="button">List</button>
+      </div>
+
+      <div id="keyTabPanel" class="tab-panel active">
+        <div class="board-wrap safelight-zone">
+          <div id="spymasterBoard" class="board board-key" aria-label="Spymaster key"></div>
+        </div>
+      </div>
+
+      <div id="boardTabPanel" class="tab-panel">
+        <div class="board-wrap">
+          <div id="spymasterPublicBoard" class="board" aria-label="Public board as players see it"></div>
+        </div>
+      </div>
+
+      <div id="listTabPanel" class="tab-panel">
+        <div id="spymasterListView" class="list-grid"></div>
+      </div>
+
+      <div id="cardActionMenu" class="card-menu" role="menu">
+        <button id="revealCardButton" class="menu-item menu-primary" type="button" role="menuitem">Reveal</button>
+        <button id="newCardButton" class="menu-item" type="button" role="menuitem">Swap word</button>
+        <button id="closeCardMenuButton" class="menu-item menu-quiet" type="button" role="menuitem">Cancel</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ── OVERLAYS ───────────────────────────────────────────── -->
+  <div id="hostKickMenu" class="card-menu" role="menu">
+    <button id="kickCluegiverButton" class="menu-item" type="button" role="menuitem">Remove</button>
+    <button id="closeHostKickMenuButton" class="menu-item menu-quiet" type="button" role="menuitem">Cancel</button>
+  </div>
+
+  <div id="qrOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="qrOverlayHeading">
+    <div class="overlay-plate qr-plate">
+      <p class="notation" id="qrOverlayHeading">Join as spymaster</p>
+      <strong id="qrOverlayCode" class="qr-overlay-code">····</strong>
+      <div class="qr-frame">
+        <img id="qrOverlayImage" class="qr-overlay-image" alt="QR code that opens this room's team picker" />
+      </div>
+      <p class="overlay-sub">Scan to land straight on the team picker. Or type the code above.</p>
+      <button id="closeQrButton" class="btn btn-primary" type="button">Done</button>
+    </div>
+  </div>
+
+  <div id="startTeamOverlay" class="overlay">
+    <div class="overlay-plate">
+      <p class="notation">First move</p>
+      <strong id="startTeamText" class="overlay-headline">Red starts</strong>
+      <p class="overlay-sub">Nine agents to find. The other side has eight.</p>
+      <button id="dismissStartTeamButton" class="btn btn-primary" type="button">Begin</button>
+    </div>
+  </div>
+
+  <div id="fxLayer" class="fx-layer" aria-hidden="true"></div>
+
+  <script type="module" src="app.js?v=safelight1"></script>
+</body>
+</html>
