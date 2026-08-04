@@ -24,6 +24,8 @@
 
   * { box-sizing: border-box; }
 
+  html { scroll-behavior: smooth; }
+
   body {
     margin: 0;
     min-height: 100vh;
@@ -65,43 +67,53 @@
     margin: 0;
   }
 
-  /* --- the phone hero ---------------------------------------------------- */
+  /* --- the landing ------------------------------------------------------- */
 
   /*
-   * Full-bleed out of .shell so the flanking phones are cropped by the window
-   * edge rather than by the content column. The negative margins resolve to
-   * exactly 100vw; body hides the overflow the scrollbar would otherwise add.
+   * The first screenful is the phones and nothing else; the menu itself starts
+   * below the fold. svh rather than vh so a phone's collapsing address bar
+   * cannot leave the scroll cue stranded off-screen.
    */
-  .hero {
-    --ph: clamp(268px, 38vh, 384px);       /* phone height drives everything */
+  .landing {
+    display: flex;
+    flex-direction: column;
+    min-height: 100svh;
+  }
+
+  .landing > .shell { padding-bottom: 0; }
+
+  .stage {
+    --ph: clamp(240px, 46vh, 460px);       /* phone height drives everything */
     --pw: calc(var(--ph) * 0.461);         /* 393 x 852, the real ratio */
     position: relative;
-    margin-inline: calc(50% - 50vw);
-    height: calc(var(--ph) + 26px);
+    flex: 1;
     overflow: hidden;
   }
 
   /* A pool of light under the phones, so they stand on something. */
-  .hero::after {
+  .stage::after {
     content: "";
     position: absolute;
     left: 50%;
-    bottom: -46%;
-    width: min(760px, 92vw);
+    top: 50%;
+    width: min(820px, 94vw);
     aspect-ratio: 2 / 1;
-    transform: translateX(-50%);
-    background: radial-gradient(ellipse at center, rgba(120, 130, 190, 0.16), transparent 68%);
+    transform: translate(-50%, -18%);
+    background: radial-gradient(ellipse at center, rgba(120, 130, 190, 0.17), transparent 68%);
     pointer-events: none;
   }
 
   .phone {
     position: absolute;
-    bottom: 0;
+    left: 50%;
+    top: 50%;
+    margin-top: calc(var(--ph) / -2);
     width: var(--pw);
     height: var(--ph);
-    translate: var(--tx, 0) 0;
+    translate: var(--tx) 0;
     rotate: var(--tilt, 0deg);
-    animation: phone-in 900ms cubic-bezier(.2, .8, .25, 1) var(--delay, 0ms) both;
+    scale: var(--sc, 1);
+    animation: phone-in 1050ms cubic-bezier(.16, .84, .3, 1) var(--delay, 0ms) both;
   }
 
   /*
@@ -110,13 +122,61 @@
    * wide band that same placement just leaves a few hundred pixels of gap
    * either side of the middle phone. Overlapping keeps it one object.
    */
-  .phone--centre { left: 50%; --tx: -50%; z-index: 2; }
-  .phone--left { left: 50%; --tx: -132%; --tilt: -12deg; --delay: 90ms; bottom: -6%; scale: 0.94; z-index: 1; }
-  .phone--right { left: 50%; --tx: 32%; --tilt: 12deg; --delay: 170ms; bottom: -6%; scale: 0.94; z-index: 1; }
+  .phone--centre { --tx: -50%; --delay: 120ms; z-index: 2; }
+  .phone--left {
+    --tx: -132%; --tilt: -12deg; --sc: 0.94; --delay: 420ms; z-index: 1;
+    margin-top: calc(var(--ph) / -2 + 20px);
+  }
+  .phone--right {
+    --tx: 32%; --tilt: 12deg; --sc: 0.94; --delay: 520ms; z-index: 1;
+    margin-top: calc(var(--ph) / -2 + 20px);
+  }
 
+  /*
+   * They arrive as one deck and fan apart: every phone starts stacked behind
+   * the middle one, so the outer two swing out rather than merely sliding up.
+   */
   @keyframes phone-in {
-    from { opacity: 0; translate: var(--tx, 0) 54px; rotate: 0deg; }
-    to   { opacity: 1; translate: var(--tx, 0) 0; rotate: var(--tilt, 0deg); }
+    from {
+      opacity: 0;
+      translate: -50% 90px;
+      rotate: 0deg;
+      scale: 0.88;
+    }
+    to {
+      opacity: 1;
+      translate: var(--tx) 0;
+      rotate: var(--tilt, 0deg);
+      scale: var(--sc, 1);
+    }
+  }
+
+  /* --- scroll cue --------------------------------------------------------- */
+
+  .cue {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 0 0 clamp(22px, 4vh, 40px);
+    color: var(--muted);
+    text-decoration: none;
+    animation: cue-in 600ms ease 1100ms both;
+  }
+
+  .cue:hover, .cue:focus-visible { color: var(--text); }
+  .cue:focus-visible { outline: 2px solid var(--text); outline-offset: 6px; border-radius: 4px; }
+
+  .cue__arrow {
+    font-size: 15px;
+    line-height: 1;
+    animation: cue-nudge 2.1s ease-in-out infinite;
+  }
+
+  @keyframes cue-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes cue-nudge {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(5px); }
   }
 
   .phone__frame {
@@ -351,11 +411,26 @@
   @media (max-width: 780px) {
     /* Two phones would crowd the centre one off the screen. */
     .phone--left, .phone--right { display: none; }
-    .hero { --ph: clamp(240px, 34vh, 320px); }
+    .stage { --ph: clamp(240px, 44vh, 380px); }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .phone { animation: none; opacity: 1; }
+    /* Land everything where it belongs, with no flight and no nudging. */
+    .phone, .cue { animation: none; opacity: 1; }
+    .cue__arrow { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+
+  /*
+   * A screen of its own, so the cue lands the menu squarely at the top of the
+   * window. Sized any shorter, the page runs out of scroll before the landing
+   * has left the screen and you arrive with the phones still hanging overhead.
+   */
+  .menu {
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
   .masthead { padding: clamp(28px, 4vw, 44px) 0 clamp(30px, 5vw, 48px); }
@@ -518,15 +593,17 @@
 </style>
 </head>
 <body>
-  <div class="shell">
-    <div class="bar">
-      <p class="label">Game night</p>
-      <p class="label"><!--COUNT--></p>
+  <section class="landing">
+    <div class="shell">
+      <div class="bar">
+        <p class="label">Game night</p>
+        <p class="label"><!--COUNT--></p>
+      </div>
     </div>
 
     <!-- What each game looks like in your hand. Decorative — the games
          themselves are reached from the wall below. -->
-    <section class="hero" aria-hidden="true">
+    <div class="stage" aria-hidden="true">
       <div class="phone phone--left">
         <div class="phone__frame">
           <div class="phone__screen scr scr--key">
@@ -581,8 +658,15 @@
           </div>
         </div>
       </div>
-    </section>
+    </div>
 
+    <a class="cue" href="#games">
+      <span class="label">Games down here</span>
+      <span class="cue__arrow" aria-hidden="true">&darr;</span>
+    </a>
+  </section>
+
+  <div class="shell menu" id="games">
     <header class="masthead">
       <h1>What are we playing?</h1>
       <p class="standfirst">Pick one, then get everyone looking at the same screen.</p>
