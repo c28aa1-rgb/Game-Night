@@ -680,5 +680,67 @@
       <p class="label">Another game goes in <code>games/registry.js</code></p>
     </footer>
   </div>
+
+<script>
+  /*
+   * The landing and the menu are a screen each, so treat them as two stops:
+   * any downward intent on the landing goes the whole way rather than leaving
+   * the phones half off the top. Scrolling back up from the menu's top returns.
+   *
+   * Deliberately narrow. It only acts at the two boundaries — once you are
+   * inside the menu, scrolling is the browser's again, which matters on short
+   * windows where the menu is taller than the viewport and has its own
+   * scrolling to do.
+   */
+  (() => {
+    const landing = document.querySelector('.landing');
+    const menu = document.getElementById('games');
+    if (!landing || !menu) return;
+
+    const slow = matchMedia('(prefers-reduced-motion: reduce)');
+    let busy = false;
+
+    function glide(target) {
+      busy = true;
+      target.scrollIntoView({ behavior: slow.matches ? 'auto' : 'smooth', block: 'start' });
+      clearTimeout(glide.timer);
+      glide.timer = setTimeout(() => { busy = false; }, slow.matches ? 80 : 780);
+    }
+
+    // Halfway down the landing it is still the landing; past that the menu is
+    // already arriving and the browser should be left alone.
+    const onLanding = () => scrollY < landing.offsetHeight * 0.5;
+    const atMenuTop = () => Math.abs(scrollY - menu.offsetTop) < 4;
+
+    function intent(down, event) {
+      if (busy) { event.preventDefault(); return; }
+      if (down && onLanding()) { event.preventDefault(); glide(menu); }
+      else if (!down && atMenuTop()) { event.preventDefault(); glide(landing); }
+    }
+
+    addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaY) < 2) return;          // horizontal or trackpad drift
+      intent(e.deltaY > 0, e);
+    }, { passive: false });
+
+    let touchY = null;
+    addEventListener('touchstart', (e) => { touchY = e.touches[0].clientY; }, { passive: true });
+    addEventListener('touchmove', (e) => {
+      if (touchY === null) return;
+      const moved = touchY - e.touches[0].clientY;   // positive is a swipe up
+      if (Math.abs(moved) < 14) return;              // ignore a shaky finger
+      touchY = null;
+      intent(moved > 0, e);
+    }, { passive: false });
+    addEventListener('touchend', () => { touchY = null; }, { passive: true });
+
+    // The cue runs the same journey; hold off the handlers while it does.
+    document.querySelector('.cue')?.addEventListener('click', () => {
+      busy = true;
+      clearTimeout(glide.timer);
+      glide.timer = setTimeout(() => { busy = false; }, slow.matches ? 80 : 780);
+    });
+  })();
+</script>
 </body>
 </html>
