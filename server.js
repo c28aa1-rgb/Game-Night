@@ -25,7 +25,7 @@ const PORT = Number(process.env.PORT) || 3000;
 // ---------------------------------------------------------------------------
 
 const HUB_DIR = path.join(__dirname, 'hub');
-const hubTemplate = fs.readFileSync(path.join(HUB_DIR, 'index.html'), 'utf8');
+const hubTemplate = fs.readFileSync(path.join(HUB_DIR, 'template.html'), 'utf8');
 
 /** Escape anything from the registry before it lands in the hub's markup. */
 function esc(value) {
@@ -34,32 +34,51 @@ function esc(value) {
   })[ch]);
 }
 
-function renderTiles() {
+function renderCards() {
   return games
     .map((game) => {
       const href = game.href || game.basePath;
+      // The poster carries the game's printed title, so the img is decorative
+      // and the name is announced from the hidden heading instead of twice.
+      const badge = game.status === 'draft'
+        ? '<span class="badge">In progress</span>'
+        : '';
       return `
-      <a class="tile" href="${esc(href)}" style="--accent: ${esc(game.accent)}">
-        <h2 class="tile__name">${esc(game.name)}</h2>
-        <p class="tile__tagline">${esc(game.tagline)}</p>
-        <p class="tile__players">${esc(game.players)}</p>
-        <span class="tile__go" aria-hidden="true">Play</span>
+      <a class="card" href="${esc(href)}" style="--accent: ${esc(game.accent)}">
+        <span class="frame">
+          <img src="${esc(game.art)}" alt="" width="1200" height="675" decoding="async" />
+          ${badge}
+        </span>
+        <span class="meta">
+          <h2 class="visually-hidden">${esc(game.name)}</h2>
+          <p class="tagline">${esc(game.tagline)}</p>
+          <span class="players">
+            <span class="label">${esc(game.players)}</span>
+            <span class="play" aria-hidden="true">Play →</span>
+          </span>
+        </span>
       </a>`;
     })
     .join('\n');
 }
 
 app.get('/', (req, res) => {
-  res.type('html').send(hubTemplate.replace('<!--TILES-->', renderTiles()));
+  const count = `${games.length} game${games.length === 1 ? '' : 's'}`;
+  res.type('html').send(
+    hubTemplate
+      .replace('<!--TILES-->', renderCards())
+      .replace('<!--COUNT-->', count)
+  );
 });
 
-// The hub's own assets. Namespaced so no game's static folder can shadow them.
-app.use('/hub', express.static(HUB_DIR));
+// The hub's own assets. Namespaced so no game's static folder can shadow them,
+// and pointed at hub/public/ so the template itself is never served raw.
+app.use('/hub', express.static(path.join(HUB_DIR, 'public')));
 
 /** Machine-readable version of the registry, for anything else that wants it. */
 app.get('/api/games', (req, res) => {
-  res.json(games.map(({ id, name, tagline, players, accent, basePath, href }) => ({
-    id, name, tagline, players, accent, basePath, href: href || basePath,
+  res.json(games.map(({ id, name, tagline, players, accent, art, status, basePath, href }) => ({
+    id, name, tagline, players, accent, art, status, basePath, href: href || basePath,
   })));
 });
 

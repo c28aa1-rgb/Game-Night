@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Draft Night — spin two teams</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="arena" aria-hidden="true">
+  <div class="beam beam-l"></div>
+  <div class="beam beam-r"></div>
+  <div class="grain"></div>
+</div>
+
+<!-- ══════════════════ PAGE 1 — ROSTER ══════════════════ -->
+<section class="page page-roster is-active" id="page-roster">
+  <div class="roster-grid">
+
+    <div class="roster-pitch">
+      <p class="eyebrow" data-stagger>Draft night</p>
+      <h1 class="display-xl" data-stagger>
+        Put the<br>names in.<br><span class="gold-word">Let the wheel<br>pick sides.</span>
+      </h1>
+      <p class="lede" data-stagger>
+        Every spin takes one name off the wheel and puts it on a team, alternating
+        Team 1 and Team 2 until the board is empty. No takebacks.
+      </p>
+
+      <div class="pitch-foot" data-stagger>
+        <button class="btn btn-gold" id="startBtn" disabled>
+          <span>Start the draft</span>
+          <svg viewBox="0 0 24 24" class="btn-arrow" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg>
+        </button>
+        <p class="hint" id="startHint">Add at least 2 names to open the floor.</p>
+      </div>
+    </div>
+
+    <div class="roster-sheet" data-stagger>
+      <header class="sheet-head">
+        <h2 class="sheet-title">Roster</h2>
+        <span class="counter" id="rosterCount">00 entrants</span>
+      </header>
+
+      <form class="sheet-entry" id="nameForm" autocomplete="off">
+        <span class="entry-num" id="entryNum">01</span>
+        <input type="text" id="nameInput" class="entry-input"
+               placeholder="Type a name, press Enter"
+               aria-label="Add a name to the roster" maxlength="28">
+        <button type="submit" class="entry-add" aria-label="Add name">+</button>
+      </form>
+
+      <ul class="sheet-list" id="rosterList"></ul>
+
+      <div class="sheet-empty" id="rosterEmpty">
+        <p>No one on the sheet yet.</p>
+        <p class="sub">Paste a whole list at once — one name per line works.</p>
+      </div>
+
+      <footer class="sheet-foot">
+        <button class="btn-ghost" id="sampleBtn" type="button">Use a sample roster</button>
+        <button class="btn-ghost danger" id="clearBtn" type="button">Clear all</button>
+      </footer>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════════ PAGE 2 — DRAFT FLOOR ══════════════════ -->
+<section class="page page-floor" id="page-floor">
+  <header class="floor-head">
+    <p class="eyebrow">On the clock</p>
+    <p class="floor-status" id="floorStatus">Spinning</p>
+  </header>
+
+  <div class="floor-grid">
+
+    <aside class="bench bench-1" id="bench1">
+      <header class="bench-head">
+        <span class="bench-bar"></span>
+        <h2 class="bench-name">Team 1</h2>
+        <span class="bench-count" id="bench1Count">0</span>
+      </header>
+      <ol class="bench-list" id="bench1List"></ol>
+    </aside>
+
+    <div class="stage">
+      <div class="wheel-wrap">
+        <div class="wheel-glow" aria-hidden="true"></div>
+        <div class="pointer" id="pointer" aria-hidden="true">
+          <svg viewBox="0 0 44 60"><path d="M22 58 L4 14 A20 20 0 0 1 40 14 Z"/></svg>
+        </div>
+        <svg class="wheel" id="wheel" viewBox="0 0 600 600" role="img" aria-label="Draft wheel">
+          <defs>
+            <radialGradient id="hubGrad" cx="50%" cy="35%" r="70%">
+              <stop offset="0%" stop-color="#1B2740"/>
+              <stop offset="100%" stop-color="#080D18"/>
+            </radialGradient>
+            <linearGradient id="rimGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#FFF0C2"/>
+              <stop offset="45%" stop-color="#E8B84B"/>
+              <stop offset="100%" stop-color="#8F6A18"/>
+            </linearGradient>
+          </defs>
+          <circle cx="300" cy="300" r="288" class="rim-outer"/>
+          <g id="rotor">
+            <g id="segments"></g>
+          </g>
+          <circle cx="300" cy="300" r="272" class="rim-inner"/>
+          <circle cx="300" cy="300" r="70" class="hub-plate"/>
+          <circle cx="300" cy="300" r="70" class="hub-ring"/>
+          <text x="300" y="288" class="hub-label">Pick</text>
+          <text x="300" y="330" class="hub-num" id="hubNum">01</text>
+        </svg>
+      </div>
+
+      <p class="stage-meta" id="stageMeta">8 names left on the wheel</p>
+      <button class="btn-ghost skip" id="skipBtn" type="button">Skip to results</button>
+    </div>
+
+    <aside class="bench bench-2" id="bench2">
+      <header class="bench-head">
+        <span class="bench-bar"></span>
+        <h2 class="bench-name">Team 2</h2>
+        <span class="bench-count" id="bench2Count">0</span>
+      </header>
+      <ol class="bench-list" id="bench2List"></ol>
+    </aside>
+
+  </div>
+
+  <!-- broadcast lower-third reveal -->
+  <div class="reveal" id="reveal" aria-live="polite">
+    <div class="reveal-card" id="revealCard">
+      <div class="reveal-strip"><span id="revealMeta">Pick 01 — Team 1</span></div>
+      <p class="reveal-name" id="revealName">Name</p>
+      <span class="reveal-sheen" aria-hidden="true"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ PAGE 3 — FINAL TEAMS ══════════════════ -->
+<section class="page page-final" id="page-final">
+  <header class="final-head">
+    <p class="eyebrow" data-stagger>Draft complete</p>
+    <h1 class="display-xl center" data-stagger>The teams are set.</h1>
+  </header>
+
+  <div class="final-grid">
+    <article class="squad squad-1" data-stagger>
+      <header class="squad-head">
+        <h2 class="squad-name">Team 1</h2>
+        <span class="squad-count" id="final1Count">0 players</span>
+      </header>
+      <ol class="squad-list" id="final1List"></ol>
+      <span class="squad-sheen" aria-hidden="true"></span>
+    </article>
+
+    <div class="versus" data-stagger><span>vs</span></div>
+
+    <article class="squad squad-2" data-stagger>
+      <header class="squad-head">
+        <h2 class="squad-name">Team 2</h2>
+        <span class="squad-count" id="final2Count">0 players</span>
+      </header>
+      <ol class="squad-list" id="final2List"></ol>
+      <span class="squad-sheen" aria-hidden="true"></span>
+    </article>
+  </div>
+
+  <footer class="final-foot" data-stagger>
+    <button class="btn btn-gold" id="redraftBtn" type="button"><span>Redraft same names</span></button>
+    <button class="btn-ghost" id="newRosterBtn" type="button">Edit the roster</button>
+    <button class="btn-ghost" id="copyBtn" type="button">Copy teams</button>
+  </footer>
+</section>
+
+<div class="wipe" id="wipe" aria-hidden="true"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

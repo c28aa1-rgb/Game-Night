@@ -1,12 +1,13 @@
 # Arcade
 
-Both party games behind one hub page, served by one Express process.
+Party games behind one hub page, served by one Express process.
 
 ```
 /            hub landing page
 /hitster     Hitster — phone controller
 /hitster/tv  Hitster — TV screen
 /codenames   Codenames
+/draft       Draft Night (unfinished — marked as such on the hub)
 ```
 
 ## Run it
@@ -26,10 +27,30 @@ lib/host.js          the one Express app + HTTP server + Socket.io instance
 games/registry.js    the list of games — the only file you edit to add one
 games/hitster/       server.js registers its own routes; public/ is its frontend
 games/codenames/     static/ is the bundle, served as-is
-hub/                 the landing page
+games/draft/         static/ is the bundle; theme/ is its design notes
+hub/template.html    the landing page, with the cards rendered into it
+hub/public/          the only hub files served — favicon and art/
+scripts/build-art.js turns source key art into web-sized WebP
 ```
 
-## Adding a third game
+## The hub
+
+The cards are the games' key art, so the hub's own type stays out of the way:
+the poster carries each game's printed title and the hub supplies only the
+service text around it. Pointing at one card steps the others back, which is
+what keeps three loud posters from fighting on one wall.
+
+Art is optimised before it is committed — the sources are around 1.9 MB each
+and the served WebP are 40–70 KB:
+
+```bash
+node scripts/build-art.js draft="C:/path/to/source.png"
+```
+
+Output lands in `hub/public/art/<id>.webp`, which is what the registry's `art`
+field points at. Sources are not kept in the repo.
+
+## Adding another game
 
 **Static game** — drop the bundle in `games/<id>/static/` and add an entry to
 `games/registry.js` with `type: 'static'`. Keep its asset paths relative, the
