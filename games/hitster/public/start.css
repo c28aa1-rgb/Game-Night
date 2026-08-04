@@ -1,0 +1,171 @@
+/* ==========================================================================
+   START — the front door.
+
+   Three ways into the game, and they are not equal weight: on a game night you
+   pick TV or Player, and resolving songs is setup you do beforehand. The layout
+   says so rather than presenting three identical choices.
+   ========================================================================== */
+
+.start {
+  position: relative;
+  z-index: 1;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: clamp(2.4rem, 7vh, 5rem) 1.25rem clamp(2rem, 5vh, 3.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.8rem, 4vh, 2.8rem);
+  min-height: 100vh;
+}
+
+/* --- masthead ----------------------------------------------------------- */
+
+.start__head {
+  text-align: center;
+}
+
+.start__mark {
+  margin: 0;
+  font-size: clamp(2.6rem, 9vw, 4rem);
+  color: var(--text);
+}
+
+.start__tag {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-size: clamp(1rem, 2.4vw, 1.1rem);
+}
+
+/* --- the two ways in ---------------------------------------------------- */
+
+.picks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: clamp(0.9rem, 2vw, 1.25rem);
+}
+
+.pick {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 0.5rem 1rem;
+  padding: clamp(1.25rem, 3vw, 1.7rem);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 2px 10px rgba(27, 42, 63, 0.06);
+  color: inherit;
+  text-decoration: none;
+  transition: transform 160ms var(--spring), box-shadow 200ms var(--ease),
+              border-color 200ms var(--ease);
+}
+
+.pick:hover,
+.pick:focus-visible {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: 0 12px 28px -14px var(--accent-glow), 0 0 0 4px var(--accent-glow);
+}
+
+.pick__icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius);
+  background: var(--surface-hi);
+  color: var(--accent);
+  transition: background 200ms var(--ease), color 200ms var(--ease);
+}
+
+.pick__icon svg { width: 24px; height: 24px; }
+
+/* The TV is the screen that runs the room, so it carries the warm accent. */
+.pick--tv .pick__icon {
+  background: var(--accent-2-glow);
+  color: var(--accent-2);
+}
+
+.pick:hover .pick__icon,
+.pick:focus-visible .pick__icon {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.pick__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.pick__name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.35rem, 3.4vw, 1.7rem);
+  letter-spacing: -0.015em;
+  line-height: 1.05;
+}
+
+.pick__note {
+  color: var(--muted);
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+
+.pick__go {
+  align-self: center;
+  font-size: 1.3rem;
+  color: var(--accent);
+  transition: transform 200ms var(--ease);
+}
+
+.pick:hover .pick__go { transform: translateX(4px); }
+
+/* --- setup -------------------------------------------------------------- */
+
+.start__foot {
+  margin-top: auto;
+  padding-top: clamp(1.2rem, 3vh, 1.8rem);
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.setup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: inherit;
+  text-decoration: none;
+  transition: background 180ms var(--ease), border-color 180ms var(--ease);
+}
+
+.setup:hover,
+.setup:focus-visible {
+  background: var(--surface);
+  border-color: var(--line-strong);
+}
+
+.setup__name {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.setup__note {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 560px) {
+  .pick {
+    grid-template-columns: auto 1fr;
+    gap: 0.4rem 0.9rem;
+  }
+  .pick__go { display: none; }
+}

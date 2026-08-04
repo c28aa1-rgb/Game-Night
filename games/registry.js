@@ -32,7 +32,6 @@ module.exports = [
     accent: '#FF2E92',
     art: '/hub/art/hitster.webp',
     basePath: '/hitster',
-    href: '/hitster/tv',
     type: 'node',
   },
   {

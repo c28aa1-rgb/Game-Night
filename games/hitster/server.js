@@ -670,7 +670,17 @@ function reassignHost(room) {
 
 const page = (file) => (req, res) => res.sendFile(path.join(__dirname, 'public', file));
 
-app.get(BASE, page('controller.html'));
+// A room code in the URL means this is somebody joining — almost always from
+// the QR code on the TV — so send them to the controller instead of asking
+// which screen they are. Older codes pointing at /hitster still work.
+app.get(BASE, (req, res, next) => {
+  const code = String(req.query.room || '').toUpperCase();
+  if (!/^[A-Z]{2,8}$/.test(code)) return next();
+  res.redirect(302, `${BASE}/play?room=${encodeURIComponent(code)}`);
+});
+
+app.get(BASE, page('start.html'));
+app.get(`${BASE}/play`, page('controller.html'));
 app.get(`${BASE}/tv`, page('tv.html'));
 app.get(`${BASE}/resolve`, page('resolve.html'));
 // Stays at the site root: spotify-auth.js builds its redirect_uri from
@@ -810,7 +820,7 @@ function joinUrlFor(req, code) {
   const lan = lanAddress();
   const target = isLoopback && lan ? `${lan}:${PORT}` : host;
   const protocol = isLoopback ? 'http' : req.protocol;
-  return `${protocol}://${target}${BASE}?room=${code}`;
+  return `${protocol}://${target}${BASE}/play?room=${code}`;
 }
 
 app.get('/api/join-info', async (req, res) => {

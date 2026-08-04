@@ -3,12 +3,18 @@
 Party games behind one hub page, served by one Express process.
 
 ```
-/            hub landing page
-/hitster     Hitster — phone controller
-/hitster/tv  Hitster — TV screen
-/codenames   Codenames
-/draft       Draft Night
+/                 hub landing page
+/hitster          Hitster — pick a screen
+/hitster/tv       Hitster — TV screen
+/hitster/play     Hitster — phone controller
+/hitster/resolve  Hitster — match songs to Spotify
+/codenames        Codenames
+/draft            Draft Night
 ```
+
+`/hitster?room=CODE` redirects to `/hitster/play?room=CODE`, so a QR code or a
+shared link still drops a player straight into the game rather than asking them
+which screen they are.
 
 ## Run it
 
@@ -89,6 +95,10 @@ root routes: `controller.js` and `tv.js` (`room_closed` redirects), `tv.js`
 `/hitster/resolve` and `/hitster/tv`), `callback.html` (the error link), and
 `joinUrlFor` in `games/hitster/server.js`, which is what the join QR code
 encodes. No game logic, styling or markup structure was touched.
+
+`start.html` / `start.css` are new — the screen picker at `/hitster`, which is
+why the controller now lives at `/hitster/play`. It is the game's own page, so
+it is built from `theme.css` and looks like Hitster rather than like the hub.
 
 ## Deploying
 

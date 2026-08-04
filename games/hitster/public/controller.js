@@ -167,7 +167,7 @@ socket.on('steal_choices', ({ titleOptions, artistOptions }) => {
 /** This room was abandoned; start fresh on the join screen with the new code. */
 socket.on('room_closed', ({ code }) => {
   localStorage.removeItem(STORE);
-  location.href = `/hitster?room=${code}`;
+  location.href = `/hitster/play?room=${code}`;
 });
 
 const SCREENS = ['screen-join', 'screen-lobby', 'screen-waiting', 'screen-place', 'screen-steal-choice', 'screen-reveal', 'screen-over'];
