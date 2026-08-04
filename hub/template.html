@@ -8,8 +8,10 @@
 <link rel="icon" type="image/svg+xml" href="/hub/favicon.svg" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<!-- The last three families are the games' own display faces, one weight each.
+     The phone mockups below are only recognisable if they are set in them. -->
 <link rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" />
+  href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&family=Space+Grotesk:wght@700&family=Big+Shoulders+Display:wght@800&display=swap" />
 <style>
   :root {
     --ink: #0B0B0E;
@@ -25,6 +27,9 @@
   body {
     margin: 0;
     min-height: 100vh;
+    /* The hero bleeds to 100vw; without this the scrollbar's width shows up
+       as a horizontal scroll. */
+    overflow-x: hidden;
     background: var(--ink);
     color: var(--text);
     font-family: "Instrument Sans", system-ui, sans-serif;
@@ -60,7 +65,300 @@
     margin: 0;
   }
 
-  .masthead { padding: clamp(34px, 6vw, 60px) 0 clamp(30px, 5vw, 48px); }
+  /* --- the phone hero ---------------------------------------------------- */
+
+  /*
+   * Full-bleed out of .shell so the flanking phones are cropped by the window
+   * edge rather than by the content column. The negative margins resolve to
+   * exactly 100vw; body hides the overflow the scrollbar would otherwise add.
+   */
+  .hero {
+    --ph: clamp(268px, 38vh, 384px);       /* phone height drives everything */
+    --pw: calc(var(--ph) * 0.461);         /* 393 x 852, the real ratio */
+    position: relative;
+    margin-inline: calc(50% - 50vw);
+    height: calc(var(--ph) + 26px);
+    overflow: hidden;
+  }
+
+  /* A pool of light under the phones, so they stand on something. */
+  .hero::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -46%;
+    width: min(760px, 92vw);
+    aspect-ratio: 2 / 1;
+    transform: translateX(-50%);
+    background: radial-gradient(ellipse at center, rgba(120, 130, 190, 0.16), transparent 68%);
+    pointer-events: none;
+  }
+
+  .phone {
+    position: absolute;
+    bottom: 0;
+    width: var(--pw);
+    height: var(--ph);
+    translate: var(--tx, 0) 0;
+    rotate: var(--tilt, 0deg);
+    animation: phone-in 900ms cubic-bezier(.2, .8, .25, 1) var(--delay, 0ms) both;
+  }
+
+  /*
+   * Fanned around the centre rather than pinned to the window edges. The
+   * reference crops its outer phones because its frame is nearly square; in a
+   * wide band that same placement just leaves a few hundred pixels of gap
+   * either side of the middle phone. Overlapping keeps it one object.
+   */
+  .phone--centre { left: 50%; --tx: -50%; z-index: 2; }
+  .phone--left { left: 50%; --tx: -132%; --tilt: -12deg; --delay: 90ms; bottom: -6%; scale: 0.94; z-index: 1; }
+  .phone--right { left: 50%; --tx: 32%; --tilt: 12deg; --delay: 170ms; bottom: -6%; scale: 0.94; z-index: 1; }
+
+  @keyframes phone-in {
+    from { opacity: 0; translate: var(--tx, 0) 54px; rotate: 0deg; }
+    to   { opacity: 1; translate: var(--tx, 0) 0; rotate: var(--tilt, 0deg); }
+  }
+
+  .phone__frame {
+    position: relative;
+    height: 100%;
+    padding: 3px;
+    border-radius: calc(var(--pw) * 0.16);
+    background: linear-gradient(155deg, #4a4a55, #17171c 42%, #33333c);
+    box-shadow: 0 26px 50px -18px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+
+  .phone__screen {
+    position: relative;
+    height: 100%;
+    border-radius: calc(var(--pw) * 0.14);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Dynamic island. */
+  .phone__frame::after {
+    content: "";
+    position: absolute;
+    top: calc(var(--pw) * 0.045);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30%;
+    height: calc(var(--pw) * 0.055);
+    border-radius: 99px;
+    background: #0a0a0d;
+    z-index: 3;
+  }
+
+  /* --- screen 1 · Codenames, the spymaster's key ------------------------- */
+
+  .scr { font-size: calc(var(--pw) * 0.055); padding: 9% 6% 6%; gap: 4%; }
+
+  .scr--key {
+    background: #10161e;
+    color: #e9edf2;
+    font-family: "IBM Plex Sans Condensed", system-ui, sans-serif;
+  }
+
+  .key__bar { display: flex; justify-content: space-between; align-items: baseline; }
+  .key__role { font-family: "Chivo Mono", monospace; font-size: 0.62em; letter-spacing: 0.14em; text-transform: uppercase; color: #7c8b9a; }
+  .key__code { font-family: "Chivo Mono", monospace; font-size: 1.1em; letter-spacing: 0.2em; color: #e9edf2; }
+
+  .key__teams { display: flex; gap: 5%; }
+  .key__team {
+    flex: 1;
+    padding: 3% 5%;
+    background: #1b2530;
+    border-left: 2px solid var(--c);
+    font-size: 0.66em;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7c8b9a;
+  }
+  .key__team b { display: block; color: #e9edf2; font-size: 1.15em; letter-spacing: 0; }
+
+  .key__tabs { display: flex; gap: 4%; font-size: 0.66em; text-transform: uppercase; letter-spacing: 0.1em; color: #4d5c6b; }
+  .key__tabs span.on { color: #e8a33d; border-bottom: 1px solid #e8a33d; }
+
+  .key__grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3.2%; flex: 1; }
+  .key__grid i {
+    display: grid;
+    place-items: center;
+    border-radius: 2px;
+    /* Unreadable at this scale by nature — a real phone screenshot would be
+       too. It only has to read as words on a key. */
+    font-size: 0.52em;
+    font-style: normal;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-align: center;
+    line-height: 1;
+    overflow: hidden;
+  }
+  /* The real key's distribution: 9 red, 8 blue, 7 bystanders, 1 assassin. */
+  .k-r { background: linear-gradient(168deg, #d14a42, #8e2a26); color: #fff2f0; }
+  .k-b { background: linear-gradient(168deg, #3e92be, #1e5a7a); color: #eaf6fd; }
+  .k-n { background: linear-gradient(168deg, #b0a288, #6d6350); color: #241f16; }
+  .k-a { background: linear-gradient(168deg, #1a1c20, #08090b); color: #d14a42; box-shadow: inset 0 0 0 1px #40060b; }
+
+  /* --- screen 2 · Hitster, placing a card -------------------------------- */
+
+  .scr--place {
+    background: #f4f8fd;
+    color: #1b2a3f;
+    font-family: Outfit, "Instrument Sans", system-ui, sans-serif;
+    padding-top: 12%;
+  }
+
+  .place__eyebrow { font-family: "Chivo Mono", monospace; font-size: 0.6em; letter-spacing: 0.2em; text-transform: uppercase; color: #64789a; }
+  .place__title {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 1.5em;
+    letter-spacing: -0.02em;
+    line-height: 0.98;
+    margin-top: 2%;
+  }
+
+  /* The picker wheel: years part around the card being placed. */
+  .place__wheel {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6%;
+    margin: 6% 0;
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent);
+    mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent);
+  }
+  .place__wheel span {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 1.35em;
+    color: #1b2a3f;
+  }
+  .place__wheel span:first-child,
+  .place__wheel span:last-child { opacity: 0.34; scale: 0.82; }
+
+  .place__card {
+    display: grid;
+    place-items: center;
+    width: 46%;
+    padding: 5% 0;
+    border: 2px solid #4a6fa5;
+    border-radius: 8px;
+    background: #fff;
+    color: #4a6fa5;
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 1.3em;
+    box-shadow: 0 6px 18px rgba(27, 42, 63, 0.18), 0 0 0 5px rgba(74, 111, 165, 0.28);
+  }
+
+  .place__readout { font-family: "Chivo Mono", monospace; font-size: 0.58em; letter-spacing: 0.16em; text-transform: uppercase; color: #4a6fa5; text-align: center; }
+  .place__btn {
+    margin-top: 4%;
+    padding: 6% 0;
+    border-radius: 8px;
+    background: #4a6fa5;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.78em;
+    text-align: center;
+  }
+
+  /* --- screen 3 · Draft Night, on the clock ------------------------------ */
+
+  .scr--draft {
+    background: #070A12;
+    color: #EEF2F9;
+    font-family: Archivo, "Instrument Sans", system-ui, sans-serif;
+    padding-top: 12%;
+    text-align: center;
+  }
+
+  .draft__eyebrow { font-family: "Chivo Mono", monospace; font-size: 0.56em; letter-spacing: 0.2em; text-transform: uppercase; color: #8494AE; }
+  .draft__status {
+    font-family: "Big Shoulders Display", Impact, sans-serif;
+    font-weight: 800;
+    font-size: 1.5em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #F0523F;
+  }
+
+  .draft__wheel {
+    position: relative;
+    width: 62%;
+    aspect-ratio: 1;
+    margin: 7% auto;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 50% 35%, #1B2740, #080D18 72%),
+      conic-gradient(#121A2D 0 20%, #0E1526 0 40%, #121A2D 0 60%, #0E1526 0 80%, #121A2D 0);
+    box-shadow: 0 0 0 2px #E8B84B, 0 0 22px rgba(232, 184, 75, 0.28);
+  }
+  /* The milled gold pointer at twelve o'clock. */
+  .draft__wheel::before {
+    content: "";
+    position: absolute;
+    top: -9%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 9px solid #E8B84B;
+  }
+  .draft__wheel::after {
+    content: "01";
+    position: absolute;
+    inset: 34%;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border: 1px solid #E8B84B;
+    background: #0C1120;
+    color: #E8B84B;
+    font-family: "Big Shoulders Display", Impact, sans-serif;
+    font-weight: 800;
+    font-size: 0.85em;
+  }
+
+  .draft__benches { display: flex; gap: 6%; text-align: left; }
+  .draft__bench { flex: 1; border-top: 2px solid var(--c); padding-top: 4%; }
+  .draft__bench b {
+    display: block;
+    font-family: "Big Shoulders Display", Impact, sans-serif;
+    font-weight: 800;
+    font-size: 0.95em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--c);
+  }
+  .draft__bench i {
+    display: block;
+    margin-top: 6%;
+    height: 0.5em;
+    border-radius: 1px;
+    background: #121A2D;
+    font-style: normal;
+  }
+  .draft__bench i.set { background: #22304C; }
+
+  @media (max-width: 780px) {
+    /* Two phones would crowd the centre one off the screen. */
+    .phone--left, .phone--right { display: none; }
+    .hero { --ph: clamp(240px, 34vh, 320px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .phone { animation: none; opacity: 1; }
+  }
+
+  .masthead { padding: clamp(28px, 4vw, 44px) 0 clamp(30px, 5vw, 48px); }
 
   h1 {
     font-weight: 600;
@@ -225,6 +523,65 @@
       <p class="label">Game night</p>
       <p class="label"><!--COUNT--></p>
     </div>
+
+    <!-- What each game looks like in your hand. Decorative — the games
+         themselves are reached from the wall below. -->
+    <section class="hero" aria-hidden="true">
+      <div class="phone phone--left">
+        <div class="phone__frame">
+          <div class="phone__screen scr scr--key">
+            <div class="key__bar">
+              <span class="key__role">Spymaster</span>
+              <span class="key__code">QVUD</span>
+            </div>
+            <div class="key__teams">
+              <span class="key__team" style="--c:#d14a42">Red <b>9</b></span>
+              <span class="key__team" style="--c:#3e92be">Blue <b>8</b></span>
+            </div>
+            <div class="key__tabs"><span class="on">Key</span><span>Board</span><span>List</span></div>
+            <div class="key__grid">
+              <i class="k-n">ROOT</i><i class="k-r">CRANE</i><i class="k-b">DRIFT</i><i class="k-r">MOTH</i><i class="k-n">GLASS</i>
+              <i class="k-b">SPUR</i><i class="k-r">EMBER</i><i class="k-n">TIDE</i><i class="k-b">VAULT</i><i class="k-r">PLUME</i>
+              <i class="k-r">SHELL</i><i class="k-a">NIGHT</i><i class="k-b">QUILL</i><i class="k-n">FOSSIL</i><i class="k-b">MARCH</i>
+              <i class="k-n">BRASS</i><i class="k-b">SLATE</i><i class="k-r">HOLLOW</i><i class="k-r">PITCH</i><i class="k-n">CIRCUS</i>
+              <i class="k-b">ORBIT</i><i class="k-r">CANVAS</i><i class="k-n">THORN</i><i class="k-b">RIVET</i><i class="k-r">FABLE</i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="phone phone--centre">
+        <div class="phone__frame">
+          <div class="phone__screen scr scr--place">
+            <p class="place__eyebrow">Your turn</p>
+            <p class="place__title">Where does<br />it go?</p>
+            <div class="place__wheel">
+              <span>1983</span>
+              <span>1997</span>
+              <div class="place__card">?</div>
+              <span>2004</span>
+              <span>2019</span>
+            </div>
+            <p class="place__readout">Between 1997 and 2004</p>
+            <p class="place__btn">Place it here</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="phone phone--right">
+        <div class="phone__frame">
+          <div class="phone__screen scr scr--draft">
+            <p class="draft__eyebrow">On the clock</p>
+            <p class="draft__status">Team 1 selects</p>
+            <div class="draft__wheel"></div>
+            <div class="draft__benches">
+              <span class="draft__bench" style="--c:#F0523F"><b>Team 1</b><i class="set"></i><i class="set"></i><i></i></span>
+              <span class="draft__bench" style="--c:#3AA0FF"><b>Team 2</b><i class="set"></i><i></i><i></i></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <header class="masthead">
       <h1>What are we playing?</h1>
