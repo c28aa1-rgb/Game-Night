@@ -52,7 +52,6 @@ module.exports = [
     players: 'Any number · one screen',
     accent: '#3AA0FF',
     art: '/hub/art/draft.webp',
-    status: 'draft',
     basePath: '/draft',
     type: 'static',
   },

@@ -43,10 +43,18 @@ across the screen and locks into its team column.
 
 ## Layout by team count
 
-Two teams flank the wheel, as a broadcast split — bench left, wheel, bench right,
-the right bench mirrored. Three or four cannot, so they line up beneath the wheel
-and it gives up height for them. The versus badge exists only between exactly two
-squads. Below 1080px everything stacks under the wheel at any team count.
+The broadcast split holds at every count: benches flank the wheel, up to two a
+side, stacked. Teams 1–2 take the left column, 3–4 the right, and the right-hand
+benches mirror so both columns read outward from the wheel. Three teams leave one
+bench alone on the right, where it takes both rows rather than sitting in half a
+column.
+
+The wheel always owns the full-height middle column. That is load-bearing, not
+cosmetic: it is sized `min(58vh, 100%, 620px)`, so giving it a short grid row
+instead makes it overflow upward into the status line on laptop-height screens.
+
+The versus badge exists only between exactly two squads. Below 1080px everything
+stacks under the wheel at any team count.
 
 ## Motion
 

@@ -241,32 +241,42 @@ ol,ul{list-style:none}
   max-width:1240px;width:100%;margin:0 auto;min-height:0;
 }
 
-/* Two teams keep the broadcast split: one bench either side of the wheel. */
-.floor-grid[data-teams="2"]{
+/* The broadcast split holds at every team count: the wheel keeps the middle
+   column at full height, and the benches flank it — up to two a side, stacked.
+   Giving the stage the whole column is what stops the wheel from growing into
+   the status line on a short screen. */
+.floor-grid{
   grid-template-columns:minmax(200px,.7fr) minmax(0,1.6fr) minmax(200px,.7fr);
 }
-.floor-grid[data-teams="2"] .stage{grid-column:2;grid-row:1}
-.floor-grid[data-teams="2"] .bench:nth-child(1){grid-column:1;grid-row:1}
-.floor-grid[data-teams="2"] .bench:nth-child(2){grid-column:3;grid-row:1;text-align:right}
-.floor-grid[data-teams="2"] .bench:nth-child(2) .bench-head{flex-direction:row-reverse}
-.floor-grid[data-teams="2"] .bench:nth-child(2) .slot{flex-direction:row-reverse}
-
-/* Three or four teams cannot flank the wheel, so they line up beneath it. */
 .floor-grid[data-teams="3"],
-.floor-grid[data-teams="4"]{
-  grid-template-rows:minmax(0,1fr) auto;
-  align-items:stretch;
-}
-.floor-grid[data-teams="3"]{grid-template-columns:repeat(3,1fr)}
-.floor-grid[data-teams="4"]{grid-template-columns:repeat(4,1fr)}
+.floor-grid[data-teams="4"]{grid-template-rows:repeat(2,minmax(0,1fr))}
+
+.floor-grid[data-teams="2"] .stage{grid-column:2;grid-row:1}
 .floor-grid[data-teams="3"] .stage,
-.floor-grid[data-teams="4"] .stage{grid-column:1/-1;grid-row:1;min-height:0}
-.floor-grid[data-teams="3"] .bench,
-.floor-grid[data-teams="4"] .bench{grid-row:2;padding-top:0}
-.floor-grid[data-teams="3"] .bench-list,
-.floor-grid[data-teams="4"] .bench-list{max-height:24vh}
-.floor-grid[data-teams="3"] .wheel-wrap,
-.floor-grid[data-teams="4"] .wheel-wrap{width:min(46vh,420px)}
+.floor-grid[data-teams="4"] .stage{grid-column:2;grid-row:1/span 2}
+
+.floor-grid[data-teams="2"] .bench:nth-child(1){grid-column:1;grid-row:1}
+.floor-grid[data-teams="2"] .bench:nth-child(2){grid-column:3;grid-row:1}
+
+.floor-grid[data-teams="3"] .bench:nth-child(1),
+.floor-grid[data-teams="4"] .bench:nth-child(1){grid-column:1;grid-row:1}
+.floor-grid[data-teams="3"] .bench:nth-child(2),
+.floor-grid[data-teams="4"] .bench:nth-child(2){grid-column:1;grid-row:2}
+/* Three teams leave the right column to one bench, so it takes both rows. */
+.floor-grid[data-teams="3"] .bench:nth-child(3){grid-column:3;grid-row:1/span 2}
+.floor-grid[data-teams="4"] .bench:nth-child(3){grid-column:3;grid-row:1}
+.floor-grid[data-teams="4"] .bench:nth-child(4){grid-column:3;grid-row:2}
+
+/* Right-hand benches mirror, so both columns read outward from the wheel. */
+.floor-grid[data-teams="2"] .bench:nth-child(2),
+.floor-grid[data-teams="3"] .bench:nth-child(3),
+.floor-grid[data-teams="4"] .bench:nth-child(n+3){text-align:right}
+.floor-grid[data-teams="2"] .bench:nth-child(2) .bench-head,
+.floor-grid[data-teams="3"] .bench:nth-child(3) .bench-head,
+.floor-grid[data-teams="4"] .bench:nth-child(n+3) .bench-head{flex-direction:row-reverse}
+.floor-grid[data-teams="2"] .bench:nth-child(2) .slot,
+.floor-grid[data-teams="3"] .bench:nth-child(3) .slot,
+.floor-grid[data-teams="4"] .bench:nth-child(n+3) .slot{flex-direction:row-reverse}
 
 /* The wrapper only exists to be filled from script — it must not become a box. */
 .benches{display:contents}
@@ -548,18 +558,25 @@ ol,ul{list-style:none}
   .floor-grid[data-teams="2"] .stage,
   .floor-grid[data-teams="3"] .stage,
   .floor-grid[data-teams="4"] .stage{grid-column:1;grid-row:auto;order:-1}
+  /* These have to carry the same nth-child weight as the placement rules
+     above, or the stacked-column spans survive into the phone layout. */
   .floor-grid .bench,
-  .floor-grid[data-teams="2"] .bench,
-  .floor-grid[data-teams="3"] .bench,
-  .floor-grid[data-teams="4"] .bench{grid-column:1;grid-row:auto;text-align:left}
+  .floor-grid[data-teams="2"] .bench:nth-child(1),
+  .floor-grid[data-teams="2"] .bench:nth-child(2),
+  .floor-grid[data-teams="3"] .bench:nth-child(1),
+  .floor-grid[data-teams="3"] .bench:nth-child(2),
+  .floor-grid[data-teams="3"] .bench:nth-child(3),
+  .floor-grid[data-teams="4"] .bench:nth-child(1),
+  .floor-grid[data-teams="4"] .bench:nth-child(2),
+  .floor-grid[data-teams="4"] .bench:nth-child(n+3){grid-column:1;grid-row:auto;text-align:left}
   .floor-grid[data-teams="2"] .bench:nth-child(2) .bench-head,
-  .floor-grid[data-teams="2"] .bench:nth-child(2) .slot{flex-direction:row}
-  .wheel-wrap,
-  .floor-grid[data-teams="3"] .wheel-wrap,
-  .floor-grid[data-teams="4"] .wheel-wrap{width:min(78vw,440px)}
-  .bench-list,
-  .floor-grid[data-teams="3"] .bench-list,
-  .floor-grid[data-teams="4"] .bench-list{max-height:none}
+  .floor-grid[data-teams="2"] .bench:nth-child(2) .slot,
+  .floor-grid[data-teams="3"] .bench:nth-child(3) .bench-head,
+  .floor-grid[data-teams="3"] .bench:nth-child(3) .slot,
+  .floor-grid[data-teams="4"] .bench:nth-child(n+3) .bench-head,
+  .floor-grid[data-teams="4"] .bench:nth-child(n+3) .slot{flex-direction:row}
+  .wheel-wrap{width:min(78vw,440px)}
+  .bench-list{max-height:none}
   .final-grid,
   .final-grid[data-teams="2"],
   .final-grid[data-teams="3"],

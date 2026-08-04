@@ -7,7 +7,7 @@ Party games behind one hub page, served by one Express process.
 /hitster     Hitster — phone controller
 /hitster/tv  Hitster — TV screen
 /codenames   Codenames
-/draft       Draft Night (unfinished — marked as such on the hub)
+/draft       Draft Night
 ```
 
 ## Run it
