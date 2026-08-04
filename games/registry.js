@@ -48,7 +48,7 @@ module.exports = [
   {
     id: 'draft',
     name: 'Draft Night',
-    tagline: 'Spin the wheel, split the room into two teams.',
+    tagline: 'Spin the wheel, split the room into two, three or four teams.',
     players: 'Any number · one screen',
     accent: '#3AA0FF',
     art: '/hub/art/draft.webp',

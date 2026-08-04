@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════
    DRAFT NIGHT
-   Spin a wheel, alternate picks, end with two teams.
+   Spin a wheel, take picks in turn, end with two to four teams.
 
    Correctness rule that governs this whole file:
    the name that gets drafted is read back off the wheel's final
@@ -23,9 +23,13 @@ const T = {
 };
 
 /* ── state ──────────────────────────────────────────────── */
+const MAX_TEAMS = 4;
+const TEAM_COLOUR = ['var(--t1)', 'var(--t2)', 'var(--t3)', 'var(--t4)'];
+
 const state = {
   roster: [],        // names on the input sheet
   wheel: [],         // names still on the wheel
+  teamCount: 2,      // 2–4, chosen on the roster page
   teams: [[], []],
   pick: 0,           // picks completed
   rotation: 0,       // accumulated wheel rotation, degrees
@@ -36,6 +40,15 @@ const state = {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const pad = (n) => String(n).padStart(2, '0');
+
+/**
+ * How many players each team ends up with. Picks go round the teams in turn,
+ * so when the roster does not divide evenly the earlier teams take the spare
+ * names — team 1 gets the extra of an odd pair, exactly as before.
+ */
+function teamSizes(total, count = state.teamCount) {
+  return Array.from({ length: count }, (_, i) => Math.floor(total / count) + (i < total % count ? 1 : 0));
+}
 
 /* ═══════════════ PAGE TRANSITIONS ═══════════════════════ */
 
@@ -48,6 +61,7 @@ function stagger(page) {
 
 async function goto(name) {
   if (state.page === name) return;
+  SFX.whoosh(true, 0.4);
   const wipe = $('wipe');
   const from = $(`page-${state.page}`);
   const to = $(`page-${name}`);
@@ -85,11 +99,11 @@ function renderRoster() {
   $('entryNum').textContent = pad(n + 1);
   $('rosterEmpty').classList.toggle('hidden', n > 0);
 
-  const ready = n >= 2;
+  const ready = n >= state.teamCount;
   $('startBtn').disabled = !ready;
   $('startHint').textContent = ready
-    ? `Team 1 takes ${Math.ceil(n / 2)}, Team 2 takes ${Math.floor(n / 2)}.`
-    : 'Add at least 2 names to open the floor.';
+    ? `Splits into ${teamSizes(n).join(' · ')}.`
+    : `Add at least ${state.teamCount} names to open the floor.`;
 }
 
 function esc(s) {
@@ -113,7 +127,8 @@ function addNames(raw) {
 $('nameForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const input = $('nameInput');
-  if (input.value.trim()) addNames(input.value);
+  // A name that was a duplicate, or over the cap, adds nothing — say so.
+  if (input.value.trim()) addNames(input.value) ? SFX.add() : SFX.nope();
   input.value = '';
   input.focus();
 });
@@ -122,7 +137,7 @@ $('nameInput').addEventListener('paste', (e) => {
   const text = (e.clipboardData || window.clipboardData).getData('text');
   if (!/[\n,;\t]/.test(text)) return;      // single name — let the browser handle it
   e.preventDefault();
-  addNames(text);
+  if (addNames(text)) SFX.add();
   e.target.value = '';
 });
 
@@ -131,6 +146,7 @@ $('rosterList').addEventListener('click', (e) => {
   if (!btn) return;
   const row = btn.closest('.sheet-row');
   const i = Number(btn.dataset.kill);
+  SFX.remove();
   row.classList.add('leaving');
   setTimeout(() => { state.roster.splice(i, 1); renderRoster(); }, reduceMotion ? 0 : 260);
 });
@@ -138,12 +154,36 @@ $('rosterList').addEventListener('click', (e) => {
 $('sampleBtn').addEventListener('click', () => {
   state.roster = [];
   addNames('Marcus, Elena, Priya, Dante, Nadia, Ivan, Rosa, Kwame, Hana, Theo');
+  SFX.add();
   $('nameInput').focus();
 });
 
-$('clearBtn').addEventListener('click', () => { state.roster = []; renderRoster(); $('nameInput').focus(); });
+$('clearBtn').addEventListener('click', () => {
+  state.roster = [];
+  SFX.remove();
+  renderRoster();
+  $('nameInput').focus();
+});
 
-$('startBtn').addEventListener('click', () => startDraft(state.roster.slice()));
+$('teamSel').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-teams]');
+  if (!btn) return;
+  const count = Math.min(MAX_TEAMS, Math.max(2, Number(btn.dataset.teams)));
+  if (count === state.teamCount) return;
+  state.teamCount = count;
+  SFX.detent();
+  for (const opt of $('teamSel').querySelectorAll('.teamsel-opt')) {
+    const on = Number(opt.dataset.teams) === count;
+    opt.classList.toggle('is-on', on);
+    opt.setAttribute('aria-checked', String(on));
+  }
+  renderRoster();
+});
+
+$('startBtn').addEventListener('click', () => {
+  SFX.start();
+  startDraft(state.roster.slice());
+});
 
 /* ═══════════════ THE WHEEL ══════════════════════════════ */
 
@@ -230,40 +270,55 @@ function setRotation(deg, animate) {
 
 /* ═══════════════ PAGE 2 — DRAFT FLOOR ═══════════════════ */
 
-function renderBenches() {
-  const total = state.roster.length;
-  const sizes = [Math.ceil(total / 2), Math.floor(total / 2)];
+/** Lays out one bench per team. Called once at the start of a draft. */
+function buildBenches() {
+  $('floorGrid').dataset.teams = state.teamCount;
+  $('benches').innerHTML = state.teams
+    .map((_, t) => `
+      <aside class="bench" style="--team:${TEAM_COLOUR[t]}">
+        <header class="bench-head">
+          <span class="bench-bar"></span>
+          <h2 class="bench-name">Team ${t + 1}</h2>
+          <span class="bench-count" data-count="${t}">0</span>
+        </header>
+        <ol class="bench-list" data-list="${t}"></ol>
+      </aside>`)
+    .join('');
+}
 
-  [0, 1].forEach((t) => {
-    const list = $(`bench${t + 1}List`);
+function renderBenches() {
+  const sizes = teamSizes(state.roster.length);
+
+  state.teams.forEach((team, t) => {
     let html = '';
     for (let i = 0; i < sizes[t]; i++) {
-      const name = state.teams[t][i];
+      const name = team[i];
       html += `<li class="slot ${name ? 'filled' : 'empty'}" data-team="${t}" data-slot="${i}">
                  <span class="slot-num">${pad(i + 1)}</span>
                  <span class="slot-name">${name ? esc(name) : '—'}</span>
                </li>`;
     }
-    list.innerHTML = html;
-    $(`bench${t + 1}Count`).textContent = `${state.teams[t].length}/${sizes[t]}`;
+    $('benches').querySelector(`[data-list="${t}"]`).innerHTML = html;
+    $('benches').querySelector(`[data-count="${t}"]`).textContent = `${team.length}/${sizes[t]}`;
   });
 }
 
 function setStatus(text, team) {
   const el = $('floorStatus');
   el.textContent = text;
-  el.classList.toggle('t1', team === 0);
-  el.classList.toggle('t2', team === 1);
+  el.style.color = team == null ? '' : TEAM_COLOUR[team];
 }
 
 async function startDraft(names) {
+  SFX.stopTicks();          // a previous draft may still be spinning
   state.wheel = names.slice();
-  state.teams = [[], []];
+  state.teams = Array.from({ length: state.teamCount }, () => []);
   state.pick = 0;
   state.rotation = 0;
   state.drafting = true;
   const run = ++state.run;
 
+  buildBenches();
   renderBenches();
   renderWheel(0);
   const segs = $('segments');
@@ -283,8 +338,9 @@ async function runDraft(run) {
   const live = () => state.drafting && state.run === run;
 
   while (live() && state.wheel.length > 0) {
-    const team = state.pick % 2;                 // 0,1,0,1 — Team 1 picks first
+    const team = state.pick % state.teamCount;   // round the teams in turn
     setStatus(`Team ${team + 1} is on the clock`, team);
+    SFX.onClock(team);
     await sleep(reduceMotion ? 0 : 420);
     if (!live()) return;
 
@@ -297,6 +353,68 @@ async function runDraft(run) {
     await sleep(T.breath);
   }
   if (live()) finishDraft();
+}
+
+/* ── the ratchet ────────────────────────────────────────── */
+
+/** The wheel's CSS easing, as control points. Must match setRotation(). */
+const SPIN_EASE = { x1: 0.16, y1: 0.84, x2: 0.28, y2: 1 };
+
+/** One axis of a cubic bezier from (0,0) to (1,1), at parameter s. */
+function bezierAxis(s, p1, p2) {
+  const u = 1 - s;
+  return 3 * u * u * s * p1 + 3 * u * s * s * p2 + s * s * s;
+}
+
+/** Given how far the wheel has turned (0–1), when does that happen (0–1)? */
+function timeForProgress(p) {
+  let lo = 0, hi = 1, s = 0.5;
+  for (let i = 0; i < 24; i++) {                 // invert y(s), then read x(s)
+    s = (lo + hi) / 2;
+    if (bezierAxis(s, SPIN_EASE.y1, SPIN_EASE.y2) < p) lo = s; else hi = s;
+  }
+  return bezierAxis(s, SPIN_EASE.x1, SPIN_EASE.x2);
+}
+
+/**
+ * Queues one ratchet click for every segment edge that will pass the pointer
+ * during this spin.
+ *
+ * The whole spin is known in advance — start angle, end angle, duration and
+ * easing — so the clicks are computed and handed to the audio clock up front
+ * rather than sampled frame by frame. Sample-accurate, and it keeps ticking at
+ * the right moments even if the page drops frames or is running in a
+ * background tab, where requestAnimationFrame is throttled to nothing.
+ *
+ * Boundaries land on exact multiples of the segment angle: a segment edge is
+ * under the pointer whenever the rotation is a multiple of 360/n.
+ */
+function scheduleTicks(from, to, duration) {
+  if (reduceMotion) return;
+  const seg = 360 / state.wheel.length;
+  const span = to - from;
+  if (span <= 0) return;
+
+  const times = [];
+  for (let k = Math.ceil(from / seg); k <= Math.floor(to / seg); k++) {
+    times.push(timeForProgress((k * seg - from) / span) * duration);
+  }
+
+  let last = -Infinity;
+  times.forEach((ms, i) => {
+    // A real ratchet cannot articulate faster than this; at the start of a
+    // spin the edges fly past far quicker, so those collapse into a blur.
+    if (ms - last < 16) return;
+    // Rate comes from the gap to the next edge; the last edge has none, so it
+    // borrows the gap behind it — otherwise the dying click sounds like a fast
+    // one and the wheel stops sounding like it ran out of momentum.
+    const gap = i + 1 < times.length
+      ? times[i + 1] - ms
+      : (i > 0 ? ms - times[i - 1] : 40);
+    const speed = Math.min(1, seg / Math.max(gap, 1) / 1.1);   // deg/ms → 0–1
+    SFX.tick(speed, ms / 1000);
+    last = ms;
+  });
 }
 
 /** Spins the wheel and returns the index the pointer actually landed on. */
@@ -312,6 +430,7 @@ async function spin(team) {
   wrap.classList.add('spinning');
   renderWheel(target);              // orient labels for where the wheel will stop
   setRotation(target, true);
+  scheduleTicks(state.rotation, target, T.spin);
   await sleep(T.spin);
 
   // Normalise so the number never balloons, without moving the wheel.
@@ -326,6 +445,7 @@ async function spin(team) {
   }
 
   wrap.classList.remove('spinning');
+  SFX.clunk();
   $('pointer').classList.add('clunk');
   setTimeout(() => $('pointer').classList.remove('clunk'), 700);
 
@@ -343,11 +463,12 @@ async function revealAndSeat(wheelIndex, team, live = () => true) {
   const name = state.wheel[wheelIndex];
   const slotIndex = state.teams[team].length;
 
-  card.style.setProperty('--team', team === 0 ? 'var(--t1)' : 'var(--t2)');
+  card.style.setProperty('--team', TEAM_COLOUR[team]);
   $('revealMeta').textContent = `Pick ${pad(state.pick + 1)} — Team ${team + 1}`;
   $('revealName').textContent = name;
 
   setStatus(`Team ${team + 1} selects`, team);
+  SFX.reveal(team);
   reveal.classList.add('show');
   await sleep(T.hold);
   if (!live()) { reveal.classList.remove('show'); return; }
@@ -376,6 +497,7 @@ async function revealAndSeat(wheelIndex, team, live = () => true) {
   state.wheel.splice(wheelIndex, 1);
   state.pick++;
   renderBenches();
+  SFX.lock(team);
   document.querySelector(`.slot[data-team="${team}"][data-slot="${slotIndex}"]`)?.classList.add('landing');
 
   reveal.classList.remove('show');
@@ -402,14 +524,14 @@ async function revealAndSeat(wheelIndex, team, live = () => true) {
 $('skipBtn').addEventListener('click', () => {
   state.drafting = false;
   state.run++;
+  SFX.stopTicks();          // a spin may still have clicks queued
+  SFX.click();
   $('reveal').classList.remove('show');
   $('reveal').style.background = '';
   // Deal the rest of the wheel out in the order it stands.
-  let team = state.pick % 2;
   while (state.wheel.length) {
-    state.teams[team].push(state.wheel.shift());
+    state.teams[state.pick % state.teamCount].push(state.wheel.shift());
     state.pick++;
-    team = 1 - team;
   }
   finishDraft();
 });
@@ -420,44 +542,87 @@ function finishDraft() {
   state.drafting = false;
   setStatus('Draft complete', null);
 
-  [0, 1].forEach((t) => {
-    const list = $(`final${t + 1}List`);
-    list.innerHTML = state.teams[t].map((name, i) => `
-      <li class="squad-row" style="animation-delay:${420 + i * 70}ms">
-        <span class="squad-rank">${pad(i + 1)}</span>
-        <span class="squad-player">${esc(name)}</span>
-      </li>`).join('');
-    const n = state.teams[t].length;
-    $(`final${t + 1}Count`).textContent = `${n} player${n === 1 ? '' : 's'}`;
-  });
+  const grid = $('finalGrid');
+  grid.dataset.teams = state.teamCount;
 
+  const squad = (team, t) => {
+    const n = team.length;
+    return `
+      <article class="squad" data-stagger style="--team:${TEAM_COLOUR[t]}">
+        <header class="squad-head">
+          <h2 class="squad-name">Team ${t + 1}</h2>
+          <span class="squad-count">${n} player${n === 1 ? '' : 's'}</span>
+        </header>
+        <ol class="squad-list">${team.map((name, i) => `
+          <li class="squad-row" style="animation-delay:${420 + i * 70}ms">
+            <span class="squad-rank">${pad(i + 1)}</span>
+            <span class="squad-player">${esc(name)}</span>
+          </li>`).join('')}
+        </ol>
+        <span class="squad-sheen" aria-hidden="true"></span>
+      </article>`;
+  };
+
+  const squads = state.teams.map(squad);
+  // The versus badge belongs between two squads and nowhere else.
+  grid.innerHTML = state.teamCount === 2
+    ? squads[0] + '<div class="versus" data-stagger><span>vs</span></div>' + squads[1]
+    : squads.join('');
+
+  SFX.complete();
   goto('final');
 }
 
-$('redraftBtn').addEventListener('click', () => startDraft(state.roster.slice()));
+$('redraftBtn').addEventListener('click', () => {
+  SFX.start();
+  startDraft(state.roster.slice());
+});
 
 $('newRosterBtn').addEventListener('click', async () => {
   state.drafting = false;
   state.run++;
+  SFX.stopTicks();
+  SFX.click();
   await goto('roster');
   $('nameInput').focus();
 });
 
 $('copyBtn').addEventListener('click', async (e) => {
-  const text = [0, 1]
-    .map((t) => `TEAM ${t + 1}\n` + state.teams[t].map((n, i) => `${i + 1}. ${n}`).join('\n'))
+  const text = state.teams
+    .map((team, t) => `TEAM ${t + 1}\n` + team.map((n, i) => `${i + 1}. ${n}`).join('\n'))
     .join('\n\n');
   const btn = e.currentTarget;
   try {
     await navigator.clipboard.writeText(text);
     btn.textContent = 'Copied';
+    SFX.blip();
   } catch {
     btn.textContent = 'Copy blocked — select the list instead';
+    SFX.nope();
   }
   setTimeout(() => { btn.textContent = 'Copy teams'; }, 2200);
 });
 
+/* ═══════════════ SOUND ══════════════════════════════════ */
+
+function paintSoundButton() {
+  const btn = $('soundBtn');
+  btn.setAttribute('aria-pressed', String(SFX.enabled));
+  $('soundLabel').textContent = SFX.enabled ? 'Sound on' : 'Sound off';
+}
+
+$('soundBtn').addEventListener('click', () => {
+  SFX.toggle();
+  paintSoundButton();
+});
+
+// Browsers will not start audio until the user has done something, so the
+// context is opened on the first gesture rather than at load.
+addEventListener('pointerdown', () => SFX.prime(), { once: true });
+addEventListener('keydown', () => SFX.prime(), { once: true });
+
 /* ── boot ───────────────────────────────────────────────── */
+paintSoundButton();
 renderRoster();
 stagger($('page-roster'));
 $('nameInput').focus();

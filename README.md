@@ -28,6 +28,7 @@ games/registry.js    the list of games — the only file you edit to add one
 games/hitster/       server.js registers its own routes; public/ is its frontend
 games/codenames/     static/ is the bundle, served as-is
 games/draft/         static/ is the bundle; theme/ is its design notes
+                     (sfx.js synthesises its sound — no audio files)
 hub/template.html    the landing page, with the cards rendered into it
 hub/public/          the only hub files served — favicon and art/
 scripts/build-art.js turns source key art into web-sized WebP

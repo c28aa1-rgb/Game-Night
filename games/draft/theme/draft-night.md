@@ -1,7 +1,7 @@
 # Theme: Draft Night
 
 Custom theme — premium sports broadcast. The visual language of a televised draft:
-a darkened arena, trophy gold as the only luxury, and two team colors that never mix.
+a darkened arena, trophy gold as the only luxury, and team colors that never mix.
 
 ## Palette
 
@@ -19,6 +19,11 @@ a darkened arena, trophy gold as the only luxury, and two team colors that never
 | `--gold-lo`  | `#8F6A18` | Gold shadow / bevel |
 | `--t1`       | `#F0523F` | Team 1 — scarlet |
 | `--t2`       | `#3AA0FF` | Team 2 — sky |
+| `--t3`       | `#2FD08A` | Team 3 — turf |
+| `--t4`       | `#B07CFF` | Team 4 — floodlight violet |
+
+Two to four teams, chosen on the roster page. None of the team colours is gold:
+gold belongs to the chrome, so a team can never be mistaken for the furniture.
 
 ## Typography
 
@@ -36,9 +41,36 @@ milled gold pointer at 12 o'clock, and a specular sheen that sweeps the rim whil
 spinning. Every pick resolves into a broadcast lower-third that then physically flies
 across the screen and locks into its team column.
 
+## Layout by team count
+
+Two teams flank the wheel, as a broadcast split — bench left, wheel, bench right,
+the right bench mirrored. Three or four cannot, so they line up beneath the wheel
+and it gives up height for them. The versus badge exists only between exactly two
+squads. Below 1080px everything stacks under the wheel at any team count.
+
 ## Motion
 
 - Spin: 4.2s, `cubic-bezier(.16,.84,.28,1)` — fast break, long settle.
 - Reveal beat: ~5s from stop to locked-in row.
 - Page change: full-bleed gold wipe, left-to-right in, right-to-left out.
 - `prefers-reduced-motion`: spins resolve instantly, wipes become cross-fades.
+
+## Sound
+
+Synthesised in `sfx.js` — no audio files, so the game stays a static bundle with
+nothing to preload. The context is built on the first gesture, because browsers
+refuse to start audio before one. The toggle sits top-right on every page and
+remembers itself in `localStorage`.
+
+The wheel is the voice of this game. Its ratchet clicks once per segment edge
+passing the pointer: bright and quiet at speed, fat and slow as it dies, so the
+wheel can be heard running out of momentum without being watched. Those clicks
+are derived from the spin's easing curve and handed to the audio clock up front
+rather than sampled frame by frame — sample-accurate, and unaffected by dropped
+frames or a backgrounded tab, where `requestAnimationFrame` is throttled to
+nothing. Abandoning a spin cuts the queued clicks.
+
+Everything else mixes under the wheel and the pointer's clunk. Stings are pitched
+per team — F3, A3, C4, E4 — so which team just picked is audible as well as
+visible. Measured peaks: ticks 0.19–0.29, clunk 0.44, team stings and the
+completion fanfare 0.27–0.35, UI blips 0.08–0.26.

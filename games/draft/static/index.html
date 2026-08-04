@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Draft Night — spin two teams</title>
+<title>Draft Night — spin the teams</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -27,9 +27,18 @@
         Put the<br>names in.<br><span class="gold-word">Let the wheel<br>pick sides.</span>
       </h1>
       <p class="lede" data-stagger>
-        Every spin takes one name off the wheel and puts it on a team, alternating
-        Team 1 and Team 2 until the board is empty. No takebacks.
+        Every spin takes one name off the wheel and puts it on a team, working
+        through the teams in turn until the board is empty. No takebacks.
       </p>
+
+      <div class="teamsel" data-stagger>
+        <span class="teamsel-label">How many teams</span>
+        <div class="teamsel-opts" id="teamSel" role="radiogroup" aria-label="Number of teams">
+          <button class="teamsel-opt is-on" type="button" role="radio" aria-checked="true" data-teams="2">2</button>
+          <button class="teamsel-opt" type="button" role="radio" aria-checked="false" data-teams="3">3</button>
+          <button class="teamsel-opt" type="button" role="radio" aria-checked="false" data-teams="4">4</button>
+        </div>
+      </div>
 
       <div class="pitch-foot" data-stagger>
         <button class="btn btn-gold" id="startBtn" disabled>
@@ -77,16 +86,11 @@
     <p class="floor-status" id="floorStatus">Spinning</p>
   </header>
 
-  <div class="floor-grid">
+  <div class="floor-grid" id="floorGrid" data-teams="2">
 
-    <aside class="bench bench-1" id="bench1">
-      <header class="bench-head">
-        <span class="bench-bar"></span>
-        <h2 class="bench-name">Team 1</h2>
-        <span class="bench-count" id="bench1Count">0</span>
-      </header>
-      <ol class="bench-list" id="bench1List"></ol>
-    </aside>
+    <!-- benches are built from the team count; display:contents lets each one
+         sit directly in the floor grid -->
+    <div class="benches" id="benches"></div>
 
     <div class="stage">
       <div class="wheel-wrap">
@@ -122,15 +126,6 @@
       <button class="btn-ghost skip" id="skipBtn" type="button">Skip to results</button>
     </div>
 
-    <aside class="bench bench-2" id="bench2">
-      <header class="bench-head">
-        <span class="bench-bar"></span>
-        <h2 class="bench-name">Team 2</h2>
-        <span class="bench-count" id="bench2Count">0</span>
-      </header>
-      <ol class="bench-list" id="bench2List"></ol>
-    </aside>
-
   </div>
 
   <!-- broadcast lower-third reveal -->
@@ -150,27 +145,7 @@
     <h1 class="display-xl center" data-stagger>The teams are set.</h1>
   </header>
 
-  <div class="final-grid">
-    <article class="squad squad-1" data-stagger>
-      <header class="squad-head">
-        <h2 class="squad-name">Team 1</h2>
-        <span class="squad-count" id="final1Count">0 players</span>
-      </header>
-      <ol class="squad-list" id="final1List"></ol>
-      <span class="squad-sheen" aria-hidden="true"></span>
-    </article>
-
-    <div class="versus" data-stagger><span>vs</span></div>
-
-    <article class="squad squad-2" data-stagger>
-      <header class="squad-head">
-        <h2 class="squad-name">Team 2</h2>
-        <span class="squad-count" id="final2Count">0 players</span>
-      </header>
-      <ol class="squad-list" id="final2List"></ol>
-      <span class="squad-sheen" aria-hidden="true"></span>
-    </article>
-  </div>
+  <div class="final-grid" id="finalGrid" data-teams="2"></div>
 
   <footer class="final-foot" data-stagger>
     <button class="btn btn-gold" id="redraftBtn" type="button"><span>Redraft same names</span></button>
@@ -181,6 +156,18 @@
 
 <div class="wipe" id="wipe" aria-hidden="true"></div>
 
+<button class="sound-toggle" id="soundBtn" type="button" aria-pressed="true">
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path class="sound-body" d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>
+    <path class="sound-wave" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"
+          fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    <path class="sound-off" d="M17 9.5l5 5m0-5l-5 5"
+          fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+  </svg>
+  <span class="sound-label" id="soundLabel">Sound on</span>
+</button>
+
+<script src="sfx.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
