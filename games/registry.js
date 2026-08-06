@@ -53,6 +53,7 @@ module.exports = [
     art: '/hub/art/mayday.webp',
     basePath: '/mayday',
     type: 'node',
+    status: 'draft',
   },
   {
     id: 'draft',
