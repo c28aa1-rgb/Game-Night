@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- The alarm glyph, which is the only thing this ship has left to say. -->
+  <rect width="32" height="32" rx="7" fill="#0A0D0F"/>
+  <path d="M16 5.5 L29 27 H3 Z" fill="none" stroke="#FF3B1F" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M16 13 V19.5" stroke="#FF3B1F" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="16" cy="23.2" r="1.7" fill="#FF3B1F"/>
+</svg>

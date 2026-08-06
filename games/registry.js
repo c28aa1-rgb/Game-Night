@@ -45,6 +45,16 @@ module.exports = [
     type: 'static',
   },
   {
+    id: 'mayday',
+    name: 'Mayday',
+    tagline: 'Trust some. Question all. Survive together.',
+    players: '5–12 players · TV narrates, phones decide',
+    accent: '#FF3B1F',
+    art: '/hub/art/mayday.webp',
+    basePath: '/mayday',
+    type: 'node',
+  },
+  {
     id: 'draft',
     name: 'Draft Night',
     tagline: 'Spin the wheel, split the room into two, three or four teams.',

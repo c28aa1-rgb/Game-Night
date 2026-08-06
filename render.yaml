@@ -1,0 +1,21 @@
+# Render reads this straight from the repo: one web service, one Node process.
+#
+# The server binds 0.0.0.0 on process.env.PORT, which Render sets, so nothing
+# else needs configuring. Dev dependencies are skipped — sharp is only used by
+# scripts/build-art.js, which runs on a laptop, never on the server.
+services:
+  - type: web
+    name: game-night
+    runtime: node
+    plan: free
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # Hitster needs this to play music. Everything else — Codenames, Draft
+      # Night, Mayday — runs without it, so an unset value only costs you
+      # Hitster. Set it in the Render dashboard rather than here.
+      - key: SPOTIFY_CLIENT_ID
+        sync: false

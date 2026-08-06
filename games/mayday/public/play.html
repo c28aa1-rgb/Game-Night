@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0A0D0F" />
+  <title>Mayday</title>
+  <link rel="icon" href="/mayday/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/mayday/theme.css" />
+  <link rel="stylesheet" href="/mayday/play.css" />
+</head>
+<body class="phone">
+
+  <!-- Your suit, always in reach -------------------------------------------- -->
+  <header class="bar" id="bar" hidden>
+    <button class="bar__role" id="role-chip" type="button" aria-expanded="false">
+      <span class="bar__figure" id="bar-figure"></span>
+      <span class="bar__text">
+        <span class="bar__name" id="bar-name">—</span>
+        <span class="bar__label readout" id="bar-label">Crew</span>
+      </span>
+    </button>
+    <div class="bar__right">
+      <span class="bar__clock figure" id="bar-clock"></span>
+      <!-- Host only: the game's controls live here, not on the TV. -->
+      <button class="minibtn" id="skip-btn" type="button" hidden>Skip</button>
+      <button class="minibtn" id="pause-btn" type="button" hidden>Pause</button>
+    </div>
+  </header>
+
+  <main class="stage">
+
+    <!-- Join ---------------------------------------------------------------- -->
+    <section class="card screen" id="screen-join">
+      <h1 class="display card__title">Mayday</h1>
+      <p class="card__sub">A ship past saving, and a crew that isn't all crew.</p>
+
+      <label class="field" id="code-field">
+        <span class="readout">Ship code</span>
+        <input id="code-input" maxlength="8" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABCD" />
+      </label>
+
+      <label class="field">
+        <span class="readout">Your name</span>
+        <input id="name-input" maxlength="14" autocomplete="off" placeholder="Ripley" />
+      </label>
+
+      <button class="btn btn--alert btn--block" id="join-btn" type="button">Board the ship</button>
+      <p class="error" id="join-error" role="alert"></p>
+    </section>
+
+    <!-- Lobby --------------------------------------------------------------- -->
+    <section class="card screen" id="screen-lobby" hidden>
+      <p class="readout">You are</p>
+      <div class="me">
+        <div class="me__figure" id="me-figure"></div>
+        <div class="me__text">
+          <p class="me__name display" id="me-name">—</p>
+          <p class="me__colour readout" id="me-colour">—</p>
+        </div>
+      </div>
+
+      <p class="readout swatch__label">Change suit</p>
+      <div class="swatches" id="swatches"></div>
+
+      <p class="note" id="lobby-note">Waiting for the host to start the game.</p>
+      <div class="crewlist" id="lobby-crew"></div>
+
+      <!-- Host only. The first person to join runs the game. -->
+      <div class="hostpanel" id="hostpanel" hidden>
+        <p class="readout">Mission setup</p>
+
+        <div class="toggles" id="setup-roles">
+          <button class="toggle" data-key="sensor" type="button">
+            <span class="toggle__name">Sensor Officer</span>
+            <span class="toggle__note">Scans one crewmate each night. Human, or not.</span>
+            <span class="toggle__state readout">On</span>
+          </button>
+          <button class="toggle" data-key="medic" type="button">
+            <span class="toggle__name">Medic</span>
+            <span class="toggle__note">Seals one set of quarters. Never the same two nights.</span>
+            <span class="toggle__state readout">On</span>
+          </button>
+          <button class="toggle" data-key="security" type="button">
+            <span class="toggle__name">Security Officer</span>
+            <span class="toggle__note">Voted out? Takes one crewmate with them.</span>
+            <span class="toggle__state readout">Off</span>
+          </button>
+          <button class="toggle" data-key="mimic" type="button">
+            <span class="toggle__name">Mimic</span>
+            <span class="toggle__note" id="mimic-note">A saboteur whose suit scans clean. Needs 7+ crew.</span>
+            <span class="toggle__state readout">Off</span>
+          </button>
+          <button class="toggle" data-key="spotlight" type="button">
+            <span class="toggle__name">Spotlight</span>
+            <span class="toggle__note">Each crewmate gets 20s to defend themselves first.</span>
+            <span class="toggle__state readout">Off</span>
+          </button>
+        </div>
+
+        <div class="lengths">
+          <span class="readout">Discussion</span>
+          <div class="segmented" id="setup-length">
+            <button type="button" data-ms="90000">90s</button>
+            <button type="button" data-ms="180000">3 min</button>
+            <button type="button" data-ms="300000">5 min</button>
+          </div>
+        </div>
+
+        <p class="readout hostpanel__brief" id="setup-brief">5 crew minimum</p>
+        <button class="btn btn--alert btn--block" id="start-btn" type="button" disabled>Start the game</button>
+      </div>
+    </section>
+
+    <!-- Role reveal ---------------------------------------------------------- -->
+    <section class="card screen screen--role" id="screen-role" hidden>
+      <p class="readout" id="role-eyebrow">Assignment</p>
+      <div class="role__head">
+        <div class="role__figure" id="role-figure"></div>
+        <div class="role__id">
+          <h2 class="display role__name" id="role-name">Crew</h2>
+          <p class="role__win readout" id="role-win"></p>
+        </div>
+      </div>
+      <p class="role__brief" id="role-brief"></p>
+
+      <div class="role__team" id="role-team" hidden>
+        <p class="readout">Also not human</p>
+        <div class="crewlist" id="role-teammates"></div>
+      </div>
+
+      <div class="role__log" id="role-log" hidden>
+        <p class="readout">Your scans</p>
+        <div id="role-scans"></div>
+      </div>
+
+      <button class="btn btn--block" id="role-close" type="button">Understood</button>
+    </section>
+
+    <!-- Night action --------------------------------------------------------- -->
+    <section class="card screen" id="screen-act" hidden>
+      <p class="readout" id="act-eyebrow">Your move</p>
+      <h2 class="display act__title" id="act-title">Choose</h2>
+      <p class="act__note" id="act-note"></p>
+      <div class="picker" id="act-picker"></div>
+      <p class="act__result" id="act-result" hidden></p>
+    </section>
+
+    <!-- Voting ---------------------------------------------------------------- -->
+    <section class="card screen" id="screen-vote" hidden>
+      <p class="readout">Voting</p>
+      <h2 class="display act__title">Who goes out?</h2>
+      <p class="act__note" id="vote-note">A strict majority ejects. No majority, nobody goes.</p>
+      <div class="picker" id="vote-picker"></div>
+      <button class="btn btn--ghost btn--block" id="vote-back" type="button" hidden>Back to the room</button>
+    </section>
+
+    <!-- Passive --------------------------------------------------------------- -->
+    <section class="card screen screen--quiet" id="screen-quiet" hidden>
+      <div class="quiet">
+        <div class="quiet__glyph" id="quiet-glyph" aria-hidden="true"></div>
+        <h2 class="display quiet__title" id="quiet-title">Eyes closed</h2>
+        <p class="quiet__note" id="quiet-note">The ship will tell you when to open them.</p>
+        <!-- You can vote whenever you like; the voting phase is only the time
+             set aside for people who have not decided yet. -->
+        <button class="btn btn--block" id="vote-early-btn" type="button" hidden>Vote now</button>
+      </div>
+    </section>
+
+    <!-- Game over -------------------------------------------------------------- -->
+    <section class="card screen" id="screen-over" hidden>
+      <p class="readout" id="over-eyebrow">Final report</p>
+      <h2 class="display over__title" id="over-title">—</h2>
+      <p class="over__line" id="over-line"></p>
+      <div class="crewlist" id="over-crew"></div>
+      <button class="btn btn--block" id="again-btn" type="button" hidden>Back to the lobby</button>
+    </section>
+
+  </main>
+
+  <p class="toast" id="toast" role="status" hidden></p>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/mayday/avatar.js"></script>
+  <script src="/mayday/play.js"></script>
+</body>
+</html>

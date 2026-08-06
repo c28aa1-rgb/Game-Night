@@ -83,11 +83,19 @@
   .landing > .shell { padding-bottom: 0; }
 
   .stage {
-    --ph: clamp(240px, 46vh, 460px);       /* phone height drives everything */
+    /* Bigger than the old fan could afford: only one is presented at a time. */
+    --ph: clamp(270px, 54vh, 520px);       /* phone height drives everything */
     --pw: calc(var(--ph) * 0.461);         /* 393 x 852, the real ratio */
     position: relative;
     flex: 1;
     overflow: hidden;
+    /*
+     * Deep enough that a phone turning on its own axis reads as a real object
+     * catching the light rather than a rectangle being squashed. Shorter than
+     * this and the turn looks like a horizontal scale.
+     */
+    perspective: 1200px;
+    perspective-origin: 50% 45%;
   }
 
   /* A pool of light under the phones, so they stand on something. */
@@ -103,52 +111,91 @@
     pointer-events: none;
   }
 
-  .phone {
+  /*
+   * A turntable.
+   *
+   * Four phones stand on the rim of one circle, a quarter turn apart, and the
+   * whole circle steps round: the one in the middle goes to the right, the one
+   * on the right goes behind and out of sight, the one on the left comes to the
+   * middle, and the one that was hidden arrives on the left. Nothing travels on
+   * its own — every phone is carried by the same rotation about the same point.
+   *
+   * The side phones read as steep trapezoids because they are very nearly
+   * edge-on: perspective is what keeps a sliver of each face visible from the
+   * camera's angle, which is exactly what makes it look like a solid object on
+   * a rotating stand rather than three flat cards.
+   */
+  .deck {
     position: absolute;
     left: 50%;
     top: 50%;
-    margin-top: calc(var(--ph) / -2);
     width: var(--pw);
     height: var(--ph);
-    translate: var(--tx) 0;
-    rotate: var(--tilt, 0deg);
-    scale: var(--sc, 1);
-    animation: phone-in 1050ms cubic-bezier(.16, .84, .3, 1) var(--delay, 0ms) both;
+    margin: calc(var(--ph) / -2) 0 0 calc(var(--pw) / -2);
+    transform-style: preserve-3d;
+    --loop: 13s;
   }
 
   /*
-   * Fanned around the centre rather than pinned to the window edges. The
-   * reference crops its outer phones because its frame is nearly square; in a
-   * wide band that same placement just leaves a few hundred pixels of gap
-   * either side of the middle phone. Overlapping keeps it one object.
+   * Every phone walks the same circle about the same point, and stops at four
+   * stations: front, right, behind, left.
+   *
+   * The side stations sit at 55°, not the 90° a rigid turntable would give
+   * them. Under perspective the near and far edges of a turned phone converge
+   * hard, so its projected width collapses much faster than cosine suggests —
+   * at 90° it is a hairline no matter how far out it stands, and even at 64° it
+   * measures 44px against the front phone's 224. At 55° there is an actual
+   * trapezoid of screen still facing the room, which is what the reference
+   * holds at the edges of frame.
    */
-  .phone--centre { --tx: -50%; --delay: 120ms; z-index: 2; }
-  .phone--left {
-    --tx: -132%; --tilt: -12deg; --sc: 0.94; --delay: 420ms; z-index: 1;
-    margin-top: calc(var(--ph) / -2 + 20px);
-  }
-  .phone--right {
-    --tx: 32%; --tilt: 12deg; --sc: 0.94; --delay: 520ms; z-index: 1;
-    margin-top: calc(var(--ph) / -2 + 20px);
+  .phone {
+    position: absolute;
+    inset: 0;
+    /* The one facing away is gone, rather than showing through in mirror. */
+    backface-visibility: hidden;
+    animation: orbit var(--loop) linear var(--delay) infinite both;
   }
 
   /*
-   * They arrive as one deck and fan apart: every phone starts stacked behind
-   * the middle one, so the outer two swing out rather than merely sliding up.
+   * Where each one starts. Hitster holds the front, Mayday waits on the left,
+   * Codenames on the right, and Draft Night is the one still out of sight.
    */
-  @keyframes phone-in {
-    from {
-      opacity: 0;
-      translate: -50% 90px;
-      rotate: 0deg;
-      scale: 0.88;
-    }
-    to {
-      opacity: 1;
-      translate: var(--tx) 0;
-      rotate: var(--tilt, 0deg);
-      scale: var(--sc, 1);
-    }
+  .phone--1 { --delay: 0s; }
+  .phone--2 { --delay: calc(var(--loop) * -0.75); }
+  .phone--3 { --delay: calc(var(--loop) * -0.25); }
+  .phone--4 { --delay: calc(var(--loop) * -0.5); }
+
+  /*
+   * Radius 1.3 phone-widths, so x = R·sinθ and z = R·(cosθ − 1). The
+   * mid-transition keyframes are on the circle too — without them the phones
+   * cut the corner in a straight line and the turn reads as a slide.
+   *
+   * The easing is declared per keyframe rather than once on the animation, and
+   * that is the whole difference between this reading as one turn and as two.
+   * A timing function applies to every keyframe *interval*, so an ease-in-out
+   * on the animation gets applied twice across a station-to-station move — once
+   * into the arc's midpoint and once out of it — and the phone visibly slows
+   * down halfway through its own turn. Here each move accelerates into its
+   * midpoint and decelerates out of it, which is a single continuous swing.
+   */
+  @keyframes orbit {
+    /* Front and centre. */
+    0%   { transform: translate3d(0, 0, 0) rotateY(0deg); animation-timing-function: linear; }
+    17%  { transform: translate3d(0, 0, 0) rotateY(0deg); animation-timing-function: cubic-bezier(.42, 0, 1, 1); }
+    21%  { transform: translate3d(60%, 0, calc(var(--pw) * -0.147)) rotateY(27.5deg); animation-timing-function: cubic-bezier(0, 0, .58, 1); }
+    /* Right. */
+    25%  { transform: translate3d(106.5%, 0, calc(var(--pw) * -0.554)) rotateY(55deg); animation-timing-function: linear; }
+    42%  { transform: translate3d(106.5%, 0, calc(var(--pw) * -0.554)) rotateY(55deg); animation-timing-function: cubic-bezier(.42, 0, 1, 1); }
+    46%  { transform: translate3d(115.3%, 0, calc(var(--pw) * -1.9)) rotateY(117.5deg); animation-timing-function: cubic-bezier(0, 0, .58, 1); }
+    /* Behind, and out of sight. */
+    50%  { transform: translate3d(0, 0, calc(var(--pw) * -2.6)) rotateY(180deg); animation-timing-function: linear; }
+    67%  { transform: translate3d(0, 0, calc(var(--pw) * -2.6)) rotateY(180deg); animation-timing-function: cubic-bezier(.42, 0, 1, 1); }
+    71%  { transform: translate3d(-115.3%, 0, calc(var(--pw) * -1.9)) rotateY(242.5deg); animation-timing-function: cubic-bezier(0, 0, .58, 1); }
+    /* Left. */
+    75%  { transform: translate3d(-106.5%, 0, calc(var(--pw) * -0.554)) rotateY(305deg); animation-timing-function: linear; }
+    92%  { transform: translate3d(-106.5%, 0, calc(var(--pw) * -0.554)) rotateY(305deg); animation-timing-function: cubic-bezier(.42, 0, 1, 1); }
+    96%  { transform: translate3d(-60%, 0, calc(var(--pw) * -0.147)) rotateY(332.5deg); animation-timing-function: cubic-bezier(0, 0, .58, 1); }
+    100% { transform: translate3d(0, 0, 0) rotateY(360deg); }
   }
 
   /* --- scroll cue --------------------------------------------------------- */
@@ -330,7 +377,7 @@
     text-align: center;
   }
 
-  /* --- screen 3 · Draft Night, on the clock ------------------------------ */
+  /* --- screen 4 · Draft Night, on the clock ------------------------------ */
 
   .scr--draft {
     background: #070A12;
@@ -408,16 +455,111 @@
   }
   .draft__bench i.set { background: #22304C; }
 
+  /* --- screen 3 · Mayday, the assignment --------------------------------- */
+
+  /*
+   * The moment the game turns: the phone that has just told you what you are.
+   * Emergency lighting, the suit you were given, and a word you cannot show
+   * anybody.
+   */
+  .scr--mayday {
+    background: #0A0D0F;
+    color: #C9D6DC;
+    font-family: Manrope, system-ui, sans-serif;
+    padding-top: 11%;
+    gap: 5%;
+  }
+
+  .may__bar {
+    display: flex;
+    align-items: center;
+    gap: 5%;
+    padding-bottom: 5%;
+    border-bottom: 1px solid #28323688;
+  }
+  .may__bar svg { width: 15%; height: auto; display: block; }
+  .may__who { display: flex; flex-direction: column; line-height: 1.15; }
+  .may__name { font-family: Rajdhani, system-ui, sans-serif; font-weight: 700; font-size: 0.92em; letter-spacing: 0.05em; }
+  .may__tap { font-family: "Chivo Mono", monospace; font-size: 0.48em; letter-spacing: 0.14em; text-transform: uppercase; color: #7C8A90; }
+  .may__clock { margin-left: auto; font-family: "Chivo Mono", monospace; font-size: 0.95em; color: #FFB020; }
+
+  .may__eyebrow { font-family: "Chivo Mono", monospace; font-size: 0.52em; letter-spacing: 0.2em; text-transform: uppercase; color: #7C8A90; }
+
+  .may__role {
+    display: flex;
+    align-items: center;
+    gap: 6%;
+  }
+  .may__role svg { width: 26%; height: auto; display: block; }
+  .may__title {
+    display: block;
+    font-family: Rajdhani, system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 1.85em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #FF3B1F;
+    line-height: 0.95;
+  }
+  .may__win { display: block; font-family: "Chivo Mono", monospace; font-size: 0.42em; line-height: 1.5; letter-spacing: 0.1em; text-transform: uppercase; color: #7C8A90; margin-top: 6%; }
+
+  .may__brief { font-size: 0.68em; line-height: 1.45; color: #C9D6DC; }
+
+  .may__team { margin-top: auto; padding-bottom: 4%; display: flex; flex-direction: column; gap: 4%; }
+  .may__mate {
+    display: flex;
+    align-items: center;
+    gap: 5%;
+    padding: 4% 5%;
+    border: 1px solid #28323688;
+    border-radius: 8px;
+    font-size: 0.66em;
+    font-weight: 600;
+  }
+  .may__mate svg { width: 13%; height: auto; display: block; }
+  .may__mate span:last-child {
+    margin-left: auto;
+    font-family: "Chivo Mono", monospace;
+    font-size: 0.72em;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #FF3B1F;
+  }
+
+  /*
+   * All three, on every width.
+   *
+   * They used to be dropped on a narrow screen because the fan was wider than
+   * the window. Rather than hide two thirds of the picture, the deck closes up:
+   * the phones sit smaller, overlap much further, and tilt harder — which is
+   * how the reference composes them anyway, as one fanned object rather than
+   * three separate mockups standing apart.
+   */
+  /*
+   * The carousel needs no special case for a narrow window: only one phone is
+   * ever being presented, and the two either side are turned so far out of
+   * plane that they take almost no width. It just wants a shallower camera, or
+   * the leaving phone swings past the edge of a small screen too fast.
+   */
   @media (max-width: 780px) {
-    /* Two phones would crowd the centre one off the screen. */
-    .phone--left, .phone--right { display: none; }
-    .stage { --ph: clamp(240px, 44vh, 380px); }
+    .stage { --ph: clamp(250px, 48vh, 420px); perspective: 1150px; }
+  }
+
+  @media (max-width: 430px) {
+    .stage { --ph: clamp(230px, 44vh, 360px); perspective: 950px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    /* Land everything where it belongs, with no flight and no nudging. */
-    .phone, .cue { animation: none; opacity: 1; }
-    .cue__arrow { animation: none; }
+    /*
+     * The turntable stops where it rests: one facing, one either side, one
+     * behind. The same picture, held still.
+     */
+    .cue, .cue__arrow { animation: none; }
+    .phone { animation: none; }
+    .phone--1 { transform: translate3d(0, 0, 0) rotateY(0deg); }
+    .phone--3 { transform: translate3d(106.5%, 0, calc(var(--pw) * -0.554)) rotateY(55deg); }
+    .phone--2 { transform: translate3d(-106.5%, 0, calc(var(--pw) * -0.554)) rotateY(305deg); }
+    .phone--4 { transform: translate3d(0, 0, calc(var(--pw) * -2.6)) rotateY(180deg); }
     html { scroll-behavior: auto; }
   }
 
@@ -604,8 +746,9 @@
     <!-- What each game looks like in your hand. Decorative — the games
          themselves are reached from the wall below. -->
     <div class="stage" aria-hidden="true">
-      <div class="phone phone--left">
-        <div class="phone__frame">
+      <div class="deck">
+      <div class="phone phone--3">
+          <div class="phone__frame">
           <div class="phone__screen scr scr--key">
             <div class="key__bar">
               <span class="key__role">Spymaster</span>
@@ -624,11 +767,11 @@
               <i class="k-b">ORBIT</i><i class="k-r">CANVAS</i><i class="k-n">THORN</i><i class="k-b">RIVET</i><i class="k-r">FABLE</i>
             </div>
           </div>
-        </div>
+          </div>
       </div>
 
-      <div class="phone phone--centre">
-        <div class="phone__frame">
+      <div class="phone phone--1">
+          <div class="phone__frame">
           <div class="phone__screen scr scr--place">
             <p class="place__eyebrow">Your turn</p>
             <p class="place__title">Where does<br />it go?</p>
@@ -642,10 +785,60 @@
             <p class="place__readout">Between 1997 and 2004</p>
             <p class="place__btn">Place it here</p>
           </div>
-        </div>
+          </div>
       </div>
 
-      <div class="phone phone--right">
+      <div class="phone phone--2">
+          <div class="phone__frame">
+          <div class="phone__screen scr scr--mayday">
+            <div class="may__bar">
+              <svg viewBox="0 0 120 148"><g fill="#26C6D6">
+                <path d="M44 52 34 56C25 59 21 65 21 75v27c0 10 4 16 13 16h10Z" opacity=".55"/>
+                <path d="M41 66C41 33 55 17 74 17s34 15 34 43v57c0 7-4 11-11 11H85c-5 0-8-3-9-8l-2-8c-1-4-5-4-6 0l-2 8c-1 5-4 8-9 8H48c-6 0-7-4-7-11Z"/>
+                <path d="M66 45c0-9 8-14 21-14s21 5 21 14v17c0 9-7 14-21 14s-21-5-21-14Z" opacity=".45"/>
+                <path d="M70 46c0-6.5 6.5-10.5 17-10.5S104 39.5 104 46v15c0 6.5-6 10.5-17 10.5S70 67.5 70 61Z" fill="#101A1F"/>
+              </g></svg>
+              <span class="may__who">
+                <span class="may__name">Marlowe</span>
+                <span class="may__tap">Tap for your role</span>
+              </span>
+              <span class="may__clock">18</span>
+            </div>
+
+            <p class="may__eyebrow">Assignment — keep it shut</p>
+
+            <div class="may__role">
+              <svg viewBox="0 0 120 148"><g fill="#26C6D6">
+                <path d="M44 52 34 56C25 59 21 65 21 75v27c0 10 4 16 13 16h10Z" opacity=".55"/>
+                <path d="M41 66C41 33 55 17 74 17s34 15 34 43v57c0 7-4 11-11 11H85c-5 0-8-3-9-8l-2-8c-1-4-5-4-6 0l-2 8c-1 5-4 8-9 8H48c-6 0-7-4-7-11Z"/>
+                <path d="M66 45c0-9 8-14 21-14s21 5 21 14v17c0 9-7 14-21 14s-21-5-21-14Z" opacity=".45"/>
+                <path d="M70 46c0-6.5 6.5-10.5 17-10.5S104 39.5 104 46v15c0 6.5-6 10.5-17 10.5S70 67.5 70 61Z" fill="#101A1F"/>
+              </g></svg>
+              <span>
+                <b class="may__title">Saboteur</b>
+                <span class="may__win">You win when saboteurs are no longer outnumbered</span>
+              </span>
+            </div>
+
+            <p class="may__brief">Each night, you and the others pick one crewmate to vent.</p>
+
+            <div class="may__team">
+              <p class="may__eyebrow">Also not human</p>
+              <span class="may__mate">
+                <svg viewBox="0 0 120 148"><g fill="#F2C31B">
+                  <path d="M44 52 34 56C25 59 21 65 21 75v27c0 10 4 16 13 16h10Z" opacity=".55"/>
+                  <path d="M41 66C41 33 55 17 74 17s34 15 34 43v57c0 7-4 11-11 11H85c-5 0-8-3-9-8l-2-8c-1-4-5-4-6 0l-2 8c-1 5-4 8-9 8H48c-6 0-7-4-7-11Z"/>
+                  <path d="M66 45c0-9 8-14 21-14s21 5 21 14v17c0 9-7 14-21 14s-21-5-21-14Z" opacity=".45"/>
+                  <path d="M70 46c0-6.5 6.5-10.5 17-10.5S104 39.5 104 46v15c0 6.5-6 10.5-17 10.5S70 67.5 70 61Z" fill="#101A1F"/>
+                </g></svg>
+                <span>Rivas</span>
+                <span>Saboteur</span>
+              </span>
+            </div>
+          </div>
+          </div>
+      </div>
+      <div class="phone phone--4">
         <div class="phone__frame">
           <div class="phone__screen scr scr--draft">
             <p class="draft__eyebrow">On the clock</p>
@@ -657,6 +850,7 @@
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
 
