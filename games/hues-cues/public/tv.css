@@ -296,12 +296,33 @@
 .out {
   border: 2px solid var(--tone);
   border-radius: 2px;
-  box-shadow: 0 0 0 1px rgba(8, 9, 11, 0.85), 0 0 12px -2px var(--tone);
-  animation: out-in 180ms var(--snap);
+  /*
+   * The dark hairline is inset rather than a spread ring outside the box. An
+   * outer ring makes the outline a pixel bigger than the square on every side,
+   * which reads as "not quite lined up" — and the zoom magnifies that.
+   */
+  box-shadow: inset 0 0 0 1px rgba(8, 9, 11, 0.85), 0 0 12px -2px var(--tone);
+  /*
+   * Fades in rather than scaling in. A 2% pop looks lively on most things, but
+   * on a box whose whole job is to sit exactly on one square it reads as the
+   * outline being the wrong size — and the zoom multiplies the impression.
+   */
+  animation: out-appear 160ms var(--ease);
 }
 
-/* Concurrent outlines on the same row nest instead of stacking exactly. */
-.out { margin: calc(var(--nest) * 2px); }
+@keyframes out-appear {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/*
+ * Concurrent outlines nest instead of stacking exactly. The inset is applied
+ * to left/top/width/height from tv.js rather than as a margin here: margin on
+ * an absolutely positioned box with an explicit size shifts it down and right
+ * instead of pulling all four edges in, which left every outline sitting a
+ * couple of pixels off its square — and two pixels magnified by the zoom is
+ * what reads as unfinished.
+ */
 
 .out--band { border-radius: 3px; }
 
@@ -584,6 +605,102 @@
 .goal b { color: var(--chalk); font-weight: 600; }
 
 /* --------------------------------------------------------------------------
+   The tally — what the turn was worth, at reading distance
+   -------------------------------------------------------------------------- */
+
+.tally {
+  position: fixed;
+  inset: 0;
+  z-index: 17;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  padding: 2rem;
+  background: rgba(8, 9, 11, 0.88);
+  backdrop-filter: blur(5px);
+  animation: handoff-in 320ms var(--ease);
+}
+
+.tally > .readout { margin: 0 0 1.4rem; }
+
+.tally__list {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  width: min(720px, 86vw);
+}
+
+.tally__list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1.1rem;
+  padding: 0.7rem 1.1rem;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--tone);
+  border-radius: var(--radius);
+  background: var(--bench);
+  /* Held back until its own beat in the count-down. */
+  opacity: 0;
+}
+
+.tally__list li.is-in { animation: tally-in 520ms var(--snap) both; }
+
+.tally__name {
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 2.1vw, 1.8rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tally__role {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--graphite-dim);
+}
+
+.tally__delta {
+  font-family: var(--font-mono);
+  font-size: clamp(1.4rem, 3vw, 2.6rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--live);
+}
+
+.tally__delta.is-zero { color: var(--graphite-dim); }
+
+.tally__total {
+  min-width: 3.5ch;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: clamp(1rem, 1.8vw, 1.5rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--graphite);
+}
+
+.tally__dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--tone);
+  box-shadow: 0 0 0 1px rgba(8, 9, 11, 0.9), 0 0 18px -3px var(--tone);
+}
+
+@keyframes tally-in {
+  0% { opacity: 0; transform: translateX(-26px) scale(0.96); }
+  70% { opacity: 1; transform: translateX(3px) scale(1); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* --------------------------------------------------------------------------
    The handoff — who is up next, and how long you have to look away
    -------------------------------------------------------------------------- */
 
@@ -856,4 +973,74 @@
   .lobby { grid-template-columns: 1fr; text-align: center; justify-items: center; }
   .lobby__players { justify-content: center; }
   .lobby__blurb { margin-inline: auto; }
+}
+
+/* --------------------------------------------------------------------------
+   The way out
+
+   Same machined chip as every other control on this screen, sitting in the
+   bottom rail's empty left column — the one the layout note above already
+   calls load-bearing. It stays a fixed element so the lobby and end-game
+   sheets, which cover the rail entirely, cannot take the exit away with them.
+   -------------------------------------------------------------------------- */
+
+.tv-back {
+  position: fixed;
+  z-index: 21;
+  left: clamp(1rem, 2.2vw, 2rem);
+  /* Short enough to sit inside the bottom rail's band rather than break its
+     top hairline — the rail is only 40px with the scores empty. */
+  bottom: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.7rem 0.35rem 0.55rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: rgba(8, 9, 11, 0.72);
+  color: var(--graphite-dim);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: border-color 160ms var(--ease), color 160ms var(--ease);
+}
+
+.tv-back:hover,
+.tv-back:focus-visible {
+  border-color: var(--graphite-dim);
+  color: var(--chalk);
+}
+
+.tv-back__arrow {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  line-height: 1;
+  transition: transform 160ms var(--snap);
+}
+
+.tv-back:hover .tv-back__arrow,
+.tv-back:focus-visible .tv-back__arrow { transform: translateX(-3px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tv-back__arrow { transition: none; }
+  .tv-back:hover .tv-back__arrow,
+  .tv-back:focus-visible .tv-back__arrow { transform: none; }
+}
+
+/* On a screen too narrow for the score rail to leave its left column alone,
+   the chip drops to the arrow and gets out of the way. The name is kept for
+   anything reading the page aloud. */
+@media (max-width: 760px) {
+  .tv-back__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .tv-back { padding: 0.35rem 0.5rem; }
 }

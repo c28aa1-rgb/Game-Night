@@ -129,6 +129,69 @@ window.HuesSFX = (() => {
     src.stop(now(at) + decay + 0.05);
   }
 
+  // -------------------------------------------------------------------------
+  // The lobby bed
+  //
+  // Something for the room to arrive to. A drone a long way down, a chord
+  // moving slowly above it, and single notes falling into the reverb — quiet
+  // enough to talk over, which is the entire specification for music playing
+  // while people are finding a seat and typing their name in.
+  // -------------------------------------------------------------------------
+
+  let bedNodes = [];
+  let bedTimers = [];
+  let bedGain = null;
+  let bedOn = false;
+
+  /** A2 minor-pentatonic. Nothing here can land on a sour interval. */
+  const BED_NOTES = [220.0, 261.63, 293.66, 349.23, 392.0, 440.0, 523.25, 587.33];
+  const BED_CHORDS = [[110, 164.81, 220], [98, 146.83, 196], [123.47, 164.81, 246.94], [87.31, 130.81, 174.61]];
+
+  function bedVoice(freq, at, hold, peak, type) {
+    const osc = ctx.createOscillator();
+    osc.type = type || 'sine';
+    osc.frequency.value = freq;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now(at));
+    gain.gain.exponentialRampToValueAtTime(peak, now(at) + 1.6);
+    gain.gain.setValueAtTime(peak, now(at) + hold);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now(at) + hold + 2.4);
+    osc.connect(gain);
+    gain.connect(bedGain);
+    const wet = ctx.createGain();
+    wet.gain.value = 0.9;
+    gain.connect(wet);
+    wet.connect(reverbSend);
+    osc.start(now(at));
+    osc.stop(now(at) + hold + 2.6);
+    bedNodes.push(osc);
+    return osc;
+  }
+
+  function bedStep(index) {
+    if (!bedOn || !ctx) return;
+    const chord = BED_CHORDS[index % BED_CHORDS.length];
+    for (const freq of chord) bedVoice(freq, 0, 6, 0.035, 'triangle');
+    // One note on top, landing somewhere different each time.
+    const note = BED_NOTES[Math.floor(Math.random() * BED_NOTES.length)];
+    bedVoice(note, 1.2 + Math.random() * 2, 0.4, 0.028, 'sine');
+    bedTimers.push(setTimeout(() => bedStep(index + 1), 8200));
+  }
+
+  function stopBed() {
+    bedOn = false;
+    bedTimers.forEach(clearTimeout);
+    bedTimers = [];
+    if (bedGain && ctx) {
+      bedGain.gain.cancelScheduledValues(ctx.currentTime);
+      bedGain.gain.setValueAtTime(bedGain.gain.value, ctx.currentTime);
+      bedGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.2);
+    }
+    const going = bedNodes;
+    bedNodes = [];
+    setTimeout(() => going.forEach((n) => { try { n.stop(); } catch { /* already done */ } }), 1400);
+  }
+
   return {
     get enabled() { return enabled; },
 
@@ -136,6 +199,25 @@ window.HuesSFX = (() => {
       enabled = !!on;
       localStorage.setItem(KEY, enabled ? 'on' : 'off');
       if (enabled) live();
+      else stopBed();
+    },
+
+    /**
+     * Music while the room fills up. Idempotent — the TV calls this on every
+     * state update and it only acts on a change.
+     */
+    lobby(on) {
+      if (on) {
+        if (bedOn || !live()) return;
+        bedOn = true;
+        bedGain = ctx.createGain();
+        bedGain.gain.value = 0.0001;
+        bedGain.connect(master);
+        bedGain.gain.exponentialRampToValueAtTime(0.9, ctx.currentTime + 2.5);
+        bedStep(0);
+      } else if (bedOn) {
+        stopBed();
+      }
     },
 
     /** Called from a real gesture, to get past the autoplay policy. */
@@ -183,6 +265,20 @@ window.HuesSFX = (() => {
       const freq = notes[Math.min(step || 0, notes.length - 1)];
       tone(freq, 0, 0.9, 0.13, 'sine', 0.85);
       tone(freq * 1.5, 0.02, 0.6, 0.045, 'sine', 0.6);
+    },
+
+    /**
+     * A player's points landing on the tally. Walks up the scale as the board
+     * counts down the standings, so a long tally builds instead of repeating.
+     */
+    tally(index, points) {
+      if (!live()) return;
+      const step = SCALE[Math.min(index || 0, SCALE.length - 1)];
+      transient(0, 0.05, step * 1.5, 5, 0.03);
+      tone(step, 0, 0.5, 0.13, 'triangle', 0.55);
+      // More points, more of the chord.
+      if (points >= 2) tone(step * 1.26, 0.05, 0.45, 0.07, 'sine', 0.5);
+      if (points >= 3) tone(step * 1.5, 0.1, 0.55, 0.07, 'sine', 0.6);
     },
 
     /** Somebody was inside the 3×3. One warm chord, no fanfare. */

@@ -65,6 +65,16 @@
   </footer>
 
   <!--
+    The tally. The scoring used to happen as small chips above the score rail,
+    which nobody across a room could read. This is the same information at the
+    size the moment deserves, one player at a time.
+  -->
+  <section class="tally" id="tally" hidden>
+    <p class="readout" id="tallyLabel">Points this turn</p>
+    <ul class="tally__list" id="tallyList"></ul>
+  </section>
+
+  <!--
     The handoff. Once the scoring has played out, the gap before the next turn
     is filled with who is up and how long they have, instead of a still board.
   -->
@@ -113,6 +123,17 @@
       <p class="readout over__foot">Start another from the host's phone, or up here</p>
     </div>
   </section>
+
+  <!--
+    The way out. Fixed rather than placed in the bottom rail's empty left
+    column, because the lobby and the final table are full-screen sheets that
+    would bury it — and a screen the room is looking at needs its exit in the
+    same corner all night, not only between games.
+  -->
+  <a class="tv-back" href="/">
+    <span class="tv-back__arrow" aria-hidden="true">←</span>
+    <span class="tv-back__label">Game night</span>
+  </a>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/hues-cues/grid-data.js"></script>

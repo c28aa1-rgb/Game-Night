@@ -169,3 +169,55 @@
   }
   .pick__go { display: none; }
 }
+
+/* --- the way back ------------------------------------------------------- */
+
+/*
+ * Every game here is reached from one menu, so every game owes a door back to
+ * it. Named for what it goes to rather than for the act of leaving — the
+ * masthead of that page says "Game night", and this is the same words.
+ *
+ * Set at eyebrow weight and pinned left, above a centred wordmark: it reads as
+ * a margin note, never as a third way in.
+ */
+.back {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0.8rem 0.4rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 180ms var(--ease), border-color 180ms var(--ease),
+    background 180ms var(--ease);
+}
+
+.back:hover,
+.back:focus-visible {
+  color: var(--accent);
+  border-color: var(--line-strong);
+  background: var(--surface);
+}
+
+/* The arrow travels the way the link does. */
+.back__arrow {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  line-height: 1;
+  transition: transform 180ms var(--spring);
+}
+
+.back:hover .back__arrow,
+.back:focus-visible .back__arrow { transform: translateX(-3px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .back__arrow { transition: none; }
+  .back:hover .back__arrow,
+  .back:focus-visible .back__arrow { transform: none; }
+}

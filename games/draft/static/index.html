@@ -123,7 +123,10 @@
       </div>
 
       <p class="stage-meta" id="stageMeta">8 names left on the wheel</p>
-      <button class="btn-ghost skip" id="skipBtn" type="button">Skip to results</button>
+      <div class="stage-outs">
+        <button class="btn-ghost skip" id="skipBtn" type="button">Skip to results</button>
+        <button class="btn-ghost skip" id="abandonBtn" type="button">Back to the roster</button>
+      </div>
     </div>
 
   </div>
@@ -155,6 +158,16 @@
 </section>
 
 <div class="wipe" id="wipe" aria-hidden="true"></div>
+
+<!-- The way out. Fixed opposite the sound toggle so the two corner controls
+     bookend every page of the draft — including the floor, where the wheel is
+     mid-spin and there is otherwise nowhere else to go. -->
+<!-- Named here as well as in the label, because the label is dropped on a
+     narrow screen and an arrow on its own says nothing out loud. -->
+<a class="back-toggle" href="/" aria-label="Back to Game night">
+  <span class="back-arrow" aria-hidden="true">←</span>
+  <span class="back-label">Game night</span>
+</a>
 
 <button class="sound-toggle" id="soundBtn" type="button" aria-pressed="true">
   <svg viewBox="0 0 24 24" aria-hidden="true">

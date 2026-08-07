@@ -1960,3 +1960,57 @@ body[data-team="red"] .overlay-headline,
 
   .card-inner { transition: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   THE WAY BACK
+
+   Every game on this site is dealt from one menu, and this is
+   the door to it. Amber is spoken for — it means a card is
+   live — so this reads in film white against muted, the same
+   register as the notation line underneath it.
+
+   Home only. From a board or a key the Exit and Leave buttons
+   already land here, and the door is where they land.
+   ═══════════════════════════════════════════════════════════ */
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 5px 11px 5px 9px;
+  border: 1px solid var(--bevel);
+  border-radius: var(--r);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 180ms var(--ease), border-color 180ms var(--ease),
+    background 180ms var(--ease);
+}
+
+.back:hover,
+.back:focus-visible {
+  color: var(--film);
+  border-color: var(--table-hi);
+  background: var(--table);
+}
+
+.back-arrow {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  line-height: 1;
+  letter-spacing: 0;
+  transition: transform 180ms var(--ease);
+}
+
+.back:hover .back-arrow,
+.back:focus-visible .back-arrow { transform: translateX(-3px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .back-arrow { transition: none; }
+  .back:hover .back-arrow,
+  .back:focus-visible .back-arrow { transform: none; }
+}

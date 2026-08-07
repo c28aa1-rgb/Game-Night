@@ -237,6 +237,14 @@
 .roster__tag.is-in { color: var(--live); }
 .roster li.is-off { opacity: 0.45; }
 
+/* Whoever is holding the board right now. */
+.roster li.is-active {
+  border-color: var(--tone);
+  background: var(--bench-hi);
+}
+
+.roster li.is-active .roster__tag { color: var(--tone); }
+
 /* --------------------------------------------------------------------------
    Host controls
    -------------------------------------------------------------------------- */
@@ -382,6 +390,18 @@
   margin-top: 0.2rem;
   font-size: 0.78rem;
   color: var(--graphite);
+}
+
+/* Somebody else's square. Submit is off until you move. */
+.preview.is-taken {
+  border-color: var(--fault);
+}
+
+.preview.is-taken .preview__coord { color: var(--fault); }
+
+.preview.is-taken .preview__chip {
+  opacity: 0.45;
+  filter: saturate(0.5);
 }
 
 .wheels {

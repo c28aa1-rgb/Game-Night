@@ -173,9 +173,26 @@
 
   let sendTimer = null;
 
+  /**
+   * A pin is already on this square, so it is out of bounds for the rest of
+   * the turn — your own first-clue pin included.
+   */
+  function occupied(row, col) {
+    if (!row || !col) return null;
+    const id = (state?.takenCells || {})[`${row}${col}`];
+    if (!id) return null;
+    return { self: id === priv?.playerId, name: playerById(id)?.name || 'Someone' };
+  }
+
+  function refreshSubmit() {
+    const ready = rowWheel.value && colWheel.value
+      && !occupied(rowWheel.value, colWheel.value);
+    el('submitBtn').disabled = !ready;
+  }
+
   function onWheelMove() {
     renderPreview();
-    el('submitBtn').disabled = !(rowWheel.value && colWheel.value);
+    refreshSubmit();
     // The room is watching this move. Coalesced to one message a frame's worth
     // of scrolling, rather than one per detent.
     clearTimeout(sendTimer);
@@ -196,12 +213,23 @@
     const coord = el('previewCoord');
 
     if (row && col) {
+      /*
+       * The swatch and the coordinate, never the board's name for it. The
+       * clue-giver has just said a word out loud; showing a guesser that they
+       * are hovering over "macaroni cheese" would hand them a match on a
+       * plate. The name arrives once the pin is in and it can no longer help.
+       */
       const cell = GRID.cell(row, col);
+      const holder = occupied(row, col);
       chip.style.background = cell.hex;
-      name.textContent = cell.name;
-      coord.textContent = `${row}${col} · ${cell.hex}`;
+      name.textContent = `${row}${col}`;
+      coord.textContent = holder
+        ? (holder.self ? 'Your first pin is here' : `${holder.name} is already here`)
+        : 'Submit to lock it in';
+      el('preview').classList.toggle('is-taken', !!holder);
       return;
     }
+    el('preview').classList.remove('is-taken');
 
     if (row || col) {
       const band = GRID.cells().filter((c) => (row ? c.row === row : c.col === col));
@@ -221,10 +249,11 @@
   // -------------------------------------------------------------------------
 
   function roster(host, rows) {
-    host.replaceChildren(...rows.map(({ player, tag, done }) => {
+    host.replaceChildren(...rows.map(({ player, tag, done, active }) => {
       const li = document.createElement('li');
       li.style.setProperty('--tone', player.colour.hex);
       li.classList.toggle('is-off', !player.connected);
+      li.classList.toggle('is-active', !!active);
       const dot = document.createElement('span');
       dot.className = 'who__dot';
       const name = document.createElement('span');
@@ -238,16 +267,41 @@
     }));
   }
 
-  /** Who still owes a pin. Used by both the clue-giver's screen and the waiters'. */
+  /**
+   * The running order for this cycle — who has gone, who is up, who is next.
+   * Shown in the order they actually play, which reverses on the second clue.
+   */
   function guessRows() {
+    const queue = state.guessQueue || [];
     const waiting = new Set(state.waitingOn || []);
-    return state.players
-      .filter((p) => p.id !== state.clueGiverId)
-      .map((player) => ({
+    const active = state.activeGuesserId;
+
+    const ordered = queue.length
+      ? queue.map((id) => playerById(id)).filter(Boolean)
+      : state.players.filter((p) => p.id !== state.clueGiverId);
+
+    /*
+     * Outside the guessing phase there is no queue and nobody owes a pin, so
+     * the "has everyone gone?" test would mark the whole room as done. On the
+     * clue screen that read as "Pinned" beside people who had not been given
+     * the chance yet.
+     */
+    if (state.phase !== 'guess') {
+      return ordered.map((player) => ({
         player,
-        done: !waiting.has(player.id),
-        tag: !player.connected ? 'Away' : waiting.has(player.id) ? 'Thinking' : 'Pinned',
+        done: false,
+        tag: player.connected ? 'Ready' : 'Away',
       }));
+    }
+
+    return ordered.map((player) => ({
+      player,
+      active: player.id === active,
+      done: !waiting.has(player.id),
+      tag: player.id === active ? 'Pinning now'
+        : !player.connected ? 'Away'
+          : waiting.has(player.id) ? 'Up next' : 'Pinned',
+    }));
   }
 
   // -------------------------------------------------------------------------
@@ -284,10 +338,6 @@
       done: false,
       tag: player.id === state.hostId ? 'Host' : player.colour.name,
     })));
-
-    renderSwatches(el('lobbySwatches'), state.palette, me()?.colour.id, (id) => {
-      socket.emit('pick_colour', { colour: id }, guard(el('gameError')));
-    });
 
     const isHost = priv?.isHost;
     el('hostSetup').hidden = !isHost;
@@ -350,7 +400,7 @@
   function renderGuess() {
     show('guessView');
     el('guessLabel').textContent =
-      `${state.clueGiverName}'s clue ${state.cycle} of 2 · place your pin`;
+      `Your turn · ${state.clueGiverName}'s clue ${state.cycle} of 2`;
 
     // Fresh wheels each cycle: the second clue is meant to be reconsidered, not
     // nudged from where the first one left off.
@@ -362,7 +412,7 @@
       buzz(18);
     }
     renderPreview();
-    el('submitBtn').disabled = !(rowWheel.value && colWheel.value);
+    refreshSubmit();
   }
 
   function renderReveal() {
@@ -443,10 +493,15 @@
           : waiting(state.cycle === 1 ? 'Second clue coming' : 'First clue coming',
             `${state.clueGiverName} is thinking`);
 
-      case 'guess':
-        if (isGiver) return waiting(`Clue ${state.cycle} of 2`, 'Everyone is pinning');
-        if (priv?.submitted) return waiting(`Clue ${state.cycle} of 2`, 'Pin is in');
-        return renderGuess();
+      case 'guess': {
+        // One phone is open at a time. Everybody else watches the board.
+        if (priv?.myTurn) return renderGuess();
+        const up = playerById(state.activeGuesserId);
+        const label = `Clue ${state.cycle} of 2`;
+        if (isGiver) return waiting(label, up ? `${up.name} is pinning` : 'Everyone has pinned');
+        if (priv?.submitted) return waiting(label, up ? `${up.name} is pinning` : 'Pin is in');
+        return waiting(label, up ? `${up.name} is pinning` : 'Waiting');
+      }
 
       case 'reveal':
         return renderReveal();
@@ -479,10 +534,14 @@
   });
 
   socket.on('private_state', (next) => {
+    // The board has come round to you. Worth a nudge — everyone else is
+    // watching the TV and waiting.
+    const handedTheBoard = next.myTurn && !priv?.myTurn;
     priv = next;
     el('joinView').hidden = true;
     el('gameView').hidden = false;
     if (state) route();
+    if (handedTheBoard) buzz([18, 60, 18]);
   });
 
   /**
@@ -548,6 +607,7 @@
 
   el('submitBtn').addEventListener('click', () => {
     if (!(rowWheel.value && colWheel.value)) return;
+    if (occupied(rowWheel.value, colWheel.value)) return;
     buzz(20);
     el('submitBtn').disabled = true;
     socket.emit('submit_guess', { row: rowWheel.value, col: colWheel.value }, (res) => {

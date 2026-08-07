@@ -169,9 +169,24 @@
 
     const fieldW = span(COLS);
     const fieldH = span(ROWS.length);
-    const scale = Math.min(fieldW / span(FOCUS_COLS), fieldH / span(FOCUS_ROWS));
-    const offsetX = (fieldW - span(FOCUS_COLS) * scale) / 2;
-    const offsetY = (fieldH - span(FOCUS_ROWS) * scale) / 2;
+    const raw = Math.min(fieldW / span(FOCUS_COLS), fieldH / span(FOCUS_ROWS));
+
+    /*
+     * Snap the zoom so one cell's pitch lands on a whole device pixel.
+     *
+     * At an arbitrary scale every cell boundary falls halfway across a pixel
+     * and the browser antialiases all 480 of them, which is what makes a
+     * zoomed board look faintly out of register even when the maths is exact.
+     * Rounding the scale costs a fraction of a percent of magnification and
+     * puts every edge back on a real pixel.
+     */
+    const dpr = window.devicePixelRatio || 1;
+    const pitch = (cell + GAP) * dpr;
+    const scale = Math.max(1, Math.round(raw * pitch) / pitch);
+
+    const snap = (v) => Math.round(v * dpr) / dpr;
+    const offsetX = snap((fieldW - span(FOCUS_COLS) * scale) / 2);
+    const offsetY = snap((fieldH - span(FOCUS_ROWS) * scale) / 2);
 
     $plate.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale}) `
       + `translate(${-xAt(win.c0)}px, ${-yAt(ROWS[win.r0])}px)`;
@@ -274,11 +289,16 @@
     return found;
   }
 
-  function place(node, row, col, rowSpan, colSpan) {
-    node.style.left = `${xAt(col)}px`;
-    node.style.top = `${yAt(row)}px`;
-    node.style.width = `${span(colSpan)}px`;
-    node.style.height = `${span(rowSpan)}px`;
+  /**
+   * Sit a box exactly on a block of cells, optionally pulled in by `inset` on
+   * all four sides so concentric outlines can nest without any of them drifting
+   * off the square they mean.
+   */
+  function place(node, row, col, rowSpan, colSpan, inset = 0) {
+    node.style.left = `${xAt(col) + inset}px`;
+    node.style.top = `${yAt(row) + inset}px`;
+    node.style.width = `${Math.max(2, span(colSpan) - inset * 2)}px`;
+    node.style.height = `${Math.max(2, span(rowSpan) - inset * 2)}px`;
   }
 
   function drawLayer() {
@@ -294,7 +314,9 @@
     for (const [key, el] of overlay) if (key.startsWith('reveal:')) next.set(key, el);
 
     // Crosshairs. One wheel set lights a whole band; both set collapse it to a
-    // single cell. Nested by index so two players on the same row both show.
+    // single cell. Only one player guesses at a time, so in practice there is
+    // one of these — the nesting inset is kept for the moment a stale draft
+    // from the previous player has not cleared yet.
     if (live) {
       (state.drafts || []).forEach((draft, index) => {
         const who = playerById(draft.playerId);
@@ -302,12 +324,12 @@
 
         const box = node(next, `out:${draft.playerId}`, 'out');
         box.style.setProperty('--tone', who.colour.hex);
-        box.style.setProperty('--nest', index);
         box.classList.toggle('out--band', !(draft.row && draft.col));
 
-        if (draft.row && draft.col) place(box, draft.row, draft.col, 1, 1);
-        else if (draft.row) place(box, draft.row, 1, 1, COLS);
-        else place(box, ROWS[0], draft.col, ROWS.length, 1);
+        const inset = index * 2;
+        if (draft.row && draft.col) place(box, draft.row, draft.col, 1, 1, inset);
+        else if (draft.row) place(box, draft.row, 1, 1, COLS, inset);
+        else place(box, ROWS[0], draft.col, ROWS.length, 1, inset);
       });
     }
 
@@ -327,12 +349,18 @@
        * thing a filled marker cannot show you. No initial — ten players, ten
        * unmistakable colours, so the letter was only ever covering the board.
        */
-      const size = Math.max(5, cell * (past ? 0.54 : 0.92));
-      const stroke = Math.max(1.5, size * (past ? 0.2 : 0.24));
+      /*
+       * Rounded to whole pixels, and to an even width so that centring it with
+       * translate(-50%) also lands on a whole pixel. Half-pixel geometry is
+       * invisible at 1× and obvious once the zoom multiplies it.
+       */
+      const size = Math.max(4, Math.round(cell * (past ? 0.54 : 0.92) / 2) * 2);
+      const stroke = Math.max(1, Math.round(size * (past ? 0.2 : 0.24)));
+      const middle = Math.round(cell / 2);
 
       pin.style.setProperty('--tone', who.colour.hex);
-      pin.style.left = `${xAt(guess.col) + cell / 2}px`;
-      pin.style.top = `${yAt(guess.row) + cell / 2}px`;
+      pin.style.left = `${xAt(guess.col) + middle}px`;
+      pin.style.top = `${yAt(guess.row) + middle}px`;
       pin.style.width = `${size}px`;
       pin.style.height = `${size}px`;
       pin.style.borderWidth = `${stroke}px`;
@@ -354,6 +382,7 @@
     revealTimers = [];
     forcedFocus = null;
     el('handoff').hidden = true;
+    el('tally').hidden = true;
     $field.classList.remove('is-revealing');
     $field.querySelectorAll('.is-target').forEach((n) => n.classList.remove('is-target'));
     for (const [key, el] of overlay) {
@@ -404,17 +433,19 @@
   function runReveal(reveal) {
     clearReveal();
     const target = reveal.target;
-    forcedFocus = windowAround(rowIndex(target.row), target.col);
-    applyFocus();
 
-    // 1 — the neighbourhood. Still not saying which of the nine it is.
+    // 1 — the neighbourhood, on the full board. The zoom waits: everybody
+    // should see where every pin landed before the screen narrows to the part
+    // that scored, or a wild guess vanishes before it can be laughed at.
     const zone = addRevealBox('zone', 'zone', target, 1);
     SFX.chime(0);
 
-    // 2 — the cell itself.
-    later(1900, () => {
+    // 2 — close in on it, and show the cell itself.
+    later(2400, () => {
       zone.remove();
       overlay.delete('reveal:zone');
+      forcedFocus = windowAround(rowIndex(target.row), target.col);
+      applyFocus();
       $field.classList.add('is-revealing');
       cellNode(target.row, target.col)?.classList.add('is-target');
       addRevealBox('bull', 'bull', target, 0);
@@ -428,8 +459,8 @@
         + `<span class="tag__name"></span><span class="tag__coord"></span>`;
       tag.querySelector('.tag__name').textContent = target.name;
       tag.querySelector('.tag__coord').textContent = `${target.row}${target.col}`;
-      tag.style.left = `${xAt(target.col) + cell / 2}px`;
-      tag.style.top = `${yAt(target.row) + cell * 2.2}px`;
+      tag.style.left = `${xAt(target.col) + Math.round(cell / 2)}px`;
+      tag.style.top = `${yAt(target.row) + Math.round(cell * 2.2)}px`;
       tag.style.width = 'auto';
       tag.style.height = 'auto';
     });
@@ -437,9 +468,9 @@
     // 3 — the rings, outward, each lighting the pins it just paid out to.
     // The square itself pays three; the ring touching it two; the next one.
     const RINGS = [
-      { at: 3000, radius: 0, distance: 0, value: 3 },
-      { at: 3900, radius: 1, distance: 1, value: 2 },
-      { at: 4800, radius: 2, distance: 2, value: 1 },
+      { at: 3800, radius: 0, distance: 0, value: 3 },
+      { at: 5000, radius: 1, distance: 1, value: 2 },
+      { at: 6200, radius: 2, distance: 2, value: 1 },
     ];
 
     for (const ring of RINGS) {
@@ -452,14 +483,76 @@
       });
     }
 
-    // 4 — the count-up, once the board has finished explaining itself.
-    later(5800, () => renderScores({ deltas: true }));
+    // 4 — pull back out to the whole board, then count the turn up.
+    const tallyEnd = runTally(reveal, 7600);
 
     // 5 — the handoff, if there is a turn to hand off to. A game that just
     // ended skips this entirely; the winner is the thing to look at.
     if (!reveal.final && reveal.nextClueGiverName) {
-      later(6600, () => startHandoff(reveal));
+      const at = Math.min(HANDOFF_AT, tallyEnd + 1200);
+      later(at, () => startHandoff(reveal, at));
     }
+  }
+
+  /** Latest the handoff may start, whatever the tally is doing. */
+  const HANDOFF_AT = 12000;
+  const TALLY_STEP = 620;
+
+  /**
+   * The turn's scoring, one player at a time and big enough to read from the
+   * sofa. Returns when the last row will have landed, so the handoff can be
+   * scheduled behind it.
+   */
+  function runTally(reveal, at) {
+    const gained = new Map();
+    for (const delta of reveal.deltas) gained.set(delta.playerId, delta.points);
+    if (reveal.clueGiverId) {
+      gained.set(reveal.clueGiverId,
+        (gained.get(reveal.clueGiverId) || 0) + reveal.clueGiverPoints);
+    }
+
+    // Everyone in the turn, best first. Zeroes included — "you got nothing"
+    // is information, and leaving people off the board reads as a bug.
+    const rows = (state.players || [])
+      .filter((p) => gained.has(p.id) || p.id === reveal.clueGiverId)
+      .map((p) => ({ player: p, points: gained.get(p.id) || 0 }))
+      .sort((a, b) => b.points - a.points);
+
+    later(at, () => {
+      // Back out to the whole board — the detail work is done.
+      forcedFocus = null;
+      applyFocus();
+
+      el('tallyList').replaceChildren(...rows.map(({ player, points }) => {
+        const li = document.createElement('li');
+        li.style.setProperty('--tone', player.colour.hex);
+        li.innerHTML = `<span class="tally__dot"></span>
+          <span><span class="tally__name"></span>${player.id === reveal.clueGiverId
+            ? ' <span class="tally__role">clue</span>' : ''}</span>
+          <span class="tally__delta${points ? '' : ' is-zero'}">+${points}</span>
+          <span class="tally__total"></span>`;
+        li.querySelector('.tally__name').textContent = player.name;
+        // The running total already includes this turn — the row shows where
+        // they end up, beside what got them there.
+        li.querySelector('.tally__total').textContent = player.score;
+        return li;
+      }));
+      el('tally').hidden = false;
+    });
+
+    rows.forEach((row, index) => {
+      later(at + 260 + index * TALLY_STEP, () => {
+        const li = el('tallyList').children[index];
+        if (!li) return;
+        li.classList.add('is-in');
+        SFX.tally(index, row.points);
+      });
+    });
+
+    // Sync the score rail underneath while the tally is up.
+    later(at + 260, () => renderScores({ deltas: true }));
+
+    return at + 260 + Math.max(0, rows.length - 1) * TALLY_STEP + 700;
   }
 
   /**
@@ -467,15 +560,16 @@
    * derived from the server's own hold rather than a number of its own, so the
    * two cannot drift apart and leave a "1" sitting on screen.
    */
-  function startHandoff(reveal) {
+  function startHandoff(reveal, at) {
     const card = el('handoff');
+    el('tally').hidden = true;
     el('handoffName').textContent = reveal.nextClueGiverName;
     const who = playerById(reveal.nextClueGiverId);
     card.style.setProperty('--tone', who?.colour.hex || 'var(--chalk)');
     card.hidden = false;
     SFX.click();
 
-    let left = Math.max(1, Math.round(((reveal.holdMs || 11000) - 6600) / 1000));
+    let left = Math.max(1, Math.round(((reveal.holdMs || 15000) - at) / 1000));
     el('handoffCount').textContent = left;
 
     const tick = () => {
@@ -741,6 +835,9 @@
     renderLobby();
     renderOver();
     drawLayer();
+    // Something to arrive to while the room fills up, and silence once the
+    // game is actually running.
+    SFX.lobby(state.phase === 'lobby');
   }
 
   socket.on('game_state', (next) => {
@@ -829,11 +926,18 @@
     SFX.setEnabled(!SFX.enabled);
     el('sound').setAttribute('aria-pressed', String(SFX.enabled));
     el('soundState').textContent = SFX.enabled ? 'On' : 'Off';
-    if (SFX.enabled) SFX.click();
+    if (SFX.enabled) {
+      SFX.click();
+      if (state?.phase === 'lobby') SFX.lobby(true);
+    }
   });
 
-  // Browsers will not make a sound until the page has been touched once.
-  const unlock = () => SFX.unlock();
+  // Browsers will not make a sound until the page has been touched once, so
+  // the lobby bed starts on that first touch rather than on load.
+  const unlock = () => {
+    SFX.unlock();
+    if (state?.phase === 'lobby') SFX.lobby(true);
+  };
   document.addEventListener('click', unlock, { once: true });
   document.addEventListener('keydown', unlock, { once: true });
 

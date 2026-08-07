@@ -96,3 +96,51 @@ body.start {
   .pick { grid-template-columns: auto 1fr; gap: 0.9rem; }
   .pick__go { display: none; }
 }
+
+/* --- the way back ------------------------------------------------------- */
+
+/*
+ * Instrument grey, and it stays that way. The two signal colours on this page
+ * mean something — klaxon is the game's own name, amber is a clock running —
+ * and a door out of the airlock is neither.
+ */
+.back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 160ms var(--ease), border-color 160ms var(--ease);
+}
+
+.back:hover,
+.back:focus-visible {
+  color: var(--frost);
+  border-color: var(--line-solid);
+}
+
+.back__arrow {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  line-height: 1;
+  letter-spacing: 0;
+  transition: transform 160ms var(--snap);
+}
+
+.back:hover .back__arrow,
+.back:focus-visible .back__arrow { transform: translateX(-3px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .back__arrow { transition: none; }
+  .back:hover .back__arrow,
+  .back:focus-visible .back__arrow { transform: none; }
+}

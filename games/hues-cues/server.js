@@ -58,14 +58,14 @@ const PORT = envInt('PORT', 3000);
  * the next clue-giver and counts down, so the gap between turns is something
  * to watch rather than dead air.
  */
-const REVEAL_MS = envInt('HUES_REVEAL_MS', 11000);
+const REVEAL_MS = envInt('HUES_REVEAL_MS', 15000);
 
 /**
  * The last reveal of the game gets out of the way fast. Nobody wants a
  * countdown to a turn that is never coming — the winner is the thing to look
  * at, so this is only long enough to finish scoring the final turn.
  */
-const WIN_REVEAL_MS = envInt('HUES_WIN_REVEAL_MS', 6800);
+const WIN_REVEAL_MS = envInt('HUES_WIN_REVEAL_MS', 11500);
 
 const MIN_PLAYERS = 2;
 /** Ten, because there are ten player colours and no two players may share. */
@@ -166,6 +166,51 @@ function validCell(row, col) {
   return ROWS.includes(row) && Number.isInteger(col) && col >= 1 && col <= COLS;
 }
 
+/**
+ * The pool targets are drawn from: everything except the outermost ring.
+ *
+ * A target on the very edge has its scoring rings cut off by the board, so the
+ * same two-square miss pays two points on one side and nothing on the other,
+ * depending only on which way you happened to be wrong. Guessers can still pin
+ * the edge — it is only ever ruled out as an answer.
+ */
+const INNER_CELLS = ALL_CELLS.filter((cell) => {
+  const r = rowIndex(cell.row);
+  return r > 0 && r < ROWS.length - 1 && cell.col > 1 && cell.col < COLS;
+});
+
+/**
+ * Four fresh coordinates for a clue-giver to choose between.
+ *
+ * Nothing already used this game, and no two of the four sharing a colour —
+ * the board has a handful of hexes that appear at more than one coordinate,
+ * and offering the same colour twice reads as a bug.
+ */
+function drawCandidates(room) {
+  const draw = (pool) => {
+    const picked = [];
+    const seen = new Set();
+    for (const cell of shuffle(pool)) {
+      if (seen.has(cell.hex)) continue;
+      seen.add(cell.hex);
+      picked.push(cell);
+      if (picked.length === CANDIDATES) break;
+    }
+    return picked;
+  };
+
+  const fresh = INNER_CELLS.filter((cell) =>
+    !room.usedTargets.has(`${cell.row}${cell.col}`) && !room.usedHexes.has(cell.hex));
+
+  const picked = draw(fresh);
+  if (picked.length === CANDIDATES) return picked;
+
+  // Nearly four hundred turns in. Wipe the history rather than deal short.
+  room.usedTargets = new Set();
+  room.usedHexes = new Set();
+  return draw(INNER_CELLS);
+}
+
 // ---------------------------------------------------------------------------
 // Rooms
 // ---------------------------------------------------------------------------
@@ -235,6 +280,19 @@ function createRoom() {
      * other's crosshairs slide around is the game working.
      */
     drafts: new Map(),
+    /**
+     * Whose turn it is to pin, in order, for the cycle currently open — and how
+     * far down that list we are. Guessing is one player at a time.
+     */
+    guessQueue: [],
+    guessAt: 0,
+    /**
+     * Targets already used this game, by coordinate and by colour, so the same
+     * square — or the same colour wearing a different coordinate — is never
+     * clued twice.
+     */
+    usedTargets: new Set(),
+    usedHexes: new Set(),
     /** Filled at the end of a turn, and the only place the target goes public. */
     reveal: null,
     /**
@@ -274,14 +332,54 @@ function guessers(room) {
   return room.players.filter((p) => p.connected && (!giver || p.id !== giver.id));
 }
 
-function allGuessersIn(room) {
-  const waiting = guessers(room);
-  // A cycle with nobody able to guess must not close itself — otherwise a room
-  // whose second player is reconnecting would race through both cycles and
-  // reveal a target nobody ever saw. The host advances that one by hand.
-  if (!waiting.length) return false;
+/**
+ * The order guessers pin in for a cycle.
+ *
+ * Join order after the first clue, reversed after the second. Going last is an
+ * advantage — you have watched everybody else commit — so the second cycle
+ * hands that advantage to whoever had to guess first with nothing to go on.
+ */
+function buildGuessQueue(room, cycle) {
+  const order = guessers(room).map((p) => p.id);
+  return cycle === 2 ? order.reverse() : order;
+}
+
+/**
+ * Who already has a pin on this square this turn, across both cycles.
+ *
+ * A square is spoken for once somebody is on it: two pins stacked on one cell
+ * cannot be told apart on the TV, and letting a late guesser copy an earlier
+ * one exactly is most of the reason turn order matters.
+ */
+function pinnedBy(room, row, col) {
+  for (const cycleGuesses of room.guesses) {
+    for (const [playerId, at] of cycleGuesses) {
+      if (at.row === row && at.col === col) return playerId;
+    }
+  }
+  return null;
+}
+
+/** Whose phone is open right now. Exactly one, or nobody. */
+function activeGuesserId(room) {
+  if (room.phase !== PHASES.GUESS) return null;
+  return room.guessQueue[room.guessAt] || null;
+}
+
+/**
+ * Park the queue on the next player who can actually act, skipping anybody who
+ * has already pinned or has left. Returns false when the queue is spent, which
+ * is what closes the cycle.
+ */
+function advanceGuess(room) {
   const submitted = room.guesses[room.cycle - 1];
-  return waiting.every((p) => submitted.has(p.id));
+  while (room.guessAt < room.guessQueue.length) {
+    const id = room.guessQueue[room.guessAt];
+    const player = findPlayer(room, id);
+    if (player && player.connected && !submitted.has(id)) return true;
+    room.guessAt += 1;
+  }
+  return false;
 }
 
 function clearRevealTimer(room) {
@@ -326,8 +424,25 @@ function publicState(room) {
     hostName: findPlayer(room, room.hostId)?.name || null,
     clueGiverId: giver?.id || null,
     clueGiverName: giver?.name || null,
-    /** Who still owes a pin this cycle, so every screen can say what it is waiting for. */
-    waitingOn: guessers(room).filter((p) => !submitted.has(p.id)).map((p) => p.id),
+    /** Whose turn it is to pin. One player, or nobody. */
+    activeGuesserId: activeGuesserId(room),
+    /** The whole running order for this cycle, so screens can show what's coming. */
+    guessQueue: room.guessQueue.slice(),
+    /**
+     * Who is still to come this cycle, in the order they will go — the first
+     * entry is whoever is up. Screens read this as both "waiting on" and
+     * "then".
+     */
+    waitingOn: room.phase === PHASES.GUESS
+      ? room.guessQueue.slice(room.guessAt).filter((id) => !submitted.has(id))
+      : [],
+    /**
+     * Squares already holding a pin this turn, as "K14" -> whose it is. Phones
+     * read this to grey out somebody else's square before it can be submitted,
+     * so the rule is visible rather than a rejection after the fact.
+     */
+    takenCells: Object.fromEntries(room.guesses.flatMap((cycleGuesses) =>
+      Array.from(cycleGuesses, ([playerId, at]) => [`${at.row}${at.col}`, playerId]))),
     /** Both cycles at once: cycle 1's pins stay on the board through cycle 2. */
     guesses: room.guesses.map((cycleGuesses, index) =>
       Array.from(cycleGuesses, ([playerId, at]) => ({ playerId, cycle: index + 1, ...at }))),
@@ -335,10 +450,6 @@ function publicState(room) {
     drafts: Array.from(room.drafts, ([playerId, at]) => ({ playerId, ...at })),
     reveal: room.reveal,
     winnerId: room.winnerId,
-    palette: PALETTE.map((colour) => ({
-      ...colour,
-      takenBy: room.players.find((p) => p.colour === colour.id)?.name || null,
-    })),
     players: room.players.map((p) => ({
       id: p.id,
       name: p.name,
@@ -360,6 +471,8 @@ function privateState(room, player) {
     playerId: player.id,
     isHost: player.id === room.hostId,
     isClueGiver: isGiver,
+    /** Your phone is open. Only one guesser's is, at a time. */
+    myTurn: activeGuesserId(room) === player.id,
     /** The four coordinates on offer. Only while they are still choosing. */
     candidates: isGiver && room.phase === PHASES.PICK_TARGET ? room.candidates : [],
     /**
@@ -408,10 +521,12 @@ function beginTurn(room) {
   room.phase = PHASES.PICK_TARGET;
   room.turnNo += 1;
   room.cycle = 0;
-  room.candidates = shuffle(ALL_CELLS).slice(0, CANDIDATES);
+  room.candidates = drawCandidates(room);
   room.target = null;
   room.guesses = [new Map(), new Map()];
   room.drafts = new Map();
+  room.guessQueue = [];
+  room.guessAt = 0;
   room.reveal = null;
   broadcast(room);
 }
@@ -567,6 +682,9 @@ function startGame(room) {
   room.turnNo = 0;
   room.suddenDeath = false;
   room.winnerId = null;
+  // A fresh game gets the whole board back.
+  room.usedTargets = new Set();
+  room.usedHexes = new Set();
   // Whoever is first in join order might have wandered off between joining and
   // the host pressing start.
   if (!room.players[0]?.connected) rotate(room);
@@ -583,9 +701,13 @@ function resetToLobby(room) {
   room.target = null;
   room.guesses = [new Map(), new Map()];
   room.drafts = new Map();
+  room.guessQueue = [];
+  room.guessAt = 0;
   room.reveal = null;
   room.suddenDeath = false;
   room.winnerId = null;
+  room.usedTargets = new Set();
+  room.usedHexes = new Set();
   for (const player of room.players) player.score = 0;
   reassignHost(room);
   broadcast(room);
@@ -817,24 +939,12 @@ nsp.on('connection', (socket) => {
     broadcast(target);
   });
 
-  socket.on('pick_colour', (payload = {}, ack) => {
-    const target = room();
-    if (!target) return ack?.({ error: 'That game has ended.' });
-    if (target.phase !== PHASES.LOBBY) return ack?.({ error: 'Colours are locked once the game starts.' });
-
-    const player = findBySocket(target, socket.id);
-    if (!player) return ack?.({ error: 'You are not in this game.' });
-
-    const colour = colourById(String(payload.colour || ''));
-    if (!colour) return ack?.({ error: 'That colour does not exist.' });
-
-    const holder = target.players.find((p) => p.colour === colour.id);
-    if (holder && holder.id !== player.id) return ack?.({ error: `${holder.name} has ${colour.name}.` });
-
-    player.colour = colour.id;
-    ack?.({ ok: true });
-    broadcast(target);
-  });
+  /*
+   * There is deliberately no colour-change event. Your colour is settled on
+   * the join form and never moves after that: it is the only thing naming a
+   * pin from across the room, so a swap mid-lobby would repaint pins people
+   * have already learned to read.
+   */
 
   // --- Host controls --------------------------------------------------------
 
@@ -873,8 +983,17 @@ nsp.on('connection', (socket) => {
     if (!target) return ack?.({ error: 'That game has ended.' });
     if (!canControl(target, ack)) return;
 
+    /*
+     * Skip whoever is up rather than closing the whole cycle. With one guesser
+     * at a time, "we are waiting too long" almost always means one person, and
+     * ending everybody else's turn to unstick them would be the wrong trade.
+     * Skipping the last of them closes the cycle anyway.
+     */
     if (target.phase === PHASES.GUESS) {
-      closeCycle(target);
+      target.drafts.delete(activeGuesserId(target));
+      target.guessAt += 1;
+      if (advanceGuess(target)) broadcast(target);
+      else closeCycle(target);
       return ack?.({ ok: true });
     }
     if (target.phase === PHASES.REVEAL) {
@@ -918,13 +1037,16 @@ nsp.on('connection', (socket) => {
     if (!chosen) return ack?.({ error: 'That is not one of your four.' });
 
     target.target = chosen;
+    // Spent, for the rest of the game — by square and by colour.
+    target.usedTargets.add(`${chosen.row}${chosen.col}`);
+    target.usedHexes.add(chosen.hex);
     target.phase = PHASES.CLUE;
     target.cycle = 0;
     ack?.({ ok: true });
     broadcast(target);
   });
 
-  /** The clue has been said out loud. Open every other phone. */
+  /** The clue has been said out loud. Open the first guesser's phone. */
   socket.on('open_guessing', (payload, ack) => {
     const target = room();
     if (!target) return ack?.({ error: 'That game has ended.' });
@@ -936,6 +1058,11 @@ nsp.on('connection', (socket) => {
     target.cycle = target.cycle === 0 ? 1 : 2;
     target.phase = PHASES.GUESS;
     target.drafts = new Map();
+    target.guessQueue = buildGuessQueue(target, target.cycle);
+    target.guessAt = 0;
+    // If nobody can guess the cycle stays open rather than racing to a reveal
+    // nobody saw; the host unsticks it.
+    advanceGuess(target);
     ack?.({ ok: true });
     broadcast(target);
   });
@@ -951,7 +1078,9 @@ nsp.on('connection', (socket) => {
     if (!target || target.phase !== PHASES.GUESS) return;
 
     const player = findBySocket(target, socket.id);
-    if (!player || player.id === clueGiver(target)?.id) return;
+    // Only the player actually up can move a crosshair. Everyone else's phone
+    // is closed, and the board must show one person thinking, not several.
+    if (!player || activeGuesserId(target) !== player.id) return;
     if (target.guesses[target.cycle - 1].has(player.id)) return;
 
     const row = ROWS.includes(payload.row) ? payload.row : null;
@@ -975,19 +1104,35 @@ nsp.on('connection', (socket) => {
     // Submitting locks the pin. Letting a second submit through would also let
     // a player move after watching where everybody else landed.
     if (target.guesses[target.cycle - 1].has(player.id)) return ack?.({ error: 'Your pin is already in.' });
+    if (activeGuesserId(target) !== player.id) return ack?.({ error: 'Not your turn yet.' });
 
     const row = String(payload.row || '');
     const col = Number(payload.col);
     if (!validCell(row, col)) return ack?.({ error: 'Pick a row and a column first.' });
 
+    /*
+     * One pin per square for the whole turn — your own first-clue pin included.
+     * An occupied square is occupied: two markers stacked on one cell cannot be
+     * told apart from across the room, so the board would be lying about where
+     * everybody is.
+     */
+    const holder = pinnedBy(target, row, col);
+    if (holder) {
+      const whose = holder === player.id
+        ? 'Your first pin is'
+        : `${findPlayer(target, holder)?.name || 'Someone'} is`;
+      return ack?.({ error: `${whose} on ${row}${col}.` });
+    }
+
     target.guesses[target.cycle - 1].set(player.id, { row, col });
     target.drafts.delete(player.id);
     ack?.({ ok: true });
 
-    // The last pin closes the cycle by itself. Nobody has to press anything,
-    // which matters when the room is looking at the TV rather than their hands.
-    if (allGuessersIn(target)) closeCycle(target);
-    else broadcast(target);
+    // Hand the board to the next player, or close the cycle if that was the
+    // last of them. Nobody has to press anything either way.
+    target.guessAt += 1;
+    if (advanceGuess(target)) broadcast(target);
+    else closeCycle(target);
   });
 
   // --- Teardown -------------------------------------------------------------
@@ -1013,13 +1158,15 @@ nsp.on('connection', (socket) => {
     }
 
     /*
-     * The room was waiting on the person who just left. Closing the cycle here
-     * rather than making the host notice is the difference between a game that
-     * pauses when somebody's phone dies and one that does not.
+     * The room was waiting on the person who just left. Moving the queue on
+     * here rather than making the host notice is the difference between a game
+     * that pauses when somebody's phone dies and one that does not.
      */
-    if (target.phase === PHASES.GUESS && allGuessersIn(target)) {
-      closeCycle(target);
-      return;
+    if (target.phase === PHASES.GUESS) {
+      if (!advanceGuess(target)) {
+        closeCycle(target);
+        return;
+      }
     }
 
     broadcast(target);

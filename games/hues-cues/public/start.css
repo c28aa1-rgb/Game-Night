@@ -91,3 +91,49 @@
   margin: 1.6rem 0 0;
   border-radius: 2px;
 }
+
+/* --- the way back ------------------------------------------------------- */
+
+/*
+ * Machined, not round: the shape rule in theme.css says 999px belongs to
+ * markers and nothing else, and this is chrome. Graphite until it is pointed
+ * at, like every other label on this page — it is a door, not an instrument.
+ */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.6rem;
+  padding: 0.35rem 0.7rem 0.35rem 0.55rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  color: var(--graphite);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 160ms var(--ease), border-color 160ms var(--ease);
+}
+
+.back:hover,
+.back:focus-visible {
+  color: var(--chalk);
+  border-color: var(--graphite-dim);
+}
+
+.back__arrow {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  line-height: 1;
+  transition: transform 160ms var(--snap);
+}
+
+.back:hover .back__arrow,
+.back:focus-visible .back__arrow { transform: translateX(-3px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .back__arrow { transition: none; }
+  .back:hover .back__arrow,
+  .back:focus-visible .back__arrow { transform: none; }
+}

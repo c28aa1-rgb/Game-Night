@@ -1583,3 +1583,70 @@
     text-align: center;
   }
 }
+
+/* --------------------------------------------------------------------------
+   The way out
+
+   A TV screen has no back button, no address bar and nobody sitting in front
+   of it — so leaving has to be a thing you can see from the sofa. It holds one
+   corner all night at the weight of a footnote, and comes up to full contrast
+   only when something is actually pointing at it.
+
+   Bottom left, opposite the room code: the corner the eye goes to last, which
+   is exactly right for the control nobody needs until they do.
+   -------------------------------------------------------------------------- */
+
+.tv-back {
+  position: fixed;
+  z-index: 25;
+  left: clamp(1rem, 2vw, 2rem);
+  bottom: clamp(0.9rem, 2vh, 1.6rem);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 34px;
+  padding: 0 0.9rem 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.55);
+  backdrop-filter: blur(8px);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  opacity: 0.62;
+  transition: opacity 180ms var(--ease), color 180ms var(--ease),
+    border-color 180ms var(--ease);
+}
+
+.tv-back:hover,
+.tv-back:focus-visible {
+  opacity: 1;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.tv-back__arrow {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  line-height: 1;
+  transition: transform 180ms var(--spring);
+}
+
+.tv-back:hover .tv-back__arrow,
+.tv-back:focus-visible .tv-back__arrow { transform: translateX(-3px); }
+
+/* The player strip runs to the foot of the stage; give the corner back. */
+.playerbar { padding-bottom: 2.6rem; }
+
+@media (min-width: 1100px) {
+  .playerbar { padding-bottom: 0; padding-left: 11rem; padding-right: 11rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tv-back__arrow { transition: none; }
+  .tv-back:hover .tv-back__arrow,
+  .tv-back:focus-visible .tv-back__arrow { transform: none; }
+}

@@ -211,6 +211,16 @@
 
   <div id="toast" class="toast" role="status" hidden></div>
 
+  <!-- The way out ---------------------------------------------------------- -->
+  <!-- Sits above every gate and the game itself, so the room is never stuck on
+       this screen — including when Spotify never connects and the gate is all
+       there is. Below the reveal overlays, which are seconds long and own the
+       screen while they run. -->
+  <a class="tv-back" href="/">
+    <span class="tv-back__arrow" aria-hidden="true">←</span>
+    <span>Game night</span>
+  </a>
+
   <script src="https://sdk.scdn.co/spotify-player.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/spotify-auth.js"></script>

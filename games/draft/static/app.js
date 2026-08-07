@@ -578,14 +578,28 @@ $('redraftBtn').addEventListener('click', () => {
   startDraft(state.roster.slice());
 });
 
-$('newRosterBtn').addEventListener('click', async () => {
+/*
+ * Back to the sheet, from the floor or from the final teams.
+ *
+ * Bumping the run number is what actually stops a draft: a spin in flight
+ * checks it before dealing its name, so abandoning mid-wheel cannot land one
+ * more pick on a bench nobody is looking at any more. The reveal card is
+ * cleared by hand for the same reason — mid-spin it is on screen, and the
+ * wipe would carry it over to the roster.
+ */
+async function backToRoster() {
   state.drafting = false;
   state.run++;
   SFX.stopTicks();
   SFX.click();
+  $('reveal').classList.remove('show');
+  $('reveal').style.background = '';
   await goto('roster');
   $('nameInput').focus();
-});
+}
+
+$('newRosterBtn').addEventListener('click', backToRoster);
+$('abandonBtn').addEventListener('click', backToRoster);
 
 $('copyBtn').addEventListener('click', async (e) => {
   const text = state.teams
