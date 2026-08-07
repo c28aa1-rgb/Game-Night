@@ -1,0 +1,93 @@
+/* Hues & Cues — the landing page. Which screen are you? */
+
+.start {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: clamp(1.5rem, 5vw, 3rem);
+}
+
+.start__inner { width: min(560px, 100%); }
+
+.start__head { margin-bottom: 2.4rem; }
+
+.start__mark {
+  margin: 0 0 0.6rem;
+  font-size: clamp(2.6rem, 12vw, 3.6rem);
+}
+
+.start__amp {
+  margin: 0 0.1em;
+  color: var(--graphite-dim);
+  font-weight: 500;
+}
+
+.start__tag {
+  margin: 0 0 0.7rem;
+  font-size: 1.05rem;
+  color: var(--chalk);
+}
+
+.start__meta { margin: 0; }
+
+.picks {
+  display: grid;
+  gap: 0.8rem;
+  margin-bottom: 2.4rem;
+}
+
+.pick {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 1.1rem;
+  padding: 1.2rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bench);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 180ms var(--ease), background 180ms var(--ease);
+}
+
+.pick:hover { border-color: var(--graphite-dim); background: var(--bench-hi); }
+
+.pick__icon { color: var(--graphite); }
+.pick__icon svg { display: block; width: 30px; height: auto; }
+
+.pick__body { display: grid; gap: 0.3rem; }
+
+.pick__name {
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+}
+
+.pick__note {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--graphite);
+}
+
+.pick__go {
+  align-self: center;
+  color: var(--graphite-dim);
+  font-size: 1.2rem;
+}
+
+.pick:hover .pick__go { color: var(--chalk); }
+
+.start__foot .readout { margin: 0 0 0.6rem; }
+
+.start__rules {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--graphite);
+}
+
+.start__strip {
+  height: 6px;
+  margin: 1.6rem 0 0;
+  border-radius: 2px;
+}

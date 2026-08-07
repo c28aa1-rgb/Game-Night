@@ -1,0 +1,494 @@
+/* ==========================================================================
+   HUES & CUES — the phone.
+
+   One thumb, one decision at a time. Only ever one panel on screen, and the
+   thing you act on is always the last element, in the thumb's reach.
+
+   The wheels are the piece that matters. They are real scroll containers with
+   snap points rather than a custom drag, so they carry the platform's own
+   momentum and rubber-banding — a hand-rolled picker never feels right, and
+   everyone has held the real thing.
+   ========================================================================== */
+
+.play {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem
+           max(1rem, env(safe-area-inset-bottom)) 1rem;
+  overscroll-behavior: none;
+}
+
+.view { display: grid; align-content: start; gap: 1.2rem; }
+
+/* --------------------------------------------------------------------------
+   Join
+   -------------------------------------------------------------------------- */
+
+.view--join { padding-top: 2rem; }
+
+.join__head { text-align: center; }
+
+.join__mark {
+  margin: 0 0 0.5rem;
+  font-size: clamp(2.2rem, 11vw, 3rem);
+}
+
+.start__amp { margin: 0 0.1em; color: var(--graphite-dim); font-weight: 500; }
+
+.join__head .readout { margin: 0; }
+
+.join__form { display: grid; gap: 1.1rem; }
+
+.field { display: grid; gap: 0.5rem; }
+.field .readout { margin: 0; }
+
+.input {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 1rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bench);
+  color: var(--chalk);
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.input::placeholder { color: var(--graphite-dim); }
+.input:focus { outline: none; border-color: var(--graphite); }
+
+.input--code {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 1.15rem;
+}
+
+/* --------------------------------------------------------------------------
+   The ten colours
+   -------------------------------------------------------------------------- */
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.45rem;
+}
+
+.swatch {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  background: var(--bench);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 150ms var(--ease), transform 120ms var(--ease);
+}
+
+.swatch__dot {
+  width: 62%;
+  height: 62%;
+  border-radius: 999px;
+  background: var(--tone);
+  box-shadow: 0 0 0 1px rgba(8, 9, 11, 0.9);
+  transition: transform 150ms var(--snap);
+}
+
+.swatch.is-on { border-color: var(--chalk); }
+.swatch.is-on .swatch__dot { transform: scale(1.1); }
+.swatch:active:not(:disabled) { transform: scale(0.94); }
+
+.swatch:disabled { cursor: not-allowed; }
+.swatch:disabled .swatch__dot { opacity: 0.24; }
+
+/* A taken colour gets struck through, so "gone" survives being colour-blind. */
+.swatch:disabled::after {
+  content: '';
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  height: 2px;
+  background: var(--graphite);
+  transform: rotate(-45deg);
+}
+
+/* --------------------------------------------------------------------------
+   Game shell
+   -------------------------------------------------------------------------- */
+
+.view--game { gap: 1rem; }
+
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.8rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.top__score {
+  font-size: 1.1rem;
+  color: var(--chalk);
+}
+
+.top__code { letter-spacing: 0.16em; }
+
+/*
+ * The clue-giver's held colour. Sticky, because it is the one thing on this
+ * screen that must never scroll away mid-turn.
+ */
+.held {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bench);
+}
+
+.held__swatch {
+  width: 54px;
+  height: 54px;
+  border-radius: var(--radius);
+  background: var(--tone, var(--bench-hi));
+  box-shadow: inset 0 0 0 1px rgba(8, 9, 11, 0.35);
+}
+
+.held__label { margin: 0; }
+
+.held__coord {
+  font-size: 1.5rem;
+  color: var(--chalk);
+}
+
+.panel-view { display: grid; align-content: start; gap: 1rem; }
+.panel-view > .readout { margin: 0; }
+
+.lead {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--graphite);
+}
+
+.lead--big {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--chalk);
+  text-transform: uppercase;
+  line-height: 1.05;
+}
+
+.note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--graphite-dim);
+}
+
+.note--bad { color: var(--fault); }
+
+/* --------------------------------------------------------------------------
+   Roster — who is in, who has pinned
+   -------------------------------------------------------------------------- */
+
+.roster {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roster li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bench);
+  font-weight: 600;
+}
+
+.roster--tight li { padding: 0.45rem 0.65rem; font-size: 0.9rem; }
+
+.roster li .who__dot { width: 14px; height: 14px; }
+
+.roster__tag {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--graphite-dim);
+}
+
+.roster__tag.is-in { color: var(--live); }
+.roster li.is-off { opacity: 0.45; }
+
+/* --------------------------------------------------------------------------
+   Host controls
+   -------------------------------------------------------------------------- */
+
+.host {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bench);
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) 54px;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.stepper .btn { padding: 0; font-size: 1.2rem; }
+
+.stepper__value {
+  text-align: center;
+  font-size: 1.6rem;
+  color: var(--chalk);
+}
+
+.hostbar {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--rule);
+}
+
+.hostbar .btn { flex: 1; }
+
+/* --------------------------------------------------------------------------
+   Clue-giver
+   -------------------------------------------------------------------------- */
+
+.candidates { display: grid; gap: 0.6rem; }
+
+.candidate {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bench);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 150ms var(--ease), transform 120ms var(--ease);
+}
+
+.candidate:active { transform: scale(0.99); }
+.candidate:hover { border-color: var(--graphite-dim); }
+
+.candidate__swatch {
+  width: 62px;
+  height: 62px;
+  border-radius: var(--radius);
+  background: var(--tone);
+  box-shadow: inset 0 0 0 1px rgba(8, 9, 11, 0.35);
+}
+
+.candidate__coord {
+  font-size: 1.3rem;
+  color: var(--chalk);
+}
+
+.candidate__go { color: var(--graphite-dim); font-size: 1.1rem; }
+
+/* The chosen colour, held on screen for the whole turn. */
+.target {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bench);
+}
+
+.target__swatch {
+  width: 76px;
+  height: 76px;
+  border-radius: var(--radius);
+  background: var(--tone, var(--bench-hi));
+  box-shadow: inset 0 0 0 1px rgba(8, 9, 11, 0.35);
+}
+
+.target__name { display: block; font-size: 1.25rem; line-height: 1.2; }
+
+.target__coord {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--graphite);
+}
+
+/* --------------------------------------------------------------------------
+   The wheels
+   -------------------------------------------------------------------------- */
+
+.panel-view--guess { gap: 0.8rem; }
+
+.preview {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bench);
+}
+
+/*
+ * The swatch you are about to commit to. When only one wheel is set this
+ * becomes the whole row or column as a gradient — which is genuinely useful,
+ * since it shows what you are choosing between.
+ */
+.preview__chip {
+  width: 58px;
+  height: 58px;
+  border-radius: var(--radius);
+  background: var(--bench-hi);
+  box-shadow: inset 0 0 0 1px rgba(8, 9, 11, 0.35);
+  transition: background 200ms var(--ease);
+}
+
+.preview__name { display: block; font-size: 1.05rem; line-height: 1.25; }
+
+.preview__coord {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--graphite);
+}
+
+.wheels {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 0.6rem;
+}
+
+.wheel {
+  --item: 44px;
+  position: relative;
+  height: calc(var(--item) * 5);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bench);
+  overflow: hidden;
+}
+
+/* The lit band the selection sits in. Behind the list, never over it. */
+.wheel__band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--item) * 2);
+  height: var(--item);
+  background: var(--bench-hi);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  z-index: 0;
+}
+
+.wheel__list {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  padding: calc(var(--item) * 2) 0;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.wheel__list::-webkit-scrollbar { display: none; }
+
+.wheel__item {
+  display: grid;
+  place-items: center;
+  height: var(--item);
+  scroll-snap-align: center;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  color: var(--graphite);
+  /* Set from play.js as the wheel moves — this is the iOS drum feel. */
+  opacity: var(--near, 1);
+  transform: scale(var(--scale, 1));
+  will-change: transform, opacity;
+}
+
+.wheel__item.is-on { color: var(--chalk); }
+.wheel__item--none { font-size: 1.1rem; color: var(--graphite-dim); }
+
+@media (min-height: 720px) {
+  .wheel { --item: 52px; }
+  .wheel__item { font-size: 1.6rem; }
+}
+
+/* --------------------------------------------------------------------------
+   Waiting and reveal
+   -------------------------------------------------------------------------- */
+
+.mine {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bench);
+}
+
+.mine__chip {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius);
+  background: var(--tone, var(--bench-hi));
+  box-shadow: inset 0 0 0 1px rgba(8, 9, 11, 0.35);
+}
+
+.mine__text { display: grid; gap: 0.2rem; }
+.mine__text .readout { margin: 0; }
+.mine__text b { font-size: 1rem; }
+
+.gained {
+  margin: 0;
+  font-size: 2.6rem;
+  line-height: 1;
+  color: var(--live);
+}
+
+.gained.is-zero { color: var(--graphite-dim); }
+
+.over__name {
+  margin: 0;
+  font-size: clamp(2rem, 12vw, 2.8rem);
+  color: var(--tone, var(--chalk));
+}

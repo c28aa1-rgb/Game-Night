@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#08090B" />
+  <title>Hues &amp; Cues — TV</title>
+  <link rel="icon" href="/hues-cues/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/hues-cues/theme.css" />
+  <link rel="stylesheet" href="/hues-cues/tv.css" />
+</head>
+<body class="tv">
+
+  <!-- The instrument's top rail. Everything here is a label, never the event. -->
+  <header class="rail rail--top">
+    <div class="rail__left">
+      <h1 class="mark display">Hues<span class="mark__amp">&amp;</span>Cues</h1>
+      <p class="readout" id="turnCount" hidden>Turn 1</p>
+    </div>
+
+    <div class="banner" id="banner">
+      <p class="banner__line readout" id="bannerLabel">Standing by</p>
+      <p class="banner__main display" id="bannerMain">Waiting for players</p>
+    </div>
+
+    <div class="rail__right">
+      <button class="tvbtn" id="newGame" type="button">New game</button>
+      <button class="sound" id="sound" type="button" aria-pressed="true">
+        <span class="readout">Sound</span>
+        <span class="sound__state" id="soundState">On</span>
+      </button>
+      <p class="readout">Room</p>
+      <p class="code coord" id="code">····</p>
+    </div>
+  </header>
+
+  <!-- The board sits in a recessed well. It is the only lit thing on screen. -->
+  <main class="stage">
+    <div class="board" id="board">
+      <div class="board__corner" aria-hidden="true"></div>
+      <div class="axis axis--cols" id="axisCols" aria-hidden="true"></div>
+      <div class="axis axis--rows" id="axisRows" aria-hidden="true"></div>
+
+      <!--
+        The plate is what moves. Field and overlay are transformed together as
+        one object, so a zoom can never slide the pins off the squares they
+        mean — they are riding in the same frame.
+      -->
+      <div class="well">
+        <div class="plate" id="plate">
+          <div class="field" id="field" role="img"
+               aria-label="The 480-colour board, sixteen rows A to P by thirty columns"></div>
+          <div class="layer" id="layer" aria-hidden="true"></div>
+          <!-- Coordinates drawn on the edge squares while zoomed. -->
+          <div class="layer" id="zoomLabels" aria-hidden="true"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="rail rail--bottom">
+    <span aria-hidden="true"></span>
+    <div class="scores" id="scores"></div>
+    <p class="goal readout">First to <b id="goal">20</b></p>
+  </footer>
+
+  <!--
+    The handoff. Once the scoring has played out, the gap before the next turn
+    is filled with who is up and how long they have, instead of a still board.
+  -->
+  <section class="handoff" id="handoff" hidden>
+    <p class="readout">Next to give clues</p>
+    <p class="handoff__name display" id="handoffName">—</p>
+    <p class="handoff__count figure" id="handoffCount">3</p>
+  </section>
+
+  <!-- Lobby ---------------------------------------------------------------- -->
+  <section class="sheet" id="lobbySheet">
+    <div class="sheet__inner lobby">
+      <div class="lobby__join">
+        <p class="readout">Join on your phone</p>
+        <div class="qr" id="qr"></div>
+        <p class="lobby__url" id="joinUrl">&nbsp;</p>
+        <p class="lobby__code coord" id="lobbyCode">····</p>
+      </div>
+
+      <div class="lobby__body">
+        <h2 class="display lobby__title">A game of<br />colour association</h2>
+        <p class="lobby__blurb">
+          One player gets a secret colour and says a single word out loud.
+          Everybody else pins the square they think it is. Then a second word,
+          and a second pin. Closest to the colour scores.
+        </p>
+        <p class="readout">In the game</p>
+        <ul class="lobby__players" id="lobbyPlayers">
+          <li class="lobby__empty">Nobody yet.</li>
+        </ul>
+        <p class="lobby__hint readout" id="lobbyHint">Waiting for two players</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- End game ------------------------------------------------------------- -->
+  <section class="sheet" id="overSheet" hidden>
+    <div class="sheet__inner over">
+      <p class="readout">Final</p>
+      <div class="over__winner">
+        <span class="pin over__pin" id="overPin">—</span>
+        <h2 class="display over__name" id="overName">—</h2>
+      </div>
+      <p class="over__score figure" id="overScore">0</p>
+      <ol class="over__table" id="overTable"></ol>
+      <p class="readout over__foot">Start another from the host's phone, or up here</p>
+    </div>
+  </section>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/hues-cues/grid-data.js"></script>
+  <script src="/hues-cues/sfx.js"></script>
+  <script src="/hues-cues/tv.js"></script>
+</body>
+</html>

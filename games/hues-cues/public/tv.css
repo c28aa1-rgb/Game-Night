@@ -1,0 +1,859 @@
+/* ==========================================================================
+   HUES & CUES — the TV.
+
+   One job: get out of the way of the board. The rails are thin, grey and
+   level; the board is the only lit thing on screen. Every saturated pixel
+   here arrived as data.
+
+   Geometry is set from tv.js, which measures the stage and writes --cell and
+   --gap. Doing that in script rather than with aspect-ratio is deliberate:
+   the overlay layer has to line up with the grid to the pixel at any screen
+   size, and the only way to guarantee that is for both to be laid out from
+   the same number.
+   ========================================================================== */
+
+.tv {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   Rails
+   -------------------------------------------------------------------------- */
+
+.rail {
+  display: grid;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.85rem clamp(1rem, 2.2vw, 2rem);
+}
+
+.rail--top {
+  grid-template-columns: 1fr auto 1fr;
+  border-bottom: 1px solid var(--rule);
+}
+
+/*
+ * Three columns so the players sit dead centre under the board rather than
+ * centred in the space the target score happens to leave them. The empty
+ * first column is load-bearing.
+ */
+.rail--bottom {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  border-top: 1px solid var(--rule);
+}
+
+.rail--bottom .goal { justify-self: end; }
+
+.rail__left { display: flex; align-items: baseline; gap: 1rem; }
+
+.rail__right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.mark {
+  margin: 0;
+  font-size: clamp(1rem, 1.5vw, 1.4rem);
+  letter-spacing: -0.03em;
+}
+
+/* The ampersand is the one piece of the wordmark that is allowed to be quiet. */
+.mark__amp {
+  margin: 0 0.12em;
+  color: var(--graphite-dim);
+  font-weight: 500;
+}
+
+.code {
+  margin: 0;
+  font-size: clamp(0.9rem, 1.3vw, 1.15rem);
+  color: var(--chalk);
+}
+
+.rail__right .readout { margin: 0; }
+
+.sound {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--graphite);
+  cursor: pointer;
+}
+
+.sound:hover { border-color: var(--graphite-dim); }
+
+.sound__state {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--live);
+}
+
+.sound[aria-pressed="false"] .sound__state { color: var(--graphite-dim); }
+
+/*
+ * Ending a game from the TV. Two taps, because one stray click on the remote
+ * should not be able to wipe a game in progress — the button says what it is
+ * about to do before it does it.
+ */
+.tvbtn {
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--graphite);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 160ms var(--ease), color 160ms var(--ease),
+    background 160ms var(--ease);
+}
+
+.tvbtn:hover { border-color: var(--graphite-dim); color: var(--chalk); }
+
+.tvbtn.is-armed {
+  border-color: var(--fault);
+  color: var(--fault);
+  background: rgba(232, 112, 95, 0.08);
+}
+
+/* --------------------------------------------------------------------------
+   The banner — whose turn, which cycle, who we are waiting on
+   -------------------------------------------------------------------------- */
+
+.banner {
+  text-align: center;
+  min-width: 0;
+}
+
+.banner__line { margin: 0 0 0.25rem; }
+
+.banner__main {
+  margin: 0;
+  font-size: clamp(1.1rem, 2vw, 1.9rem);
+  letter-spacing: -0.03em;
+}
+
+/* The clue-giver's name carries their colour, and nothing else in the rail does. */
+.banner__who { color: var(--tone, var(--chalk)); }
+
+/* A cycle counter that reads as two lamps rather than a number. */
+.cycles {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 0.55rem;
+  vertical-align: 0.12em;
+}
+
+.cycles i {
+  width: 16px;
+  height: 3px;
+  background: var(--rule);
+  border-radius: 2px;
+}
+
+.cycles i.is-on { background: var(--live); }
+
+/* --------------------------------------------------------------------------
+   The board
+   -------------------------------------------------------------------------- */
+
+.stage {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: clamp(0.6rem, 1.4vw, 1.4rem);
+}
+
+.board {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  gap: 6px;
+}
+
+.board__corner { grid-area: 1 / 1; }
+
+.axis {
+  display: grid;
+  color: var(--graphite-dim);
+  font-family: var(--font-mono);
+  font-size: clamp(7px, calc(var(--cell) * 0.44), 12px);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.axis--cols {
+  grid-area: 1 / 2;
+  grid-template-columns: repeat(30, var(--cell));
+  gap: 0 var(--gap);
+  align-items: end;
+}
+
+.axis--rows {
+  grid-area: 2 / 1;
+  grid-template-rows: repeat(16, var(--cell));
+  gap: var(--gap) 0;
+  justify-items: end;
+  padding-right: 2px;
+}
+
+.axis span {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.axis--rows span { justify-items: end; }
+
+/* The recessed well the board sits in. One hairline, no fill. */
+.well {
+  grid-area: 2 / 2;
+  position: relative;
+  padding: 3px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--void);
+  /* The zoom pushes most of the board outside these edges. */
+  overflow: hidden;
+}
+
+.plate {
+  position: relative;
+  transform-origin: 0 0;
+  transition: transform 760ms var(--snap);
+}
+
+.field {
+  display: grid;
+  grid-template-columns: repeat(30, var(--cell));
+  grid-auto-rows: var(--cell);
+  gap: var(--gap);
+}
+
+/*
+ * Flush, square, no radius — the field has to read as one continuous surface,
+ * and 480 rounded chips read as 480 objects.
+ */
+.cell {
+  width: var(--cell);
+  height: var(--cell);
+  transition: transform 260ms var(--snap), filter 260ms var(--ease);
+}
+
+/* Everything drawn on top of the board lives here, positioned from tv.js. */
+.layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/*
+ * While the board is zoomed the outer rulers are lying — they still read 1–30
+ * and A–P across the full width. Hide them, but keep them in the layout so the
+ * cell size does not change underneath the zoom, and put the real coordinates
+ * on the edge squares of whatever is on screen instead.
+ */
+.board.is-zoomed .axis { opacity: 0; }
+.axis { transition: opacity 300ms var(--ease); }
+
+.zoomlabel {
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--chalk);
+  text-shadow: 0 0 4px rgba(8, 9, 11, 0.95), 0 0 10px rgba(8, 9, 11, 0.9);
+  z-index: 8;
+  animation: out-in 260ms var(--ease);
+}
+
+.layer > * { position: absolute; }
+
+/* --------------------------------------------------------------------------
+   Live crosshairs
+
+   A player who has set one wheel and not the other lights a whole row or
+   column. Ten phones scrolling at once is the best thing that happens on this
+   screen, so these are drawn bright and thin rather than filled.
+   -------------------------------------------------------------------------- */
+
+.out {
+  border: 2px solid var(--tone);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(8, 9, 11, 0.85), 0 0 12px -2px var(--tone);
+  animation: out-in 180ms var(--snap);
+}
+
+/* Concurrent outlines on the same row nest instead of stacking exactly. */
+.out { margin: calc(var(--nest) * 2px); }
+
+.out--band { border-radius: 3px; }
+
+@keyframes out-in {
+  from { opacity: 0; transform: scale(1.02); }
+  to { opacity: 1; transform: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Pins
+
+   A ring rather than a disc, and never wider than the square it sits on.
+   Leaving the middle open means the marker names the player and shows the
+   colour they actually guessed at the same time — a filled dot hides the one
+   thing the room wants to see. Dark hairlines inside and out keep the ring
+   legible even when it lands on a swatch close to its own colour.
+   -------------------------------------------------------------------------- */
+
+.mark-pin {
+  border-radius: 999px;
+  /* Open centre: the swatch the player actually guessed shows through it. */
+  background: transparent;
+  border: 2px solid var(--tone);
+  box-shadow:
+    0 0 0 1px rgba(8, 9, 11, 0.92),
+    inset 0 0 0 1px rgba(8, 9, 11, 0.55);
+  animation: pin-land 320ms var(--snap);
+  z-index: 2;
+}
+
+@keyframes pin-land {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(2.1); }
+  60% { opacity: 1; transform: translate(-50%, -50%) scale(0.92); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+/*
+ * The first clue's pin, still on the board during the second. Hollow and
+ * smaller, so "they moved" and "they stayed" are both legible at a glance.
+ */
+.mark-pin--past {
+  opacity: 0.72;
+  z-index: 1;
+}
+
+/* --------------------------------------------------------------------------
+   The reveal
+   -------------------------------------------------------------------------- */
+
+/* Step 1 — the neighbourhood, before anyone is told which cell it is. */
+.zone {
+  border: 2px dashed var(--chalk);
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(8, 9, 11, 0.9), 0 0 24px -4px rgba(233, 236, 239, 0.6);
+  animation: zone-in 500ms var(--snap), zone-breathe 1.5s 500ms ease-in-out infinite;
+  z-index: 3;
+}
+
+@keyframes zone-in {
+  from { opacity: 0; transform: scale(1.35); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes zone-breathe {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+/* Step 2 — the cell itself. */
+.bull {
+  border: 3px solid var(--chalk);
+  border-radius: 2px;
+  box-shadow: 0 0 0 2px var(--void), 0 0 30px -2px rgba(233, 236, 239, 0.85);
+  animation: bull-in 420ms var(--snap);
+  z-index: 5;
+}
+
+@keyframes bull-in {
+  0% { opacity: 0; transform: scale(3.4) rotate(-6deg); }
+  70% { opacity: 1; transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+
+/* The target's name and coordinate, tethered to the cell. */
+.tag {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.55rem;
+  background: var(--void);
+  border: 1px solid var(--chalk);
+  border-radius: var(--radius);
+  white-space: nowrap;
+  /* Counter-scaled, so the label reads the same size zoomed in or out. */
+  transform: translate(-50%, 0) scale(var(--unzoom, 1));
+  animation: out-in 300ms var(--snap);
+  z-index: 6;
+}
+
+.tag__swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--tone);
+  box-shadow: 0 0 0 1px rgba(233, 236, 239, 0.4);
+}
+
+.tag__name {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.tag__coord {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--graphite);
+}
+
+/* Step 3 — the scoring rings, pulsing outward. */
+.ring {
+  border: 2px solid rgba(233, 236, 239, 0.75);
+  border-radius: 3px;
+  z-index: 4;
+  animation: ring-pulse 900ms var(--ease) forwards;
+}
+
+@keyframes ring-pulse {
+  0% { opacity: 0; transform: scale(0.9); }
+  30% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0.28; transform: scale(1); }
+}
+
+.ring__value {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  transform: translate(-100%, -100%);
+  padding: 0.1rem 0.3rem;
+  background: var(--chalk);
+  color: var(--void);
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+}
+
+/* A pin that just scored, lit as its ring passes over it. */
+.mark-pin.is-scoring {
+  animation: pin-score 620ms var(--snap);
+  z-index: 7;
+}
+
+@keyframes pin-score {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  40% { transform: translate(-50%, -50%) scale(1.5); }
+}
+
+/* Everything that is not the target dims while the target is on screen. */
+.field.is-revealing .cell { filter: saturate(0.42) brightness(0.55); }
+.field.is-revealing .cell.is-target { filter: none; transform: scale(1.9); z-index: 2; position: relative; }
+
+/* --------------------------------------------------------------------------
+   Score rail
+
+   One row, always. Chips step down through three sizes as the room fills, so
+   ten players fit without the rail ever wrapping or scrolling.
+   -------------------------------------------------------------------------- */
+
+.scores {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.chip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bench);
+  transition: border-color 200ms var(--ease), background 200ms var(--ease);
+}
+
+/* Whoever is giving the clue is the one chip wearing its own colour. */
+.chip.is-turn {
+  border-color: var(--tone);
+  background: var(--bench-hi);
+}
+
+.chip.is-off { opacity: 0.42; }
+
+.chip__pin {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--tone);
+  border: 2px solid var(--void);
+  box-shadow: 0 0 0 1.5px rgba(233, 236, 239, 0.55);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.chip__name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip__score {
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--chalk);
+}
+
+/* A tick beside the chip of anybody whose pin is already in. */
+.chip__in {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--live);
+}
+
+.scores[data-size="m"] .chip { padding: 0.35rem 0.55rem; gap: 0.4rem; }
+.scores[data-size="m"] .chip__pin { width: 22px; height: 22px; font-size: 0.64rem; }
+.scores[data-size="m"] .chip__name { font-size: 0.76rem; max-width: 6.5ch; }
+
+.scores[data-size="s"] .chip { padding: 0.3rem 0.4rem; gap: 0.32rem; }
+.scores[data-size="s"] .chip__pin { width: 20px; height: 20px; font-size: 0.58rem; }
+.scores[data-size="s"] .chip__name { display: none; }
+.scores[data-size="s"] .chip__score { font-size: 0.8rem; }
+
+/* The count-up from the reveal, popped above its own chip. */
+.delta {
+  position: absolute;
+  top: -0.4rem;
+  left: 50%;
+  transform: translate(-50%, 0);
+  padding: 0.1rem 0.32rem;
+  border-radius: 2px;
+  background: var(--chalk);
+  color: var(--void);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  animation: delta-pop 1.9s var(--snap) forwards;
+}
+
+.delta.is-zero { background: var(--rule); color: var(--graphite); }
+
+@keyframes delta-pop {
+  0% { opacity: 0; transform: translate(-50%, 0.5rem) scale(0.8); }
+  14% { opacity: 1; transform: translate(-50%, -0.9rem) scale(1); }
+  78% { opacity: 1; transform: translate(-50%, -0.9rem) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -1.5rem) scale(0.95); }
+}
+
+.goal { margin: 0; white-space: nowrap; }
+.goal b { color: var(--chalk); font-weight: 600; }
+
+/* --------------------------------------------------------------------------
+   The handoff — who is up next, and how long you have to look away
+   -------------------------------------------------------------------------- */
+
+.handoff {
+  position: fixed;
+  inset: 0;
+  z-index: 18;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  padding: 2rem;
+  /* Dark enough that a name in any of the ten colours carries across a room,
+     but still see-through — the pins stay readable underneath. */
+  background: rgba(8, 9, 11, 0.86);
+  backdrop-filter: blur(5px);
+  animation: handoff-in 300ms var(--ease);
+}
+
+.handoff .readout { margin: 0 0 0.7rem; }
+
+.handoff__name {
+  margin: 0;
+  font-size: clamp(2.4rem, 6.5vw, 5.5rem);
+  color: var(--tone, var(--chalk));
+  text-shadow: 0 0 60px rgba(8, 9, 11, 0.95), 0 2px 30px rgba(8, 9, 11, 0.8);
+  animation: handoff-name 520ms var(--snap);
+}
+
+.handoff__count {
+  margin: 1.4rem 0 0;
+  font-size: clamp(1.6rem, 3vw, 2.6rem);
+  color: var(--chalk);
+  animation: count-pulse 900ms var(--snap);
+}
+
+@keyframes handoff-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes handoff-name {
+  0% { opacity: 0; transform: translateY(16px) scale(0.94); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes count-pulse {
+  0% { opacity: 0; transform: scale(1.6); }
+  32% { opacity: 1; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* --------------------------------------------------------------------------
+   The win
+
+   The board does the celebrating. A wave of the winner's colour rolls out
+   from the centre of the grid, square by square, and the standings arrive
+   behind it.
+   -------------------------------------------------------------------------- */
+
+.field.is-celebrating .cell {
+  animation: win-wave 1000ms var(--ease) both;
+  animation-delay: var(--wave, 0ms);
+}
+
+@keyframes win-wave {
+  0% { box-shadow: inset 0 0 0 0 var(--win-tone); transform: scale(1); }
+  28% { box-shadow: inset 0 0 0 60px var(--win-tone); transform: scale(0.76); }
+  100% { box-shadow: inset 0 0 0 0 var(--win-tone); transform: scale(1); }
+}
+
+/* --------------------------------------------------------------------------
+   Full-screen sheets — lobby and end game
+   -------------------------------------------------------------------------- */
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: clamp(1.5rem, 4vw, 4rem);
+  background: rgba(8, 9, 11, 0.94);
+  backdrop-filter: blur(6px);
+}
+
+.sheet__inner { width: min(1180px, 100%); }
+
+/* Lobby -------------------------------------------------------------------- */
+
+.lobby {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: clamp(2rem, 5vw, 5rem);
+  align-items: center;
+}
+
+.lobby__join { text-align: center; }
+.lobby__join .readout { margin: 0 0 0.9rem; }
+
+.qr {
+  width: clamp(180px, 20vw, 280px);
+  height: clamp(180px, 20vw, 280px);
+  padding: 10px;
+  background: var(--chalk);
+  border-radius: var(--radius);
+}
+
+.qr img { display: block; width: 100%; height: 100%; }
+
+.lobby__url {
+  margin: 0.9rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--graphite-dim);
+  word-break: break-all;
+}
+
+.lobby__code {
+  margin: 0.5rem 0 0;
+  font-size: clamp(1.4rem, 2.4vw, 2rem);
+  letter-spacing: 0.16em;
+}
+
+.lobby__title {
+  margin: 0 0 1rem;
+  font-size: clamp(2rem, 4.4vw, 3.6rem);
+}
+
+.lobby__blurb {
+  margin: 0 0 2rem;
+  max-width: 46ch;
+  font-size: clamp(0.95rem, 1.2vw, 1.1rem);
+  line-height: 1.55;
+  color: var(--graphite);
+}
+
+.lobby__body > .readout { margin: 0 0 0.7rem; }
+
+.lobby__players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 1.4rem;
+  padding: 0;
+  list-style: none;
+  min-height: 42px;
+}
+
+.lobby__players li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bench);
+  font-weight: 600;
+  animation: out-in 260ms var(--snap);
+}
+
+.lobby__empty { color: var(--graphite-dim); font-weight: 400 !important; }
+
+.lobby__badge {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--graphite-dim);
+}
+
+.lobby__hint { margin: 0; }
+
+/* End game ----------------------------------------------------------------- */
+
+/* Lit from behind in whatever colour just won. */
+#overSheet {
+  background:
+    radial-gradient(58% 46% at 50% 40%, var(--win-glow, transparent), transparent 72%),
+    rgba(8, 9, 11, 0.95);
+  animation: handoff-in 420ms var(--ease);
+}
+
+.over { text-align: center; }
+.over > .readout { margin: 0 0 1.2rem; }
+
+.over__winner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  margin-bottom: 0.5rem;
+  animation: winner-pop 640ms var(--snap) both;
+}
+
+.over__pin { box-shadow: 0 0 0 1.5px rgba(233, 236, 239, 0.9), 0 0 46px -4px var(--tone); }
+
+.over__score { animation: rise 520ms 220ms var(--ease) both; }
+
+.over__table li { animation: rise 460ms var(--ease) both; }
+.over__table li:nth-child(1) { animation-delay: 340ms; }
+.over__table li:nth-child(2) { animation-delay: 410ms; }
+.over__table li:nth-child(3) { animation-delay: 480ms; }
+.over__table li:nth-child(4) { animation-delay: 550ms; }
+.over__table li:nth-child(5) { animation-delay: 620ms; }
+.over__table li:nth-child(n+6) { animation-delay: 690ms; }
+
+.over__foot { animation: rise 460ms 760ms var(--ease) both; }
+
+@keyframes winner-pop {
+  0% { opacity: 0; transform: scale(0.62); }
+  62% { opacity: 1; transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+.over__pin {
+  width: clamp(56px, 6vw, 84px);
+  height: clamp(56px, 6vw, 84px);
+  font-size: clamp(1.6rem, 2.6vw, 2.4rem);
+}
+
+.over__name {
+  margin: 0;
+  font-size: clamp(2.4rem, 6vw, 5rem);
+}
+
+.over__score {
+  margin: 0 0 2.4rem;
+  font-size: clamp(1.2rem, 2vw, 1.6rem);
+  color: var(--graphite);
+}
+
+.over__table {
+  display: grid;
+  gap: 0.4rem;
+  max-width: 460px;
+  margin: 0 auto 2rem;
+  padding: 0;
+  list-style: none;
+  counter-reset: place;
+}
+
+.over__table li {
+  display: grid;
+  grid-template-columns: 2ch auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bench);
+  text-align: left;
+  counter-increment: place;
+}
+
+.over__table li::before {
+  content: counter(place);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--graphite-dim);
+}
+
+.over__foot { margin: 0; }
+
+@media (max-width: 900px) {
+  .lobby { grid-template-columns: 1fr; text-align: center; justify-items: center; }
+  .lobby__players { justify-content: center; }
+  .lobby__blurb { margin-inline: auto; }
+}

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#08090B" />
+  <title>Hues &amp; Cues</title>
+  <link rel="icon" href="/hues-cues/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/hues-cues/theme.css" />
+  <link rel="stylesheet" href="/hues-cues/start.css" />
+</head>
+<body class="start">
+  <main class="start__inner">
+    <header class="start__head">
+      <h1 class="display start__mark">Hues<span class="start__amp">&amp;</span>Cues</h1>
+      <p class="start__tag">One word. Four hundred and eighty colours.</p>
+      <p class="readout start__meta">2–10 players · one TV · one phone each</p>
+    </header>
+
+    <nav class="picks">
+      <a class="pick" href="/hues-cues/tv">
+        <span class="pick__icon" aria-hidden="true">
+          <svg viewBox="0 0 32 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="1" y="1" width="30" height="20" rx="2" />
+            <path d="M11 23h10" stroke-linecap="round" />
+          </svg>
+        </span>
+        <span class="pick__body">
+          <span class="readout">Start here</span>
+          <span class="pick__name display">TV screen</span>
+          <span class="pick__note">
+            The board, all 480 squares of it, plus everybody's pins as they
+            land. Put it on the big screen — this is the only thing the room
+            looks at.
+          </span>
+        </span>
+        <span class="pick__go" aria-hidden="true">→</span>
+      </a>
+
+      <a class="pick" href="/hues-cues/play">
+        <span class="pick__icon" aria-hidden="true">
+          <svg viewBox="0 0 20 30" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="1" y="1" width="18" height="28" rx="3" />
+            <path d="M8 25h4" stroke-linecap="round" />
+          </svg>
+        </span>
+        <span class="pick__body">
+          <span class="readout">On your phone</span>
+          <span class="pick__name display">Player</span>
+          <span class="pick__note">
+            Join with the room code and pick your colour. Scanning the code on
+            the TV does the same thing.
+          </span>
+        </span>
+        <span class="pick__go" aria-hidden="true">→</span>
+      </a>
+    </nav>
+
+    <footer class="start__foot">
+      <p class="readout">How it goes</p>
+      <p class="start__rules">
+        On your turn the game deals you four secret colours. Keep one, then say
+        a single word out loud — no more. Everybody else pins the square they
+        think you mean. Say a second word, they pin again. Land on the exact
+        square for three points, one of the eight touching it for two, the ring
+        beyond that for one. You score for every player you led home.
+      </p>
+      <p class="start__strip" aria-hidden="true"></p>
+    </footer>
+  </main>
+
+  <script src="/hues-cues/grid-data.js"></script>
+  <script>
+    /*
+     * The board's own row K, laid end to end under the rules. The one piece of
+     * colour on this page, and it is the real data rather than a decoration.
+     */
+    (() => {
+      const strip = document.querySelector('.start__strip');
+      const row = window.HuesGrid.cells().filter((c) => c.row === 'K');
+      strip.style.background = `linear-gradient(90deg, ${row.map((c) => c.hex).join(',')})`;
+    })();
+  </script>
+</body>
+</html>

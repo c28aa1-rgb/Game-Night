@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#08090B" />
+  <title>Hues &amp; Cues</title>
+  <link rel="icon" href="/hues-cues/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/hues-cues/theme.css" />
+  <link rel="stylesheet" href="/hues-cues/play.css" />
+</head>
+<body class="play">
+
+  <!-- Join ----------------------------------------------------------------- -->
+  <section class="view view--join" id="joinView">
+    <header class="join__head">
+      <h1 class="display join__mark">Hues<span class="start__amp">&amp;</span>Cues</h1>
+      <p class="readout">Join the game</p>
+    </header>
+
+    <form class="join__form" id="joinForm" autocomplete="off">
+      <label class="field">
+        <span class="readout">Your name</span>
+        <input class="input" id="nameInput" type="text" maxlength="14"
+               placeholder="Sam" autocapitalize="words" required />
+      </label>
+
+      <label class="field">
+        <span class="readout">Room code</span>
+        <input class="input input--code coord" id="codeInput" type="text" maxlength="8"
+               placeholder="HUES" autocapitalize="characters" spellcheck="false" />
+      </label>
+
+      <div class="field">
+        <span class="readout">Your colour</span>
+        <div class="swatches" id="joinSwatches"></div>
+      </div>
+
+      <p class="note note--bad" id="joinError" hidden></p>
+      <button class="btn btn--go btn--block" type="submit" id="joinBtn">Join</button>
+    </form>
+  </section>
+
+  <!-- Game ----------------------------------------------------------------- -->
+  <section class="view view--game" id="gameView" hidden>
+
+    <header class="top">
+      <span class="who top__me" id="topMe">
+        <span class="who__dot"></span>
+        <span class="who__name">—</span>
+      </span>
+      <span class="top__score figure" id="topScore">0</span>
+      <span class="readout top__code" id="topCode">····</span>
+    </header>
+
+    <!--
+      The clue-giver's own colour, held above every panel for the whole turn.
+      Once the room starts talking it is easy to lose track of which of the
+      four you kept, and there is nowhere else to check.
+
+      The swatch and the coordinate only. The board's name for the colour is
+      deliberately withheld from the person giving the clue — handing them
+      "muted blue" is handing them the clue, and the whole game is that they
+      have to find their own word for what they are looking at.
+    -->
+    <div class="held" id="held" hidden>
+      <span class="held__swatch" id="heldSwatch"></span>
+      <span class="readout held__label">Your colour</span>
+      <span class="coord held__coord" id="heldCoord">—</span>
+    </div>
+
+    <!-- Lobby -->
+    <div class="panel-view" id="lobbyView" hidden>
+      <p class="readout">In the game</p>
+      <ul class="roster" id="lobbyRoster"></ul>
+
+      <div class="field">
+        <span class="readout">Change your colour</span>
+        <div class="swatches" id="lobbySwatches"></div>
+      </div>
+
+      <div class="host" id="hostSetup" hidden>
+        <label class="field">
+          <span class="readout">Play to</span>
+          <div class="stepper">
+            <button class="btn btn--small" type="button" id="goalDown" aria-label="Lower the target">−</button>
+            <span class="stepper__value figure" id="goalValue">20</span>
+            <button class="btn btn--small" type="button" id="goalUp" aria-label="Raise the target">+</button>
+          </div>
+        </label>
+        <button class="btn btn--go btn--block" type="button" id="startBtn" disabled>Start game</button>
+      </div>
+
+      <p class="note" id="lobbyNote">Waiting for the host to start.</p>
+    </div>
+
+    <!-- Clue-giver: choosing one of four -->
+    <div class="panel-view" id="pickView" hidden>
+      <p class="readout">Your turn · pick one to clue</p>
+      <p class="lead">Nobody else can see these. Find your own word for it.</p>
+      <div class="candidates" id="candidates"></div>
+    </div>
+
+    <!-- Clue-giver: about to speak -->
+    <div class="panel-view" id="clueView" hidden>
+      <p class="readout" id="clueLabel">First clue</p>
+      <p class="lead" id="clueLead">Say one word out loud. Then open the board.</p>
+      <ul class="roster roster--tight" id="clueRoster"></ul>
+      <button class="btn btn--go btn--block" type="button" id="openBtn">Start guessing</button>
+    </div>
+
+    <!-- Guesser: the wheels -->
+    <div class="panel-view panel-view--guess" id="guessView" hidden>
+      <p class="readout" id="guessLabel">Place your pin</p>
+
+      <div class="preview" id="preview">
+        <span class="preview__chip" id="previewChip"></span>
+        <span class="preview__text">
+          <b class="preview__name" id="previewName">Spin both wheels</b>
+          <span class="coord preview__coord" id="previewCoord">—</span>
+        </span>
+      </div>
+
+      <div class="wheels">
+        <div class="wheel" id="rowWheel" data-axis="row">
+          <div class="wheel__band" aria-hidden="true"></div>
+          <div class="wheel__list" id="rowList"></div>
+        </div>
+        <div class="wheel" id="colWheel" data-axis="col">
+          <div class="wheel__band" aria-hidden="true"></div>
+          <div class="wheel__list" id="colList"></div>
+        </div>
+      </div>
+
+      <button class="btn btn--go btn--block" type="button" id="submitBtn" disabled>Submit</button>
+    </div>
+
+    <!-- Waiting -->
+    <div class="panel-view" id="waitView" hidden>
+      <p class="readout" id="waitLabel">Standing by</p>
+      <p class="lead lead--big" id="waitLead">Waiting</p>
+      <div class="mine" id="mine" hidden>
+        <span class="mine__chip" id="mineChip"></span>
+        <span class="mine__text">
+          <span class="readout">Your pin</span>
+          <b class="coord" id="mineCoord">—</b>
+        </span>
+      </div>
+      <ul class="roster roster--tight" id="waitRoster"></ul>
+    </div>
+
+    <!-- Reveal -->
+    <div class="panel-view" id="revealView" hidden>
+      <p class="readout">The colour was</p>
+      <div class="target">
+        <span class="target__swatch" id="revealSwatch"></span>
+        <span class="target__text">
+          <b class="target__name" id="revealName">—</b>
+          <span class="coord target__coord" id="revealCoord">—</span>
+        </span>
+      </div>
+      <p class="gained figure" id="revealGained">+0</p>
+      <p class="lead" id="revealLead">&nbsp;</p>
+      <ul class="roster roster--tight" id="revealRoster"></ul>
+    </div>
+
+    <!-- Over -->
+    <div class="panel-view" id="overView" hidden>
+      <p class="readout">Final</p>
+      <p class="display over__name" id="overWinner">—</p>
+      <ul class="roster roster--tight" id="overRoster"></ul>
+    </div>
+
+    <!-- Host controls, always within reach -->
+    <footer class="hostbar" id="hostBar" hidden>
+      <button class="btn btn--ghost btn--small" type="button" id="skipBtn">Skip ahead</button>
+      <button class="btn btn--ghost btn--small" type="button" id="resetBtn">New game</button>
+    </footer>
+
+    <p class="note note--bad" id="gameError" hidden></p>
+  </section>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/hues-cues/grid-data.js"></script>
+  <script src="/hues-cues/play.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!--
+    The game in one mark: a fragment of the board with one cell called out.
+    Nine swatches lifted from the real grid, and the chalk ring that says
+    "this one". Legible at 16px because the ring is the only round thing.
+  -->
+  <rect width="32" height="32" rx="6" fill="#08090B"/>
+  <g>
+    <rect x="5"  y="5"  width="7" height="7" fill="#F03225"/>
+    <rect x="12.5" y="5"  width="7" height="7" fill="#FF7A00"/>
+    <rect x="20" y="5"  width="7" height="7" fill="#FFD11A"/>
+    <rect x="5"  y="12.5" width="7" height="7" fill="#D24BFF"/>
+    <rect x="12.5" y="12.5" width="7" height="7" fill="#A3E635"/>
+    <rect x="20" y="12.5" width="7" height="7" fill="#16C464"/>
+    <rect x="5"  y="20" width="7" height="7" fill="#33A1FF"/>
+    <rect x="12.5" y="20" width="7" height="7" fill="#7A5CFF"/>
+    <rect x="20" y="20" width="7" height="7" fill="#00D5D0"/>
+  </g>
+  <circle cx="16" cy="16" r="5.4" fill="none" stroke="#08090B" stroke-width="3.4"/>
+  <circle cx="16" cy="16" r="5.4" fill="none" stroke="#E9ECEF" stroke-width="1.8"/>
+</svg>
