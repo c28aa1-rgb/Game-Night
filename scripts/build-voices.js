@@ -1,5 +1,5 @@
 /**
- * Renders the crew dialogue for Mayday's opening cinematic.
+ * Renders the crew dialogue for Mafia's opening cinematic.
  *
  *   node scripts/build-voices.js
  *
@@ -15,7 +15,7 @@
  * possible — the opening happens before anyone has a role, so no line here
  * needs to say a name.
  *
- * Output lands in games/mayday/public/vox/ along with a manifest the cinematic
+ * Output lands in games/mafia/public/vox/ along with a manifest the cinematic
  * reads, so the edit's timing lives in data rather than being hardcoded twice.
  */
 
@@ -25,7 +25,7 @@ const { spawnSync } = require('child_process');
 const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
 const ffmpeg = require('ffmpeg-static');
 
-const OUT = path.join(__dirname, '..', 'games', 'mayday', 'public', 'vox');
+const OUT = path.join(__dirname, '..', 'games', 'mafia', 'public', 'vox');
 const TMP = path.join(OUT, '.tmp');
 
 /**
@@ -63,9 +63,9 @@ const SCRIPT = [
     text: "It's open from the inside. There's no fault, there's a" },
 
   { beat: 'loss', who: 'captain', rate: '+20%', pitch: '+8Hz',
-    text: 'Seal four. Seal four! Comms, get the mayday out.' },
+    text: 'Seal four. Seal four! Comms, get the mafia out.' },
   { beat: 'loss', who: 'comms', rate: '+22%', pitch: '+12Hz',
-    text: 'Mayday, mayday, mayday. This is survey vessel Kestrel, eleven months out. Reactor breach and casualties. Any vessel, any vessel' },
+    text: 'Mafia, mafia, mafia. This is survey vessel Kestrel, eleven months out. Reactor breach and casualties. Any vessel, any vessel' },
   { beat: 'loss', who: 'captain', rate: '-6%', pitch: '-6Hz',
     text: "It won't transmit. The array's gone." },
 

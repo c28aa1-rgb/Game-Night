@@ -9,7 +9,6 @@
 
 require('dotenv').config();
 
-const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -71,6 +70,7 @@ const SETS_PATH = path.join(__dirname, 'sets.json');
 // — see lib/host.js. Everything below registers onto them exactly as it did
 // when this file stood alone.
 const { app, server, io } = require('../../lib/host');
+const joinCodes = require('../../lib/join');
 
 /** Where this game's pages live on the site. */
 const BASE = require('../registry').find((game) => game.id === 'hitster').basePath;
@@ -238,14 +238,32 @@ const PHASES = {
   GAME_OVER: 'game_over',
 };
 
+/*
+ * Codes are checked against the whole site, not just this game's rooms. Every
+ * QR on the site now encodes /j/CODE and is forwarded on the code alone, so two
+ * games holding the same four letters at once would send half a room to the
+ * wrong game — and the vocabularies genuinely collide: TONE and GOLD are in
+ * Hues & Cues' list too. See lib/join.js.
+ */
 function newCode() {
-  const free = CODE_WORDS.filter((word) => !rooms.has(word));
+  const free = CODE_WORDS.filter((word) => !rooms.has(word) && joinCodes.isFree(word));
   if (free.length) return free[Math.floor(Math.random() * free.length)];
   let code;
   do {
     code = Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random() * 24)]).join('');
-  } while (rooms.has(code));
+  } while (rooms.has(code) || !joinCodes.isFree(code));
   return code;
+}
+
+/**
+ * Take a room out of play and give its code back to the site, so a later game
+ * can be handed those four letters again. Every path that ends a room goes
+ * through here rather than calling rooms.delete directly — a code still
+ * claimed by a room that no longer exists is a code nobody can ever reuse.
+ */
+function dropRoom(code) {
+  rooms.delete(code);
+  joinCodes.release(code);
 }
 
 function createRoom() {
@@ -263,14 +281,31 @@ function createRoom() {
     currentCard: null,
     /** Who is placing right now — normally the current player, or a successful stealer. */
     placerId: null,
+    /**
+     * The songs this game was dealt from, snapshotted at start. Kept separate
+     * from the deck so a cycle can be rebuilt from the real pool rather than
+     * from whatever happens to be lying in the discard pile, and so switching
+     * sets mid-game cannot change what a running game is drawing from.
+     */
+    pool: [],
     deck: [],
     deckIndex: 0,
-    /** Wrong guesses land here and get reshuffled in once the deck runs dry. */
+    /** Wrong guesses land here, and only come back once the pool is exhausted. */
     discardPile: [],
     /**
+     * Song ids already dealt in the current pass through the pool. This is what
+     * enforces "every song plays once before any song plays twice" — the deck
+     * order alone cannot, because cards re-enter the deck mid-pass (a skipped
+     * song goes back on the bottom) and a card lost to a failed steal returns
+     * to circulation from a timeline.
+     */
+    dealtIds: new Set(),
+    /**
      * Set while a steal is in progress. Server-side this also holds the full
-     * multiple-choice options and which index is correct; publicState()
-     * strips that down to just who's attempting before it goes over the wire.
+     * multiple-choice options and which indices are correct — indices plural,
+     * because a record billed to two artists has a right answer for each of
+     * them; publicState() strips that down to just who's attempting before it
+     * goes over the wire.
      */
     stealClaim: null,
     /** Player ids that already burned their steal on this turn. */
@@ -295,6 +330,7 @@ function createRoom() {
     createdAt: Date.now(),
   };
   rooms.set(code, room);
+  joinCodes.claim(code, 'hitster', `${BASE}/play`);
   return room;
 }
 
@@ -354,8 +390,11 @@ function publicState(room) {
     sets: activeSetSummary(),
     playbackFailed: room.playbackFailed,
     winner: room.winner,
-    // Includes the discard pile, since those cards are still coming back.
-    cardsLeft: Math.max(0, room.deck.length - room.deckIndex) + room.discardPile.length,
+    // Includes the discard pile, since those cards are still coming back. The
+    // filter matters: a card can sit in the deck behind the cursor and still be
+    // spent, so counting raw deck slots would overstate what is genuinely left.
+    cardsLeft: room.deck.slice(room.deckIndex).filter((song) => !room.dealtIds.has(song.id)).length
+      + room.discardPile.length,
     lastReveal: room.lastReveal,
     players: room.players.map((p) => ({
       id: p.id,
@@ -380,6 +419,15 @@ function toTv(room, event, payload) {
 // Game flow
 // ---------------------------------------------------------------------------
 
+/**
+ * Fisher-Yates, Durstenfeld's in-place form, and the bounds are the part worth
+ * being sure about: `j` is drawn from [0, i] INCLUSIVE, which is what makes all
+ * n! orderings equally likely. Drawing from [0, i) instead — the classic
+ * off-by-one — quietly forbids an element from staying put and biases the
+ * result. Stopping at i > 0 is not a bug: the last swap would be out[0] with
+ * itself. Everything downstream now leans on this being a genuinely uniform
+ * shuffle, since it is the only thing deciding song order within a pass.
+ */
 function shuffle(items) {
   const out = items.slice();
   for (let i = out.length - 1; i > 0; i--) {
@@ -390,16 +438,111 @@ function shuffle(items) {
 }
 
 /**
+ * Two classes of separator, because they are not equally trustworthy.
+ *
+ * GUEST is unambiguous. "feat.", "ft.", "featuring" and a lower-case " x "
+ * exist for no other purpose than marking a guest on somebody else's record —
+ * no act is called "Drake ft. Rihanna". Whenever one of these appears, both
+ * sides are genuinely separate acts.
+ *
+ * JOINT is not. An ampersand between two names is a coin flip: "Elton John &
+ * Kiki Dee" is two solo artists on a duet, but "Hall & Oates", "Simon &
+ * Garfunkel", "Sam & Dave", "Dan + Shay", "Eric B. & Rakim" and "Macklemore &
+ * Ryan Lewis" are single acts whose name happens to contain one. Nobody has
+ * ever been billed as "Oates". Splitting those puts a non-existent artist on
+ * screen as an option — worse than not splitting at all, because the string the
+ * player is actually looking for is then nowhere on the board.
+ *
+ * Deliberately absent from both: ', ', ' and ' and '/'. In the real catalogue
+ * those only ever turn up inside one act's name — "Earth, Wind & Fire",
+ * "Tones and I", "AC/DC".
+ *
+ * The case classes are hand-written rather than an /i flag on purpose: ' x ' is
+ * a collaboration marker only in lower case, and matching ' X ' would tear
+ * "Malcolm X Something" in half.
+ */
+const GUEST_SEPARATOR = /\s+(?:x|[Ff]eaturing|[Ff]eat\.?|[Ff]t\.?)\s+/;
+const JOINT_SEPARATOR = /\s+[&+]\s+/;
+
+/**
+ * Split a billing into the acts a player could reasonably be expected to name.
+ * The point is the steal quiz: a record with two artists has two right answers,
+ * and marking one of them wrong is the bit that felt unfair in playtesting.
+ *
+ * Conservative by design, and the conservatism is asymmetric on purpose. Not
+ * splitting a real collaboration costs a little leniency — the full billing is
+ * still the answer, and it is also what is printed on the card, so the question
+ * behaves exactly as it always did. Splitting a band name shows the room an
+ * artist who does not exist and hides the one they are hunting for. So a split
+ * only stands where the evidence is good.
+ *
+ * Two guards rule out the band names an ampersand hides:
+ *   · a piece that is a single word — "Hall", "Oates", "Dan", "Shay", "Rakim".
+ *     A real co-headliner almost always has a forename and a surname or a
+ *     multi-word stage name, and a bare word after an ampersand is nearly
+ *     always the second half of one act's name. This guard applies only to the
+ *     ambiguous separators; "Drake ft. Rihanna" is two single words and still
+ *     obviously two artists.
+ *   · a leading "The" after the first slot — "& The Vandellas", "& The Furious
+ *     Five", "+ The Machine". That is a backing band, never a co-headliner.
+ * Plus a comma anywhere, which means the name is itself a list: "Earth, Wind".
+ */
+function splitArtists(artist) {
+  const whole = String(artist || '').trim();
+  if (!whole) return [];
+
+  // Guests first, so "Calvin Harris & Rag'n'Bone Man feat. Somebody" resolves
+  // the unambiguous marker before the ambiguous one is considered.
+  const guests = whole.split(GUEST_SEPARATOR).map((part) => part.trim());
+  const parts = guests.length > 1 ? guests : whole.split(JOINT_SEPARATOR).map((part) => part.trim());
+  if (parts.length < 2) return [whole];
+
+  // Only the ambiguous split has to clear the single-word bar.
+  const needsTwoWords = guests.length < 2;
+
+  const standalone = parts.every((part, index) => {
+    if (part.length < 2) return false;
+    if (part.includes(',')) return false;
+    if (index > 0 && /^the\b/i.test(part)) return false;
+    if (needsTwoWords && !/\s/.test(part)) return false;
+    return true;
+  });
+
+  return standalone ? [...new Set(parts)] : [whole];
+}
+
+/**
  * Six options for a steal question: the real answer plus distinct decoys
  * drawn from the whole catalog. Decoys are just text — they don't need a
  * Spotify match — so the full songPool gives plenty of variety even for a
- * small active set. Returns the shuffled options and where the answer landed,
- * so the caller can keep that index secret and only ship the text to the client.
+ * small active set. Returns the shuffled options and where the answers landed,
+ * so the caller can keep those secret and only ship the text to the client.
+ *
+ * `correct` may be several values, for a record credited to more than one
+ * artist: each is offered separately and any of them counts. `correctIndex`
+ * stays on the return for the single-answer callers (titles) that only ever
+ * have one.
  */
-function buildChoices(correctValue, pool, count = 6) {
-  const decoys = shuffle([...new Set(pool)].filter((value) => value !== correctValue)).slice(0, count - 1);
-  const options = shuffle([correctValue, ...decoys]);
-  return { options, correctIndex: options.indexOf(correctValue) };
+function buildChoices(correct, pool, count = 6) {
+  // Cap the answers so at least half the board is still wrong — a question
+  // where four of six options score is not a question.
+  const answers = [...new Set((Array.isArray(correct) ? correct : [correct]).filter(Boolean))]
+    .slice(0, Math.max(1, count - 3));
+  const decoys = shuffle([...new Set(pool)].filter((value) => !answers.includes(value)))
+    .slice(0, count - answers.length);
+  /*
+   * One shuffle over the combined list, rather than dropping the answers in
+   * afterwards: appending them and shuffling only the decoys would leave the
+   * right answers sitting together at a predictable end of the board. Note that
+   * it is a plain uniform shuffle — forcing the correct answers apart would be
+   * worse than leaving them adjacent sometimes, because "the two right answers
+   * are never next to each other" is itself a tell a player can learn.
+   */
+  const options = shuffle([...answers, ...decoys]);
+  const correctIndices = options
+    .map((value, index) => (answers.includes(value) ? index : -1))
+    .filter((index) => index >= 0);
+  return { options, correctIndices, correctIndex: correctIndices[0] };
 }
 
 function startGame(room) {
@@ -414,22 +557,91 @@ function startGame(room) {
     };
   }
 
+  room.pool = playable;
   room.deck = shuffle(playable);
   room.deckIndex = 0;
   room.discardPile = [];
+  room.dealtIds = new Set();
   room.round = 1;
   room.currentPlayerIndex = 0;
   room.winner = null;
   room.lastReveal = null;
 
   // Everyone opens with one free card, face up. Placing into an empty timeline
-  // would be trivially correct, so the first card has to be a gift.
+  // would be trivially correct, so the first card has to be a gift. Drawn the
+  // same way as any other card so the opening hands count towards the pass —
+  // otherwise the songs given away here would all come round again as playable
+  // cards later, which is exactly the repetition this is meant to stop.
   for (const player of room.players) {
-    player.timeline = [{ ...room.deck[room.deckIndex++] }];
+    const opener = drawCard(room);
+    player.timeline = opener ? [{ ...opener }] : [];
   }
 
   startTurn(room);
   return { ok: true };
+}
+
+/**
+ * Begin a fresh pass once the current one has dealt everything it can.
+ *
+ * What comes back is every song in the pool that is not sitting on a timeline:
+ * the discard pile, in other words, plus anything that leaked out of it. Cards
+ * already won are deliberately left out — bringing those back would eventually
+ * hand a player a song they already hold, and two identical cards on one
+ * timeline is a worse bug than hearing a song twice in a long game. It also
+ * keeps the "nothing left anywhere" ending reachable, which is how a game on a
+ * small set finishes at all.
+ */
+function recycleDeck(room) {
+  const held = new Set();
+  for (const player of room.players) {
+    for (const card of player.timeline) held.add(card.id);
+  }
+
+  const returning = room.pool.filter((song) => !held.has(song.id));
+  if (!returning.length) return false;
+
+  room.deck = shuffle(returning);
+  room.deckIndex = 0;
+  room.discardPile = [];
+  room.dealtIds = new Set();
+  return true;
+}
+
+/**
+ * The next song nobody has heard this pass, or null when the game has genuinely
+ * run out of music.
+ *
+ * The skip is the load-bearing bit. A wrongly placed card goes to the discard
+ * pile and a failed steal puts a won card back into circulation, and both used
+ * to be able to jump the queue the moment the deck ran dry — so a song the room
+ * had just heard could return while most of the catalogue had never been
+ * played. Now nothing returns until `dealtIds` covers everything still in play.
+ */
+function drawCard(room) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    while (room.deckIndex < room.deck.length) {
+      const card = room.deck[room.deckIndex++];
+      if (room.dealtIds.has(card.id)) continue;
+      room.dealtIds.add(card.id);
+      return card;
+    }
+    if (!recycleDeck(room)) return null;
+  }
+  // Only reachable if a freshly recycled deck somehow held nothing drawable,
+  // which would mean recycleDeck handed back cards it had just marked spent.
+  return null;
+}
+
+/**
+ * Put a card back as though it had never been dealt. Used by the skip, where
+ * the room never really heard the song, so it should not count against the
+ * pass — without clearing the id, drawCard would step straight over it forever.
+ */
+function returnUndealt(room, card) {
+  if (!card) return;
+  room.dealtIds.delete(card.id);
+  room.deck.push(card);
 }
 
 /** Every pending timer for a room, cleared together so none fires late. */
@@ -447,39 +659,35 @@ function clearTimers(room) {
 function startTurn(room) {
   clearTimers(room);
 
-  if (room.deckIndex >= room.deck.length) {
-    if (room.discardPile.length) {
-      // Wrong guesses don't leave the game — reshuffle them back in as a
-      // fresh deck rather than ending things early.
-      room.deck = shuffle(room.discardPile);
-      room.discardPile = [];
-      room.deckIndex = 0;
-    } else {
-      // Every song has either been recycled away or correctly placed
-      // somewhere — nothing left anywhere. Whoever is furthest along takes it.
-      //
-      // Nobody crossed the target here, so this is the one ending that can be a
-      // genuine draw. Sorting and taking the first would crown whoever happened
-      // to sort highest, and the TV would announce it as a clean win.
-      const ranked = room.players.slice().sort((a, b) => b.timeline.length - a.timeline.length);
-      const best = ranked[0];
-      const level = best ? ranked.filter((p) => p.timeline.length === best.timeline.length) : [];
-      room.winner = best
-        ? {
-          id: best.id,
-          name: best.name,
-          score: best.timeline.length,
-          tiedWith: level.length > 1 ? level.map((p) => p.name) : null,
-        }
-        : null;
-      room.phase = PHASES.GAME_OVER;
-      room.currentCard = null;
-      broadcast(room);
-      return;
-    }
+  const card = drawCard(room);
+  if (!card) {
+    // Every song has either been correctly placed somewhere or is already on a
+    // timeline — nothing left anywhere. Whoever is furthest along takes it.
+    //
+    // Nobody crossed the target here, so this is the one ending that can be a
+    // genuine draw. Sorting and taking the first would crown whoever happened
+    // to sort highest, and the TV would announce it as a clean win.
+    const ranked = room.players.slice().sort((a, b) => b.timeline.length - a.timeline.length);
+    const best = ranked[0];
+    const level = best ? ranked.filter((p) => p.timeline.length === best.timeline.length) : [];
+    room.winner = best
+      ? {
+        id: best.id,
+        name: best.name,
+        score: best.timeline.length,
+        tiedWith: level.length > 1 ? level.map((p) => p.name) : null,
+      }
+      : null;
+    room.phase = PHASES.GAME_OVER;
+    room.currentCard = null;
+    // The track from the last turn is still playing by design (see
+    // resolvePlacement); the game ending is where that has to stop.
+    toTv(room, 'stop_music', {});
+    broadcast(room);
+    return;
   }
 
-  room.currentCard = room.deck[room.deckIndex++];
+  room.currentCard = card;
   room.placerId = currentPlayer(room)?.id || null;
   room.stealClaim = null;
   room.stealOutcome = null;
@@ -576,7 +784,8 @@ function finishSteal(room, correct) {
   room.stealClaim = null;
   room.stealOutcome = null;
 
-  toTv(room, 'resume_music', {});
+  // The TV leaves the track running through the steal verdict. Its phase
+  // render restores the user's volume when this result is shown.
   broadcast(room);
 }
 
@@ -621,7 +830,19 @@ function resolvePlacement(room, player, gapIndex) {
   }
 
   broadcast(room);
-  toTv(room, 'stop_music', {});
+
+  /*
+   * The track deliberately keeps playing through the reveal and the "who's up
+   * next" countdown. Cutting it the instant a card landed dropped the room into
+   * REVEAL_MS + INTRO_MS of dead air on every single turn — eight seconds of a
+   * party game in silence, which is what playtesters actually complained about.
+   * beginPlayback's song_started replaces the track when the next turn starts,
+   * so nothing has to be stopped for the handover to be clean.
+   *
+   * The end of the game is the exception: there is no next song to replace it,
+   * so the winning card is where the music genuinely does stop.
+   */
+  if (room.winner) toTv(room, 'stop_music', {});
 
   // Nobody should have to tap to keep the game moving. The manual button is
   // still there to cut the wait short; whichever fires first wins, and
@@ -652,8 +873,11 @@ function nextTurn(room) {
     }
   }
 
-  // Nobody is connected. Park the game until someone comes back.
+  // Nobody is connected. Park the game until someone comes back — and since a
+  // track now outlives its own turn, silence the room rather than leaving the
+  // last song playing to nobody.
   room.phase = PHASES.LOBBY;
+  toTv(room, 'stop_music', {});
   broadcast(room);
 }
 
@@ -804,24 +1028,13 @@ app.post('/api/songs/restore', (req, res) => {
   }
 });
 
-/** LAN address, so the QR code points somewhere a phone can actually reach. */
-function lanAddress() {
-  for (const entries of Object.values(os.networkInterfaces())) {
-    for (const entry of entries || []) {
-      if (entry.family === 'IPv4' && !entry.internal) return entry.address;
-    }
-  }
-  return null;
-}
-
-function joinUrlFor(req, code) {
-  const host = req.get('host') || `localhost:${PORT}`;
-  const isLoopback = /^(localhost|127\.0\.0\.1|\[::1\])(:|$)/.test(host);
-  const lan = lanAddress();
-  const target = isLoopback && lan ? `${lan}:${PORT}` : host;
-  const protocol = isLoopback ? 'http' : req.protocol;
-  return `${protocol}://${target}${BASE}/play?room=${code}`;
-}
+/*
+ * Both of these moved to lib/join.js when every game's QR started encoding the
+ * site-wide /j/CODE address rather than this game's own join page. A shorter
+ * string makes a less dense symbol, which is the entire point: the code is
+ * scanned across a room, off a TV, by whoever is sitting furthest from it.
+ */
+const { lanAddress, joinUrl: joinUrlFor } = joinCodes;
 
 app.get('/api/join-info', async (req, res) => {
   const code = String(req.query.code || '').toUpperCase();
@@ -997,8 +1210,10 @@ io.on('connection', (socket) => {
       return ack?.({ error: 'Nothing is playing to skip.' });
     }
 
-    // Put the skipped song back at the bottom rather than burning it.
-    if (target.currentCard) target.deck.push(target.currentCard);
+    // Put the skipped song back at the bottom rather than burning it. It goes
+    // back as undealt: nobody heard it, so it should still get its turn in this
+    // pass instead of being counted as spent.
+    returnUndealt(target, target.currentCard);
     target.stealClaim = null;
     target.stealOutcome = null;
     target.stealBlocked = new Set();
@@ -1025,7 +1240,7 @@ io.on('connection', (socket) => {
     clearTimers(target);
     toTv(target, 'stop_music', {});
     io.to(`room:${target.code}`).emit('room_closed', { code: fresh.code });
-    rooms.delete(target.code);
+    dropRoom(target.code);
 
     ack?.({ ok: true, code: fresh.code });
   });
@@ -1069,7 +1284,19 @@ io.on('connection', (socket) => {
 
     const card = target.currentCard;
     const titles = buildChoices(card.title, songPool.map((s) => s.title));
-    const artists = buildChoices(card.artist, songPool.map((s) => s.artist));
+    /*
+     * A record billed to two acts asks an unfair question if only one of them
+     * scores, so both go on the board and either one wins it. The decoys are
+     * split the same way, so the options are all single acts and nothing on
+     * screen half-contains the answer — offering "Macklemore" against a decoy
+     * of "Macklemore & Ryan Lewis" would be a trick, not a question.
+     *
+     * Only the quiz splits the billing. The reveal and the timeline card still
+     * carry card.artist verbatim, because that is what the record says.
+     */
+    const artists = buildChoices(
+      splitArtists(card.artist),
+      songPool.flatMap((s) => splitArtists(s.artist)));
 
     target.stealClaim = {
       playerId: player.id,
@@ -1077,7 +1304,7 @@ io.on('connection', (socket) => {
       titleOptions: titles.options,
       correctTitleIndex: titles.correctIndex,
       artistOptions: artists.options,
-      correctArtistIndex: artists.correctIndex,
+      correctArtistIndices: artists.correctIndices,
     };
     target.phase = PHASES.STEAL_CHOOSING;
     target.stealDeadline = Date.now() + STEAL_ANSWER_MS;
@@ -1089,8 +1316,10 @@ io.on('connection', (socket) => {
       if (target.phase === PHASES.STEAL_CHOOSING) resolveSteal(target, false);
     }, STEAL_ANSWER_MS);
 
+    // Keep the song running while the stealer answers. The TV ducks it from
+    // the phase broadcast so the countdown remains audible without creating a
+    // dead-air hole in the round.
     broadcast(target);
-    toTv(target, 'pause_music', {});
     toTv(target, 'steal_attempt', { playerName: player.name, answerMs: STEAL_ANSWER_MS });
     // The options — and which one is right — go only to the stealer's socket.
     io.to(socket.id).emit('steal_choices', { titleOptions: titles.options, artistOptions: artists.options });
@@ -1108,7 +1337,10 @@ io.on('connection', (socket) => {
     const player = findPlayerBySocket(target, socket.id);
     if (!player || player.id !== claim.playerId) return ack?.({ error: 'This is not your steal to answer.' });
 
-    const correct = payload.titleIndex === claim.correctTitleIndex && payload.artistIndex === claim.correctArtistIndex;
+    // Membership, not equality: a two-artist record has more than one right
+    // answer on the board and any of them takes the steal.
+    const correct = payload.titleIndex === claim.correctTitleIndex
+      && claim.correctArtistIndices.includes(payload.artistIndex);
     resolveSteal(target, correct);
     ack?.({ ok: true, correct });
   });
@@ -1152,7 +1384,7 @@ io.on('connection', (socket) => {
       // If the room emptied out during the lobby, drop the room entirely.
       if (target.phase === PHASES.LOBBY && !connectedPlayers(target).length && !target.tvSockets.size) {
         clearTimers(target);
-        rooms.delete(target.code);
+        dropRoom(target.code);
         return;
       }
       broadcast(target);
@@ -1182,7 +1414,7 @@ setInterval(() => {
     const empty = !target.tvSockets.size && !connectedPlayers(target).length;
     if (empty && target.createdAt < cutoff) {
       clearTimers(target);
-      rooms.delete(code);
+      dropRoom(code);
     }
   }
 }, 10 * 60 * 1000);

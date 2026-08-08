@@ -25,6 +25,32 @@ let stealOpensAt = 0;
 let answerDeadline = 0;
 let clockTimer = null;
 
+// A tiny, deliberately broad lobby crate. These are already resolved entries
+// from this game's catalogue, so the playlist never depends on a search result
+// or a region-specific matching pass at the moment people are joining.
+const LOBBY_TRACKS = [
+  'spotify:track:4YCnTYbq3oL1Lqpyxg33CU', // Chubby Checker — The Twist
+  'spotify:track:0GjEhVFGZW8afUYGChu3Rr', // ABBA — Dancing Queen
+  'spotify:track:5nIKYdgxzThw3xsSB7Wi62', // The Killers — Mr. Brightside
+  'spotify:track:2R9U8R4ZcOoDWg3jjHjQLr', // OutKast — Hey Ya!
+  'spotify:track:5IVuqXILoxVWvWEPm82Jxr', // Beyoncé — Crazy in Love
+  'spotify:track:2SpEHTbUuebeLkgs9QB7Ue', // Dolly Parton — Jolene
+  'spotify:track:69kOkLUCkxIZYexIgSG8rq', // Daft Punk — Get Lucky
+  'spotify:track:0DiWol3AO6WpXZgp0goxAV', // Daft Punk — One More Time
+];
+const LOBBY_PLAYLIST_NAME = 'Hitster Lobby';
+const LOBBY_PLAYLIST_KEY = 'hitster.lobbyPlaylist';
+const LOBBY_FIRST_TRACK_KEY = 'hitster.lobbyFirstTrack';
+let lobbyWanted = false;
+let lobbyStarting = false;
+let lobbyPlaybackStarted = false;
+
+// Keep the record audible while the table reads the result and the next-turn
+// countdown. It ducks briefly for spoken/UI moments, then returns to the
+// slider's chosen level as soon as active play resumes.
+let musicVolume = 60;
+let musicDucked = false;
+
 // ---------------------------------------------------------------------------
 // Boot
 //
@@ -209,6 +235,8 @@ async function tryUnlockAudio() {
   if (pendingUri) {
     playTrack(pendingUri);
     pendingUri = null;
+  } else if (lobbyWanted) {
+    startLobbyPlayback();
   }
   return true;
 }
@@ -276,6 +304,9 @@ function initPlayer() {
       playTrack(pendingUri);
       pendingUri = null;
     }
+    // A room state can arrive before the browser accepts audio. Re-evaluate the
+    // lobby here so the first qualifying gesture starts its playlist too.
+    syncLobbyPlayback(state?.phase === 'lobby');
   });
 
   player.addListener('not_ready', () => { deviceId = null; });
@@ -349,6 +380,9 @@ async function claimDevice() {
  * user-modify-playback-state scope is for.
  */
 async function playTrack(uri) {
+  // A real game card always wins over the lobby playlist, including when a
+  // slow playlist request finishes a moment after the host pressed Start.
+  stopLobbyPlayback();
   // Hold the track until the device exists and the tab is allowed to make
   // sound. One more quiet attempt first — by now the page has usually been
   // clicked at least once, which is all the browser was waiting for. Only if
@@ -374,17 +408,164 @@ async function playTrack(uri) {
   }
 }
 
+/**
+ * Make the one playlist this TV uses while a room fills. It is created in the
+ * signed-in account just once, then the id is kept locally. A failed playlist
+ * call is deliberately non-fatal: a stale Spotify grant must never stop the
+ * actual game from working.
+ */
+async function lobbyPlaylistId() {
+  const cached = localStorage.getItem(LOBBY_PLAYLIST_KEY);
+  if (cached) {
+    // Keep working if a user deleted the old playlist from Spotify. The next
+    // lobby can transparently make a replacement instead of failing silently.
+    const existing = await spotifyFetch(`/playlists/${encodeURIComponent(cached)}`).catch(() => null);
+    // A private-playlist read can be denied for an older grant even though
+    // playback of that playlist is still allowed. Only a definite 404 means
+    // the cached id is gone; preserve it for auth/network errors.
+    if (!existing || existing.ok || existing.status !== 404) return cached;
+    localStorage.removeItem(LOBBY_PLAYLIST_KEY);
+  }
+
+  // Spotify retired POST /users/{user_id}/playlists in its 2026 Web API
+  // migration. The current endpoint is scoped to the signed-in account.
+  const made = await spotifyFetch('/me/playlists', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: LOBBY_PLAYLIST_NAME,
+      description: 'A short shuffled warm-up playlist for Hitster game night.',
+      public: false,
+    }),
+  });
+  if (!made.ok) return null;
+  const playlist = await made.json();
+  if (!playlist?.id) return null;
+
+  const filled = await spotifyFetch(`/playlists/${playlist.id}/items`, {
+    method: 'POST',
+    body: JSON.stringify({ uris: LOBBY_TRACKS }),
+  });
+  if (!filled.ok) return null;
+  localStorage.setItem(LOBBY_PLAYLIST_KEY, playlist.id);
+  return playlist.id;
+}
+
+function nextLobbyFirstTrack() {
+  const previous = localStorage.getItem(LOBBY_FIRST_TRACK_KEY);
+  const candidates = LOBBY_TRACKS.filter((uri) => uri !== previous);
+  const choice = candidates[Math.floor(Math.random() * candidates.length)] || LOBBY_TRACKS[0];
+  localStorage.setItem(LOBBY_FIRST_TRACK_KEY, choice);
+  return choice;
+}
+
+function shuffledLobbyTracks() {
+  const first = nextLobbyFirstTrack();
+  const rest = LOBBY_TRACKS.filter((uri) => uri !== first);
+  for (let i = rest.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [rest[i], rest[j]] = [rest[j], rest[i]];
+  }
+  return [first, ...rest];
+}
+
+function lobbyMusicStatus(message) {
+  const node = el('lobby-music');
+  if (node) node.textContent = message;
+}
+
+async function startLobbyPlayback() {
+  if (!lobbyWanted || lobbyStarting || !deviceId || !audioReady) return;
+  lobbyStarting = true;
+  try {
+    const playlistId = await lobbyPlaylistId().catch(() => null);
+    // State can change while Spotify is creating the playlist. Do not bring
+    // music back once the first card is already in play.
+    if (!lobbyWanted || !deviceId || !audioReady) return;
+    await claimDevice();
+    if (!lobbyWanted) return;
+    await spotifyFetch(`/me/player/shuffle?state=true&device_id=${deviceId}`, { method: 'PUT' });
+    if (!lobbyWanted) return;
+    const playBody = playlistId
+      ? {
+        context_uri: `spotify:playlist:${playlistId}`,
+        offset: { uri: nextLobbyFirstTrack() },
+        position_ms: 0,
+      }
+      : {
+        // Playlist creation needs an extra Spotify permission. If it is not
+        // available, play the same eight-song crate directly so the lobby is
+        // never silent and still starts on a different song each time.
+        uris: shuffledLobbyTracks(),
+        position_ms: 0,
+      };
+    const response = await spotifyFetch(`/me/player/play?device_id=${deviceId}`, {
+      method: 'PUT',
+      body: JSON.stringify(playBody),
+    });
+    if (!response.ok && response.status !== 204) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error?.message || `Spotify returned ${response.status}.`);
+    }
+    lobbyMusicStatus(playlistId ? 'Spotify warm-up playlist · shuffled' : 'Spotify warm-up · shuffled crate');
+    lobbyPlaybackStarted = true;
+  } catch {
+    lobbyMusicStatus('Spotify warm-up could not start · reconnect Spotify on this screen');
+  } finally {
+    lobbyStarting = false;
+  }
+}
+
+function stopLobbyPlayback() {
+  lobbyWanted = false;
+  lobbyPlaybackStarted = false;
+  if (player) player.pause().catch(() => {});
+}
+
+function syncLobbyPlayback(inLobby) {
+  if (!inLobby) {
+    // render() runs for every game-state update. Only pause the warm-up track
+    // on the actual lobby → game transition; repeatedly calling pause here
+    // would also silence every song_started event in the round.
+    if (lobbyWanted || lobbyPlaybackStarted) stopLobbyPlayback();
+    return;
+  }
+  lobbyWanted = true;
+  // game_state is broadcast whenever somebody joins. Do not restart the
+  // warm-up song for every one of those roster updates.
+  if (!lobbyPlaybackStarted) startLobbyPlayback();
+}
+
 function savedVolume() {
   return Number(localStorage.getItem('hitster.volume') ?? 60);
 }
 
 function wireVolume() {
-  const slider = el('volume');
-  slider.value = savedVolume();
-  slider.addEventListener('input', () => {
-    localStorage.setItem('hitster.volume', slider.value);
-    player?.setVolume(Number(slider.value) / 100);
-  });
+  const sliders = [el('volume'), el('volume-lobby')].filter(Boolean);
+  const apply = (value) => {
+    musicVolume = Number(value);
+    localStorage.setItem('hitster.volume', String(value));
+    applyMusicVolume();
+    for (const slider of sliders) slider.value = value;
+  };
+
+  const initial = String(savedVolume());
+  musicVolume = Number(initial);
+  for (const slider of sliders) {
+    slider.value = initial;
+    slider.addEventListener('input', () => apply(slider.value));
+  }
+  applyMusicVolume();
+}
+
+function applyMusicVolume() {
+  const level = musicDucked ? musicVolume * 0.38 : musicVolume;
+  player?.setVolume(Math.max(0, Math.min(100, level)) / 100);
+}
+
+function setMusicDucked(ducked) {
+  if (musicDucked === ducked) return;
+  musicDucked = ducked;
+  applyMusicVolume();
 }
 
 // ---------------------------------------------------------------------------
@@ -679,8 +860,10 @@ socket.on('connect', () => {
 });
 
 socket.on('song_started', ({ spotifyUri }) => playTrack(spotifyUri));
-socket.on('pause_music', () => player?.pause());
-socket.on('resume_music', () => player?.resume());
+// Older servers may still send these events. Treat them as a gentle duck so
+// an in-flight song is never cut off during a steal question.
+socket.on('pause_music', () => setMusicDucked(true));
+socket.on('resume_music', () => setMusicDucked(false));
 socket.on('stop_music', () => player?.pause());
 
 socket.on('steal_attempt', ({ playerName, answerMs }) => {
@@ -741,6 +924,9 @@ function render() {
   const inLobby = state.phase === 'lobby';
   el('lobby').hidden = !inLobby;
   el('game').hidden = inLobby;
+  syncLobbyPlayback(inLobby);
+
+  setMusicDucked(['turn_intro', 'revealing', 'steal_choosing', 'steal_verdict'].includes(state.phase));
 
   renderSets();
   // The panel stays usable mid-game, but says so about what it can change.

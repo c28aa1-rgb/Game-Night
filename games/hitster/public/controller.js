@@ -10,6 +10,10 @@
 const socket = io();
 const el = (id) => document.getElementById(id);
 const STORE = 'hitster.player';
+// A name is a person-level preference, not a room-level one. Keep the
+// Hitster session for reconnecting, but share this small convenience with the
+// other arcade games so moving between them does not mean typing it again.
+const SHARED_NAME = 'arcade.name';
 
 let state = null;
 let me = null;
@@ -44,6 +48,24 @@ function saveIdentity(next) {
   localStorage.setItem(STORE, JSON.stringify(next));
 }
 
+function readSharedName() {
+  try {
+    return localStorage.getItem(SHARED_NAME) || '';
+  } catch {
+    // Storage can be unavailable in a private or embedded browser. Joining is
+    // still perfectly valid; it just will not be remembered for next time.
+    return '';
+  }
+}
+
+function rememberName(name) {
+  try {
+    localStorage.setItem(SHARED_NAME, name);
+  } catch {
+    // See readSharedName().
+  }
+}
+
 (function prefill() {
   const saved = readIdentity();
   const roomParam = (new URLSearchParams(location.search).get('room') || '').toUpperCase();
@@ -53,7 +75,9 @@ function saveIdentity(next) {
   } else if (saved?.code) {
     el('code-input').value = saved.code;
   }
-  if (saved?.name) el('name-input').value = saved.name;
+  // The room-specific identity wins so reconnecting always supplies the name
+  // the server knows. A fresh Hitster visit falls back to the arcade-wide one.
+  el('name-input').value = saved?.name || readSharedName();
 })();
 
 // Read storage fresh on every connect: a player who joined during this page
@@ -90,6 +114,9 @@ function join() {
     }
     el('join-error').textContent = '';
     saveIdentity({ playerId: res.playerId, code: res.code, name });
+    // Only persist a name after the room accepts it. A rejected duplicate or
+    // malformed name should not replace the one used in every other game.
+    rememberName(name);
   });
 }
 

@@ -1,10 +1,5 @@
 {
   "sets": [
-    "pop",
-    "rock",
-    "hiphop",
-    "rnb",
-    "country",
-    "electronic"
+    "classic"
   ]
 }

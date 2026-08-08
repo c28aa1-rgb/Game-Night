@@ -1,7 +1,7 @@
 # Hues & Cues — Design Spec
 
 TV + phones adaptation of the Hues & Cues board game, built on this repo's
-shared host (`lib/host.js`), following the same shape as `games/mayday`: a
+shared host (`lib/host.js`), following the same shape as `games/mafia`: a
 `server.js` that registers `/hues-cues` routes and its own Socket.io
 namespace, `public/` holding `tv.*`, `play.*`, `start.*`, `theme.css`,
 `sfx.js`.
@@ -136,7 +136,7 @@ ends the game skips the handoff entirely.
 - **Theme**: neutral dark chrome (near-black background, quiet
   typography, minimal accent) — the 480-color grid and player pin colors
   are the spectacle, UI chrome stays out of the way. No single "brand"
-  accent color the way Hitster/Mayday have one, since a bold accent would
+  accent color the way Hitster/Mafia have one, since a bold accent would
   visually compete with the board.
 - **Player colors**: fixed palette of 10 distinct, saturated colors,
   chosen for max separation from each other AND for legibility as an
@@ -145,7 +145,7 @@ ends the game skips the handoff entirely.
 - **Sound**: minimal and tactile — soft UI clicks, a satisfying "plink" on
   pin placement, a rising chime through the reveal sequence, a warm
   success sting when someone lands a bullseye. No cartoonish/arcade
-  stingers. Follows `games/mayday/public/sfx.js`'s pattern of synthesized
+  stingers. Follows `games/mafia/public/sfx.js`'s pattern of synthesized
   sound (no audio files) if we want to keep the repo's zero-asset-audio
   convention.
 
@@ -170,8 +170,8 @@ runtime).
 - Registry entry in `games/registry.js`: `id: 'hues-cues'`, players
   `'2–10 players · TV + phones'`, `status: 'draft'` until playtested.
 - Reconnect/disconnect handling for a player mid-guess (out of scope for
-  design, follow Mayday's existing reconnect pattern in
-  `games/mayday/server.js`).
+  design, follow Mafia's existing reconnect pattern in
+  `games/mafia/server.js`).
 
   *Settled in build:* the guess queue does **not** step over a player whose
   phone has dropped. Skipping silently is indistinguishable from a bug when

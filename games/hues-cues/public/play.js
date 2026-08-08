@@ -18,6 +18,13 @@
   const COLS = GRID.COLS;
 
   const KEY = 'hues.session';
+  /**
+   * Not namespaced under `hues.`, and that is the point: every game on this
+   * site reads and writes this one key, so a phone that joined Mafia last
+   * week arrives here with the box already filled in. Typing over it is the
+   * whole opt-out.
+   */
+  const NAME_KEY = 'arcade.name';
   const el = (id) => document.getElementById(id);
 
   let state = null;
@@ -40,6 +47,15 @@
     if (next) localStorage.setItem(KEY, JSON.stringify(next));
     else localStorage.removeItem(KEY);
   }
+
+  function readName() {
+    try { return localStorage.getItem(NAME_KEY) || ''; } catch { return ''; }
+  }
+  // Written only once a join has actually been accepted, so a name the server
+  // turned down — taken, or empty — is never the one waiting here next time.
+  // Wrapped for the same reason readName is: storage throws outright in a
+  // private window, and losing the convenience must not lose the join with it.
+  const writeName = (name) => { try { localStorage.setItem(NAME_KEY, name); } catch { /* private mode */ } };
 
   const buzz = (ms) => { try { navigator.vibrate?.(ms); } catch { /* not everywhere */ } };
   const me = () => (state?.players || []).find((p) => p.id === priv?.playerId) || null;
@@ -351,16 +367,25 @@
       }));
     }
 
+    /*
+     * Whether a pin is in comes from the pins, not from the queue. "Not still
+     * waiting" is not the same fact — somebody the host skipped is no longer
+     * waiting either, and reading that as Pinned told the room a pin had landed
+     * that never did.
+     */
+    const pinned = new Set((state.guesses?.[state.cycle - 1] || []).map((g) => g.playerId));
+
     return ordered.map((player) => ({
       player,
       active: player.id === active,
-      done: !waiting.has(player.id),
+      done: pinned.has(player.id),
       // The player who is up and offline is the one the room is stuck behind,
       // so that reads as the problem rather than as two neutral facts.
       tag: player.id === active
         ? (player.connected ? 'Pinning now' : 'Up · offline')
-        : !player.connected ? 'Away'
-          : waiting.has(player.id) ? 'Up next' : 'Pinned',
+        : pinned.has(player.id) ? 'Pinned'
+          : !player.connected ? 'Away'
+            : waiting.has(player.id) ? 'Up next' : 'Skipped',
     }));
   }
 
@@ -646,6 +671,11 @@
     loadPalette();
   });
 
+  // The box comes up holding whatever this phone last called itself. It is the
+  // same answer every time, and typing it on a phone in a dim room while
+  // everybody else is already in is the slowest part of joining.
+  el('nameInput').value = readName();
+
   el('joinForm').addEventListener('submit', (event) => {
     event.preventDefault();
     const name = el('nameInput').value.trim();
@@ -657,6 +687,7 @@
       el('joinBtn').disabled = false;
       if (res?.error) return flash(el('joinError'), res.error);
       writeSession({ code: res.code, playerId: res.playerId });
+      writeName(name);
       history.replaceState(null, '', `?room=${res.code}`);
     });
   });

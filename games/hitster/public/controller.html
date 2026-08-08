@@ -88,6 +88,18 @@
           <div class="wheel__rail" id="wheel-rail"></div>
         </div>
         <div class="wheel__card" aria-hidden="true"><span>?</span></div>
+
+        <!-- Which end is which. Nothing else on this screen says that dragging
+             up means older, and that has to be readable for the whole turn
+             rather than in a hint that has come and gone by the time anyone
+             needs it. Pinned to the wheel, not to the rail, so the two words
+             hold their ends while the years run past between them. -->
+        <p class="eyebrow wheel__edge wheel__edge--older">
+          <span class="wheel__arrow" aria-hidden="true">↑</span>Older
+        </p>
+        <p class="eyebrow wheel__edge wheel__edge--newer">
+          <span class="wheel__arrow" aria-hidden="true">↓</span>Newer
+        </p>
       </div>
 
       <div class="dock">

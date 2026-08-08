@@ -59,8 +59,32 @@ function stagger(page) {
   page.classList.add('is-entering');
 }
 
+/**
+ * Music while the room is still filling the sheet in.
+ *
+ * Draft Night has no lobby phase because it has no server and no phones — but
+ * it does have a stretch where nothing is happening and everyone is waiting,
+ * and that is the roster page. Names get typed, the team count gets argued
+ * over, and the screen is otherwise dead quiet. So the roster is this game's
+ * lobby, and the music stops the instant the wheel page is on its way in.
+ *
+ * The bed is shared across the site and its own mute is remembered separately,
+ * but this game's sound button still silences it — a screen that has been told
+ * to be quiet should be quiet. That is a live check rather than a write to the
+ * shared preference, so turning Draft Night's sound off does not leave the
+ * other four games silent tomorrow.
+ */
+function syncLobbyMusic(page) {
+  if (!window.LobbyMusic) return;
+  if (page === 'roster' && SFX.enabled) window.LobbyMusic.start({ key: 'draft' });
+  else window.LobbyMusic.stop();
+}
+
 async function goto(name) {
   if (state.page === name) return;
+  // Before the wipe, not after it: leaving the roster starts the fade a beat
+  // early, so the bed is gone by the time the wheel takes its first tick.
+  syncLobbyMusic(name);
   SFX.whoosh(true, 0.4);
   const wipe = $('wipe');
   const from = $(`page-${state.page}`);
@@ -628,15 +652,22 @@ function paintSoundButton() {
 $('soundBtn').addEventListener('click', () => {
   SFX.toggle();
   paintSoundButton();
+  // Muting the screen mutes the bed with it, and unmuting brings it back if
+  // this is still the roster.
+  syncLobbyMusic(state.page);
 });
 
 // Browsers will not start audio until the user has done something, so the
 // context is opened on the first gesture rather than at load.
-addEventListener('pointerdown', () => SFX.prime(), { once: true });
-addEventListener('keydown', () => SFX.prime(), { once: true });
+addEventListener('pointerdown', () => { SFX.prime(); if (window.LobbyMusic) window.LobbyMusic.unlock(); }, { once: true });
+addEventListener('keydown', () => { SFX.prime(); if (window.LobbyMusic) window.LobbyMusic.unlock(); }, { once: true });
 
 /* ── boot ───────────────────────────────────────────────── */
 paintSoundButton();
 renderRoster();
 stagger($('page-roster'));
 $('nameInput').focus();
+// Asked for at load, which is well before anybody has touched the page. The
+// module holds the request and starts on the first gesture — here, that is the
+// first name being typed.
+syncLobbyMusic('roster');

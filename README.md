@@ -8,14 +8,14 @@ Party games behind one hub page, served by one Express process.
 /hitster/tv       Hitster — TV screen
 /hitster/play     Hitster — phone controller
 /hitster/resolve  Hitster — match songs to Spotify
-/mayday           Mayday — pick a screen
-/mayday/tv        Mayday — TV screen, and the ship's AI
-/mayday/play      Mayday — phone
+/mafia           Mafia — pick a screen
+/mafia/tv        Mafia — TV screen, and the ship's AI
+/mafia/play      Mafia — phone
 /codenames        Codenames
 /draft            Draft Night
 ```
 
-`/hitster?room=CODE` redirects to `/hitster/play?room=CODE`, and `/mayday`
+`/hitster?room=CODE` redirects to `/hitster/play?room=CODE`, and `/mafia`
 does the same, so a QR code or a shared link still drops a player straight into
 the game rather than asking them which screen they are.
 
@@ -31,11 +31,12 @@ Needs `.env` with `SPOTIFY_CLIENT_ID` (copy `.env.example`). Default port 3000.
 ## Layout
 
 ```
-server.js            the site host: hub at /, mounts every game
+server.js            the site host: hub at /, mounts every game, forwards /j/CODE
 lib/host.js          the one Express app + HTTP server + Socket.io instance
+lib/join.js          the site-wide room-code directory and the short join URL
 games/registry.js    the list of games — the only file you edit to add one
 games/hitster/       server.js registers its own routes; public/ is its frontend
-games/mayday/        the same shape, but everything under /mayday — including
+games/mafia/        the same shape, but everything under /mafia — including
                      its socket namespace and its assets
 games/codenames/     static/ is the bundle, served as-is
 games/draft/         static/ is the bundle; theme/ is its design notes
@@ -77,24 +78,59 @@ in a game; the host owns the port.
 Registry fields are documented at the top of `games/registry.js`. The hub reads
 them directly, and `/api/games` returns the same data as JSON.
 
-## Mayday
+## Joining a room
+
+Every QR code on the site encodes one address — `https://host/j/CODE` — and
+`server.js` forwards it to whichever game claimed that code. Two reasons it
+works that way rather than each game encoding its own join page:
+
+- **The symbol is smaller.** A QR's density comes from how many characters it
+  carries, and `/j/HUES` is fifteen characters shorter than
+  `/hues-cues/play?room=HUES`. That is a version or two off the code somebody
+  is scanning across a room, off a TV.
+- **Codes are unique site-wide.** The games invent four-letter codes from their
+  own vocabularies and those vocabularies overlap — `TONE` is in both Hitster's
+  list and Hues & Cues'. Since a scanned code now has to decide on its own
+  which game it belongs to, it has to mean exactly one room.
+
+A game with a server does three things to take part, all in `lib/join.js`:
+
+```js
+const joinCodes = require('../../lib/join');
+
+// while inventing a code, ask the site as well as your own room map
+const free = CODE_WORDS.filter((w) => !rooms.has(w) && joinCodes.isFree(w));
+
+joinCodes.claim(code, '<game id>', '<basePath>/play');  // on createRoom
+joinCodes.release(code);                                // on every path that ends a room
+```
+
+`joinCodes.joinUrl(req, code)` builds the address to put in the QR, answering a
+loopback request with this machine's LAN address so a phone can actually reach
+it. An unknown code lands on a small page saying the game has finished, rather
+than a bare 404 in somebody's hand.
+
+Player names are remembered site-wide under the `arcade.name` localStorage key,
+so you type your name once per evening rather than once per game.
+
+## Mafia
 
 Social deduction for 5–12 players. The ship's AI runs the whole thing — it
 narrates every beat, keeps every clock and counts every vote — so nobody has to
 sit out as moderator.
 
 It is mounted the way the note at the end of the Hitster section recommends,
-rather than the way Hitster itself was: everything lives under `/mayday`. Its
-pages, its assets (`/mayday/theme.css`, `/mayday/tv.js`), its API
-(`/mayday/api/join-info`) and its **Socket.io namespace** (`/mayday`) are all
+rather than the way Hitster itself was: everything lives under `/mafia`. Its
+pages, its assets (`/mafia/theme.css`, `/mafia/tv.js`), its API
+(`/mafia/api/join-info`) and its **Socket.io namespace** (`/mafia`) are all
 namespaced. The namespace is the important one: the site has a single Socket.io
 instance, so two games listening for `join_game` on the root namespace would
 both answer the same phone.
 
 ```
-games/mayday/server.js       the referee. Owns roles, clocks, votes and what
+games/mafia/server.js       the referee. Owns roles, clocks, votes and what
                              each screen is allowed to know
-games/mayday/public/
+games/mafia/public/
   tv.html / tv.js / tv.css   the shared screen: HUD, phases, roster, captions
   play.html / play.js        the phone: role, night actions, votes
   avatar.js                  the crew — one suit, twelve colours, drawn in SVG
@@ -156,7 +192,7 @@ reports whether it is mid-sentence and transitions hold until it stops. Without
 this, a long line got cut off by the next phase and took the following phase's
 line down with it — the room would hear about an ejection while the saboteurs
 were already choosing, and never hear the night begin at all. The hold is capped
-(`MAYDAY_NARRATION_HOLD_MS`), reset by every line the TV starts, and released
+(`MAFIA_NARRATION_HOLD_MS`), reset by every line the TV starts, and released
 early if the screen disconnects, so a dead TV can slow a game but never freeze
 one. Which screens are talking is tracked per socket, because a second TV — or
 one that reloads — must not clear the state of the screen that is actually
@@ -164,7 +200,7 @@ speaking.
 
 **Clocks end early when there is nothing left to wait for.** Every saboteur has
 picked, the Medic has sealed a door, the last ballot is in — the phase jumps to
-`MAYDAY_SETTLE_MS` rather than running out. Ballots can be cast from the moment
+`MAFIA_SETTLE_MS` rather than running out. Ballots can be cast from the moment
 the floor opens: the voting phase is not when voting becomes possible, it is the
 time set aside for people who have not decided yet, and it collapses the moment
 they have.
@@ -190,7 +226,7 @@ rather than as beeping.
 **The TV keeps one game control: the way out.** A menu in its status bar, in
 every phase, with three doors — back to the lobby (drops the game, keeps the
 crew and their suits), close the room (everybody out, fresh code, phones return
-to the join screen), and leave Mayday. Abandoning is the one thing that should
+to the join screen), and leave Mafia. Abandoning is the one thing that should
 not require finding whichever phone is the host, so it is the one exception to
 control living there. It takes two taps: the second one confirms.
 

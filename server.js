@@ -16,6 +16,7 @@ const path = require('path');
 const express = require('express');
 
 const { app, server } = require('./lib/host');
+const joinCodes = require('./lib/join');
 const games = require('./games/registry');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -75,6 +76,65 @@ app.get('/', (req, res) => {
 // and pointed at hub/public/ so the template itself is never served raw.
 app.use('/hub', express.static(path.join(HUB_DIR, 'public')));
 
+// ---------------------------------------------------------------------------
+// Joining
+// ---------------------------------------------------------------------------
+
+/**
+ * The one address every QR code on the site points at.
+ *
+ * A code on a TV used to encode that game's own join page — /hues-cues/play
+ * ?room=HUES — which is long enough that the symbol came out dense and fiddly
+ * to scan across a room. Everything now goes through /j/HUES and is forwarded
+ * from here, which is fifteen characters shorter and a version or two simpler.
+ *
+ * It also means the phone does not have to know which game it is joining. The
+ * code alone decides, because every room registers its code with lib/join.js
+ * the moment it is created.
+ */
+app.get('/j/:code', (req, res) => {
+  const code = String(req.params.code || '').toUpperCase();
+  const room = joinCodes.lookup(code);
+  if (room) return res.redirect(302, `${room.joinPath}?room=${encodeURIComponent(code)}`);
+
+  /*
+   * No such room. Almost always a code from a game that has already finished,
+   * or one scanned off a photo taken last week — so this says what happened
+   * rather than returning a bare 404 to somebody standing there holding a
+   * phone, and puts the way back to the site one tap away.
+   */
+  res.status(404).type('html').send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>No game with that code</title>
+  <link rel="icon" href="/hub/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0; min-height: 100svh; display: grid; place-content: center;
+      gap: 1rem; padding: 2rem; text-align: center; background: #08090B;
+      color: #E9ECEF; font: 400 1rem/1.5 system-ui, -apple-system, sans-serif;
+    }
+    h1 { margin: 0; font-size: 1.5rem; letter-spacing: -0.01em; }
+    p { margin: 0; color: #8B9199; }
+    code { color: #E9ECEF; letter-spacing: 0.12em; }
+    a {
+      justify-self: center; margin-top: 0.5rem; padding: 0.7rem 1.4rem;
+      border-radius: 999px; border: 1px solid #2A2E35; color: #E9ECEF;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Nothing running under <code>${esc(code)}</code></h1>
+  <p>That game has finished, or the code was mistyped.</p>
+  <a href="/">Game night →</a>
+</body>
+</html>`);
+});
+
 /** Machine-readable version of the registry, for anything else that wants it. */
 app.get('/api/games', (req, res) => {
   res.json(games.map(({ id, name, tagline, players, accent, art, status, basePath, href }) => ({
@@ -103,12 +163,25 @@ for (const game of games) {
       res.redirect(302, `${game.basePath}/${query ? `?${query}` : ''}`);
     });
     app.use(game.basePath, express.static(dir));
+
+    // A static game may still need a small server-side bridge without becoming
+    // a Socket.io game. Codenames uses this for its shared short join-code and
+    // QR endpoint; its room state remains entirely in Firebase.
+    const bridge = path.join(__dirname, 'games', game.id, 'server.js');
+    if (fs.existsSync(bridge)) nodeGames.push(require(bridge));
   } else if (game.type === 'node') {
     nodeGames.push(require(path.join(__dirname, 'games', game.id, 'server.js')));
   } else {
     throw new Error(`Game "${game.id}" has unknown type "${game.type}"`);
   }
 }
+
+// Keep unknown URLs inside the same game-night world as the hub. API callers
+// still get a small JSON error; browser requests get the designed 404 page.
+app.use((req, res) => {
+  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
+  res.status(404).sendFile(path.join(HUB_DIR, 'public', '404.html'));
+});
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log('');

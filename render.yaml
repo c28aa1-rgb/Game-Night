@@ -15,7 +15,7 @@ services:
       - key: NODE_VERSION
         value: "20"
       # Hitster needs this to play music. Everything else — Codenames, Draft
-      # Night, Mayday — runs without it, so an unset value only costs you
+      # Night, Mafia — runs without it, so an unset value only costs you
       # Hitster. Set it in the Render dashboard rather than here.
       - key: SPOTIFY_CLIENT_ID
         sync: false

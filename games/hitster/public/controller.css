@@ -376,10 +376,6 @@
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  /* Years fade out top and bottom, so the list can run off the edge without
-     looking cut off. */
-  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
-  mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
 }
 
 /*
@@ -395,6 +391,11 @@
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
   outline: none;
+  /* Keep the years fading at the ends without fading the direction labels.
+     Those labels are the persistent affordance for a wheel that otherwise has
+     deliberately hidden scrollbars. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
 }
 
 .wheel__scroll::-webkit-scrollbar { display: none; }
@@ -457,6 +458,39 @@
   font-family: var(--font-display);
   font-size: 1.7rem;
   color: var(--accent);
+}
+
+/* The wheel has no visible scrollbar by design, so make the direction part of
+   the control itself rather than a one-off onboarding hint. The labels live
+   above the faded rail and never intercept a drag or a keyboard focus. */
+.wheel__edge {
+  position: absolute;
+  left: 50%;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.25rem 0.6rem;
+  transform: translateX(-50%);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: 0 3px 10px rgb(27 42 63 / 0.08);
+  color: var(--muted);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.wheel__edge--older { top: 0.3rem; }
+.wheel__edge--newer { bottom: 0.3rem; }
+
+.wheel__arrow {
+  color: var(--accent);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 /* Spacers so the first and last boundary can reach the centre. */

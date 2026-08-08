@@ -19,6 +19,11 @@ import { WORD_BANK } from "./words.js";
 // site below stays untouched; control functions (mute toggle, unlock) always
 // pass through since they aren't playback.
 const SFX_CONTROL_FNS = new Set(["toggleMute", "unlockAudio", "onMuteChange", "isMuted"]);
+
+// The shared lobby bed, loaded from /hub/lobby-music.js by index.html. Absent
+// on the standalone Firebase deploy, where there is no hub to serve it, so
+// everything below goes through syncLobbyMusic() and never touches it directly.
+const music = window.LobbyMusic || null;
 const sfx = new Proxy(rawSfx, {
   get(target, prop) {
     const original = target[prop];
@@ -39,7 +44,6 @@ const sfx = new Proxy(rawSfx, {
 const HOST_ROOM_KEY = "codenames-host-room";
 const START_NOTICE_KEY = "codenames-start-notice";
 const KICK_NOTICE_KEY = "codenames-last-kick";
-const LIVE_SITE_URL = "https://codenames-online-40ca1.web.app";
 const ROOM_TTL_MS = 24 * 60 * 60 * 1000;
 const COLUMNS = 5;
 const CARD_COUNT = 25;
@@ -426,6 +430,8 @@ function bindEvents() {
     el.soundToggleBoard.setAttribute("aria-pressed", m ? "false" : "true");
     el.soundToggleBoard.classList.toggle("is-muted", m);
     el.soundToggleBoard.title = m ? "Sound off" : "Sound on";
+    // Muting the board mutes everything coming out of it, music included.
+    syncLobbyMusic();
   });
 
   document.addEventListener("click", handleGlobalPointer);
@@ -439,7 +445,12 @@ function bindEvents() {
 
   // One gesture is all the browser needs to let us make sound.
   ["pointerdown", "keydown"].forEach((evt) => {
-    window.addEventListener(evt, sfx.unlockAudio, { once: true });
+    window.addEventListener(evt, () => {
+      sfx.unlockAudio();
+      // The bed would catch this gesture on its own; doing it here means it
+      // comes up with everything else rather than a beat behind.
+      if (music) music.unlock();
+    }, { once: true });
   });
 
   // Following a room link while already in a room only changes the hash — the
@@ -491,8 +502,17 @@ async function createRoom() {
   el.homeMessage.textContent = "Opening a room…";
 
   try {
-    const code = await generateRoomCode();
-    await setDoc(getRoomRef(code), buildRoom(code));
+    const reservation = await generateRoomCode();
+    const { code, token } = reservation;
+    try {
+      await setDoc(getRoomRef(code), buildRoom(code));
+      // The route stays claimed for the Firebase room's 24-hour lifetime; this
+      // only discards the one-use rollback token held by the bridge.
+      confirmJoinCode(code, token).catch(() => {});
+    } catch (error) {
+      releaseJoinCode(code, token).catch(() => {});
+      throw error;
+    }
 
     sessionStorage.setItem(HOST_ROOM_KEY, code);
     view.roomCode = code;
@@ -1195,6 +1215,10 @@ function renderBoardScreen() {
   el.boardWaiting.style.display = started ? "none" : "flex";
   document.querySelector(".table-plane").style.display = started ? "block" : "none";
   el.boardWaitingMessage.textContent = waitingMessage(room);
+
+  // The music follows that same flag exactly: it plays behind the waiting
+  // plate and is gone by the time the deck is shuffled.
+  syncLobbyMusic();
 
   if (started) {
     paintBoard(el.board, room, { showKey: false, interactive: false });
@@ -2071,6 +2095,35 @@ function handleGlobalPointer(event) {
 
 /* ── Screen + chrome ──────────────────────────────────────── */
 
+/**
+ * Music while the room fills up.
+ *
+ * "The lobby" here is one exact thing: the public board, showing the waiting
+ * plate and the join code, with no round dealt. That is the stretch where
+ * people are reading a code off a TV and typing it into a phone, and it is the
+ * only screen this may play on — the home, join and team screens are usually
+ * somebody's phone, and a phone that starts humming in a pocket is a fault
+ * report, not a feature. It stops on the same flag the board itself uses, so
+ * the shuffle is the first thing heard in a round and nothing sits under it.
+ *
+ * The board's own sound button silences this too, but only for as long as the
+ * board is muted: that mute is deliberately not remembered (see audio.js), and
+ * writing it through to the site-wide music preference would quietly turn the
+ * music off in every other game as well.
+ *
+ * Called from everywhere a screen or a room changes. Safe to call as often as
+ * that happens — start() only acts on the first call and stop() only acts if
+ * something is playing.
+ */
+function syncLobbyMusic() {
+  if (!music) return;
+
+  const waiting = view.screen === "board" && !view.room?.gameStarted;
+
+  if (waiting && !rawSfx.isMuted()) music.start({ key: "codenames" });
+  else music.stop();
+}
+
 function showScreen(name) {
   Object.entries(screens).forEach(([key, node]) => node.classList.toggle("active", key === name));
 
@@ -2087,6 +2140,10 @@ function showScreen(name) {
   else stopHeartbeat();
   if (name === "home") setAmbient(true);
   else setAmbient(false);
+
+  // Leaving the board is a stop; arriving on it may be a start. render() below
+  // reaches the same place, but only once there is a room to render.
+  syncLobbyMusic();
 
   if (view.room) render();
   scheduleLayout();
@@ -2420,28 +2477,54 @@ function isExpired(room) {
 async function generateRoomCode() {
   for (let attempt = 0; attempt < 12; attempt += 1) {
     const code = Math.random().toString(36).slice(2, 6).toUpperCase();
-    const snap = await getDoc(getRoomRef(code));
+    const reservation = await claimJoinCode(code);
+    if (!reservation) continue;
 
-    if (!snap.exists()) return code;
+    try {
+      const snap = await getDoc(getRoomRef(code));
+      if (!snap.exists()) return { code, token: reservation.token };
 
-    if (isExpired(snap.data())) {
-      await deleteDoc(getRoomRef(code)).catch(() => {});
-      return code;
+      if (isExpired(snap.data())) {
+        await deleteDoc(getRoomRef(code)).catch(() => {});
+        return { code, token: reservation.token };
+      }
+    } catch (error) {
+      await releaseJoinCode(code, reservation.token).catch(() => {});
+      throw error;
     }
+
+    await releaseJoinCode(code, reservation.token).catch(() => {});
   }
 
   throw new Error("Could not find a free room code. Try again.");
 }
 
+async function claimJoinCode(code) {
+  const response = await fetch(`/codenames/api/join-code?code=${encodeURIComponent(code)}`, {
+    method: "POST"
+  });
+  if (response.status === 409) return null;
+  if (!response.ok) throw new Error("Could not reserve a room code.");
+  return response.json();
+}
+
+function releaseJoinCode(code, token) {
+  return fetch(`/codenames/api/join-code?code=${encodeURIComponent(code)}&token=${encodeURIComponent(token)}`, {
+    method: "DELETE"
+  });
+}
+
+function confirmJoinCode(code, token) {
+  return fetch(`/codenames/api/join-code/confirm?code=${encodeURIComponent(code)}&token=${encodeURIComponent(token)}`, {
+    method: "POST"
+  });
+}
+
 function qrUrlFor(code, size = 200) {
-  const url = new URL(LIVE_SITE_URL);
-  url.hash = `spymaster:${code}`;
-  // Dark modules on a light ground. The old build inverted this to match the
-  // dark theme, but plenty of phone cameras refuse to read an inverted QR —
-  // and a code nobody can scan is worse than one that's slightly off-palette.
-  // No cache-buster: the old build appended Date.now(), so every single render
-  // refetched this image over the network and the QR visibly flickered.
-  return `https://quickchart.io/qr?text=${encodeURIComponent(url.toString())}&size=${size}&margin=1&ecLevel=M&dark=10161e&light=e9e5db`;
+  // First-party PNG: its payload is only /j/CODE. The server turns loopback
+  // into the TV's LAN address before rendering it, so no third-party QR host
+  // sees the code and the same image works locally and in production.
+  return `/codenames/api/join-qr?code=${encodeURIComponent(code)}&size=${Math.round(size)}`;
 }
 
 function getClientId() {

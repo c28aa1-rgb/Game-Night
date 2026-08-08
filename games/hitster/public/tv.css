@@ -204,6 +204,19 @@
   line-height: 1.6;
 }
 
+.lobby__music {
+  margin: -1.6rem 0 2rem;
+  color: var(--accent);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lobby__volume {
+  margin: -0.35rem 0 1.6rem;
+  max-width: 18rem;
+}
+
 .lobby__players-label { display: block; margin-bottom: 0.8rem; }
 
 .lobby__players {
@@ -296,9 +309,11 @@
    the leftover space — the volume slider follows it. */
 .setstag {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.5rem;
   margin-left: auto;
+  min-width: 0;
+  max-width: min(100%, 18rem);
   min-height: 34px;
   padding: 0 0.9rem;
   border: 1px solid var(--line-strong);
@@ -311,6 +326,8 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
   transition: border-color 160ms var(--ease), color 160ms var(--ease);
 }
 
@@ -322,10 +339,20 @@
 }
 
 .setstag__n {
+  flex: 0 0 auto;
   font-family: var(--font-mono);
   font-size: 0.68rem;
   color: var(--accent);
   letter-spacing: 0.06em;
+}
+
+/* A long combination such as "R&B / Soul + Electronic" should stay inside
+   its button instead of making its text appear to float beside the pill. */
+.setstag__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* The same information in the lobby, where there is room to spell it out. */
@@ -817,6 +844,8 @@
   display: grid;
   place-items: center;
   padding: 4vmin;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--scrim);
   backdrop-filter: blur(14px);
   animation: fade 240ms var(--ease) both;
@@ -828,7 +857,11 @@
   align-items: center;
   gap: 1.4rem;
   text-align: center;
+  width: min(46rem, 100%);
   max-width: 46rem;
+  max-height: 100%;
+  margin: auto;
+  padding: 1vmin 0;
 }
 
 .overlay__headline {
@@ -1240,7 +1273,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.9rem;
+  min-height: 100%;
+  padding: 0.5rem 0;
 }
 
 .win__trophy {
@@ -1251,6 +1287,23 @@
 }
 
 .win__score { color: var(--accent-2); }
+
+/* A phone held sideways and smaller projectors have very little vertical
+   room. Let the winner card scroll rather than losing the score below the
+   viewport, and tighten its rhythm before that is needed. */
+.overlay--win .overlay__inner {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-height: 620px) {
+  .overlay--win .win { gap: 0.45rem; }
+  .overlay--win .win__trophy { font-size: clamp(2.4rem, 8vh, 4.4rem); }
+  .overlay--win .winner-name { font-size: clamp(2.2rem, 9vh, 4.6rem); }
+  .overlay--win .win__verb { font-size: clamp(1.15rem, 4vh, 2rem); }
+  .overlay--win .overlay__headline { font-size: clamp(1.6rem, 6vh, 3rem); }
+  .overlay--win .overlay__sub { font-size: 0.9rem; }
+}
 
 /* The actual verdict. Tracked out wide so it reads as a statement rather than
    a label, and indented by one tracking step because letter-spacing adds the

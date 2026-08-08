@@ -1,0 +1,448 @@
+﻿/* ==========================================================================
+   MAFIA â€” THE HOUSE STYLE
+
+   A back room in 1931. Two surfaces, and which one you are looking at tells
+   you what time it is without reading a word:
+
+     night   the club. Warm black, one bulb over the table, oxblood leather.
+             The family is awake and nobody can see anything.
+     day     the ledger. Aged paper, fountain-pen black, a red column rule.
+             Everything is written down now, in front of everybody.
+
+   That flip is the signature. It is not decoration â€” night and day is the
+   state the whole game turns on, and a room glancing up from an argument
+   should know which one it is from the doorway.
+
+   The red pen is the other one. A name struck through in red is dead, in the
+   same gesture on the TV, on the phone, and in the cutscene that draws it.
+
+   The phone deliberately stays on the night surface the whole way through.
+   It is held at arm's length on a sofa, and a screen that turned to paper at
+   dawn would announce the phase to everyone sitting near you.
+
+   Tokens are semantic. Retheming means editing the two :root blocks and
+   nothing else.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Limelight&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap');
+
+:root {
+  /* Night â€” the club ------------------------------------------------------- */
+  /* Warm blacks, never neutral: this room is lit by a filament, not a screen. */
+  --smoke: #14100E;
+  --velvet: #221A17;
+  --velvet-hi: #2E2320;
+  --line: #40342C88;
+  --line-solid: #40342C;
+
+  /* Ink -------------------------------------------------------------------- */
+  --bone: #EDE3D0;
+  --muted: #93826D;
+
+  /* Signals ---------------------------------------------------------------- */
+  /* Oxblood is the family's colour and the pen's. Brass is the house's. */
+  --oxblood: #8E1B22;
+  --brass: #C9A227;
+  --bulb: #F0BE5C;
+  /* Billiard cloth. "Clean", "confirmed", "your side won". */
+  --baize: #2F7D62;
+
+  --oxblood-glow: rgba(142, 27, 34, 0.34);
+  --brass-glow: rgba(201, 162, 39, 0.30);
+  --baize-glow: rgba(47, 125, 98, 0.26);
+
+  /* Transitional semantic aliases. The game surfaces use these meanings—not
+     their old sci-fi palette—while the remaining components are brought onto
+     the new token names. */
+  --panel: var(--velvet);
+  --panel-hi: var(--velvet-hi);
+  --frost: var(--bone);
+  --amber: var(--brass);
+  --amber-glow: var(--brass-glow);
+  --klaxon: var(--oxblood);
+  --klaxon-glow: var(--oxblood-glow);
+  --terminal: var(--baize);
+  --terminal-glow: var(--baize-glow);
+  --hull: var(--smoke);
+
+  /* Day â€” the ledger ------------------------------------------------------- */
+  --paper: #E2D7C0;
+  --paper-hi: #EFE7D6;
+  --paper-edge: #C9BB9E;
+  --pen: #1B1512;
+  --pen-soft: #5A4E42;
+  /* The ruled red column down a ledger page, and every strike-through. */
+  --rule: #9E2B2B;
+
+  /* Type ------------------------------------------------------------------- */
+  /* Bebas does the work: phase names, player names, the clock, read from ten
+     feet away. Limelight is genuine Deco and is rationed to three things â€”
+     the wordmark, the newspaper masthead, and the final verdict. Baskerville
+     is what the paper is set in. Courier is what a 1931 office typed on, and
+     it does every label, code and figure. */
+  --font-display: 'Bebas Neue', 'Haettenschweiler', Impact, sans-serif;
+  --font-deco: 'Limelight', 'Bebas Neue', serif;
+  --font-body: 'Libre Baskerville', Georgia, 'Times New Roman', serif;
+  --font-mono: 'Courier Prime', 'Courier New', ui-monospace, monospace;
+
+  /* Motion ----------------------------------------------------------------- */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --snap: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Rhythm ----------------------------------------------------------------- */
+  /* Deco is drawn with a compass and a straightedge. Nothing here is round. */
+  --radius: 2px;
+  --radius-lg: 3px;
+}
+
+/*
+ * Daylight. Set on the TV only, by tv.js, from the phase.
+ *
+ * Everything below re-points the *same* semantic tokens at the paper set, so
+ * no component needs to know which surface it is being drawn on â€” a panel is
+ * a panel, and it turns from leather into a pasted card on its own.
+ */
+.tv[data-surface='day'] {
+  --smoke: var(--paper);
+  --velvet: var(--paper-hi);
+  --velvet-hi: #F6F0E3;
+  --line: #B6A78A88;
+  --line-solid: var(--paper-edge);
+  --bone: var(--pen);
+  --muted: var(--pen-soft);
+  --brass: #8A6D14;
+  --bulb: #A8801C;
+}
+
+* { box-sizing: border-box; }
+
+/*
+ * The UA stylesheet's [hidden] rule loses to any author rule that sets display,
+ * including .btn below. Without this, el.hidden = true does nothing to a flex
+ * element.
+ */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--smoke);
+  color: var(--bone);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background 900ms var(--ease), color 900ms var(--ease);
+}
+
+/* --------------------------------------------------------------------------
+   Type roles
+   -------------------------------------------------------------------------- */
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+/*
+ * Deco display caps are drawn wide on purpose, and letter-spacing puts a gap
+ * after the LAST glyph as well as between them â€” which drags centred text
+ * half a gap to the left of true centre. Every tracked-out centred heading
+ * gives exactly half of it back.
+ *
+ * Half, not all: `text-indent: <tracking>` over-corrects by the same amount it
+ * was trying to fix, just in the other direction.
+ */
+.display--wide {
+  letter-spacing: var(--tracking, 0.2em);
+  text-indent: calc(var(--tracking, 0.2em) / 2);
+}
+
+/* The rationed one. Three places, and they are all a moment. */
+.deco {
+  font-family: var(--font-deco);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+/* Typed labels. Always mono, always tracked out, always small. */
+.readout {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.figure {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* --------------------------------------------------------------------------
+   The red pen
+
+   One class, everywhere a dead player's name appears. The line is drawn, not
+   printed: it wipes across on a 320ms sweep the first time it renders, which
+   is the same gesture the death cutscene makes larger.
+   -------------------------------------------------------------------------- */
+
+.struck {
+  position: relative;
+  color: var(--muted);
+}
+
+.struck::after {
+  content: '';
+  position: absolute;
+  left: -0.1em;
+  right: -0.1em;
+  top: 55%;
+  height: 2px;
+  background: var(--rule);
+  transform-origin: left center;
+  animation: pen-strike 320ms var(--ease) 1 both;
+  /* Hand-drawn, so it does not sit dead level. */
+  rotate: -1.2deg;
+}
+
+@keyframes pen-strike {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* --------------------------------------------------------------------------
+   Panels
+
+   At night they are leather booths. By day the same element is a card pasted
+   onto the ledger page, so it picks up a paper edge and a dropped corner.
+   -------------------------------------------------------------------------- */
+
+.panel {
+  background: var(--velvet);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.tv[data-surface='day'] .panel {
+  box-shadow: 0 1px 0 var(--paper-edge), 2px 3px 0 rgba(27, 21, 18, 0.10);
+}
+
+/*
+ * Deco corner brackets. Two mitred rules per corner, stepped â€” the corner
+ * treatment on a 1930s menu card or a theatre bill.
+ */
+.bracket { position: relative; }
+
+.bracket::before,
+.bracket::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--brass);
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.bracket::before { top: 4px; left: 4px; border-right: 0; border-bottom: 0; }
+.bracket::after { bottom: 4px; right: 4px; border-left: 0; border-top: 0; }
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 56px;
+  padding: 0 1.6rem;
+  border: 1px solid var(--line-solid);
+  border-radius: var(--radius);
+  background: var(--velvet-hi);
+  color: var(--bone);
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 120ms var(--ease), box-shadow 160ms var(--ease),
+    background 160ms var(--ease), border-color 160ms var(--ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:hover:not(:disabled) { border-color: var(--brass); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* The family's button. Oxblood, brass rule, bone type. */
+.btn--alert {
+  background: var(--oxblood);
+  border-color: var(--brass);
+  color: var(--bone);
+}
+
+.btn--alert:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--oxblood-glow); }
+
+.btn--go {
+  background: var(--baize);
+  border-color: var(--brass);
+  color: var(--bone);
+}
+
+.btn--go:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--baize-glow); }
+
+.btn--ghost { background: transparent; }
+
+.btn--block { width: 100%; }
+
+:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 3px;
+  border-radius: 1px;
+}
+
+/* --------------------------------------------------------------------------
+   Player chips â€” colour swatch and name, never one without the other
+   -------------------------------------------------------------------------- */
+
+.town {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.town__name {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.town__colour {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.town.is-dead .town__name {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--rule);
+  text-decoration-thickness: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   The flashbulb
+
+   The signature transition. Press photographers at a crime scene: a white
+   blowout that arrives in two frames and falls off slowly, with the pop and
+   the tinkle of the spent bulb under it. Fires before every hard cut â€” a body
+   in the morning, a name voted out, a role turned face up.
+
+   Replaces nothing gently: this is the moment the room looks up.
+   -------------------------------------------------------------------------- */
+
+.flashbulb {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(60% 50% at 50% 42%, #FFF8E7 0%, rgba(255, 245, 220, 0.55) 38%, transparent 72%);
+}
+
+.flashbulb.is-firing { animation: bulb-pop 720ms var(--ease) 1; }
+
+/* The family's own: no flash, a red wash coming up from the floor. */
+.flashbulb.is-firing--blood {
+  background: linear-gradient(0deg, var(--oxblood) 0%, rgba(142, 27, 34, 0.5) 40%, transparent 78%);
+}
+
+@keyframes bulb-pop {
+  0% { opacity: 0; }
+  4% { opacity: 1; }
+  12% { opacity: 0.86; }
+  100% { opacity: 0; }
+}
+
+/* --------------------------------------------------------------------------
+   The bulb over the table
+
+   Night only. A warm pool that drifts, because it is hanging off a flex and
+   somebody keeps knocking the table. Off by day â€” daylight has no source.
+   -------------------------------------------------------------------------- */
+
+.lamp {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(50% 42% at 50% 0%, rgba(240, 190, 92, 0.20), transparent 72%),
+    radial-gradient(90% 70% at 50% 50%, transparent 42%, rgba(6, 4, 3, 0.72));
+  transition: opacity 900ms var(--ease);
+}
+
+.lamp.is-live {
+  opacity: 1;
+  animation: lamp-sway 9s ease-in-out infinite;
+}
+
+@keyframes lamp-sway {
+  0%, 100% { transform: translateX(-0.7%); }
+  50% { transform: translateX(0.7%); }
+}
+
+/* --------------------------------------------------------------------------
+   Accessibility floor
+   -------------------------------------------------------------------------- */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  /* The flash still has to read as a flash, so it fades rather than pops. */
+  .flashbulb.is-firing { animation: bulb-fade 500ms linear 1; }
+
+  @keyframes bulb-fade {
+    0%, 100% { opacity: 0; }
+    30% { opacity: 0.75; }
+  }
+
+  /* And the pen still has to land, it just does not travel. */
+  .struck::after { animation: none; }
+}

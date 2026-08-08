@@ -1,10 +1,10 @@
 /**
- * Cuts and grades the footage behind Mayday's opening cinematic.
+ * Cuts and grades the footage behind Mafia's opening cinematic.
  *
  * The sources are 4K stock masters totalling ~376 MB and they live outside the
  * repo, same arrangement as build-art.js. This script holds the edit: which
  * clip, which in-point, how long, and how it's graded. Run it after dropping
- * the masters somewhere, then commit what lands in games/mayday/public/film/.
+ * the masters somewhere, then commit what lands in games/mafia/public/film/.
  *
  *   node scripts/build-film.js "C:/path/to/masters"
  *
@@ -24,7 +24,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const ffmpeg = require('ffmpeg-static');
 
-const OUT = path.join(__dirname, '..', 'games', 'mayday', 'public', 'film');
+const OUT = path.join(__dirname, '..', 'games', 'mafia', 'public', 'film');
 
 /*
  * One palette across every shot, or the cut reads as a collage of stock.

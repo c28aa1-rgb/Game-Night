@@ -9,6 +9,9 @@
   const STORE = 'hitster.spotify';
   const VERIFIER = 'hitster.spotify.verifier';
   const RETURN_TO = 'hitster.spotify.returnTo';
+  // Bump whenever the requested permissions change. A refresh token cannot
+  // gain a new scope, so an older saved session needs one deliberate reconnect.
+  const GRANT_VERSION = '2';
 
   const SCOPES = [
     'streaming',
@@ -16,6 +19,10 @@
     'user-read-private',
     'user-modify-playback-state',
     'user-read-playback-state',
+    // The TV creates one small private lobby playlist in the signed-in
+    // account, then reuses it. Keeping it private avoids filling a player's
+    // public profile with game-night plumbing.
+    'playlist-modify-private',
   ].join(' ');
 
   const redirectUri = `${location.origin}/callback`;
@@ -101,6 +108,7 @@
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
       expiresAt: Date.now() + data.expires_in * 1000,
+      scopeVersion: GRANT_VERSION,
     });
     sessionStorage.removeItem(VERIFIER);
     return sessionStorage.getItem(RETURN_TO) || '/hitster/tv';
@@ -126,6 +134,7 @@
       // Spotify rotates refresh tokens; keep the old one if none comes back.
       refreshToken: data.refresh_token || token.refreshToken,
       expiresAt: Date.now() + data.expires_in * 1000,
+      scopeVersion: GRANT_VERSION,
     };
     writeStore(next);
     return next;
@@ -135,6 +144,10 @@
   async function getToken() {
     const token = readStore();
     if (!token) return null;
+    if (token.scopeVersion !== GRANT_VERSION) {
+      logout();
+      return null;
+    }
     if (Date.now() < token.expiresAt - 60_000) return token.accessToken;
     if (!token.refreshToken) return null;
     try {

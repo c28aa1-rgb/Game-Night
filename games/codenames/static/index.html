@@ -290,6 +290,13 @@
 
   <div id="fxLayer" class="fx-layer" aria-hidden="true"></div>
 
+  <!-- The lobby bed, shared by every game on the site. Root-absolute because it
+       is served from the hub (/hub) rather than from this bundle (/codenames/),
+       and a plain script rather than a module so it has defined window.LobbyMusic
+       before app.js — which is deferred, as all modules are — first runs. It is
+       also the one asset here that only exists on the arcade host: on the
+       standalone Firebase deploy this 404s, so every call site below checks. -->
+  <script src="/hub/lobby-music.js"></script>
   <script type="module" src="app.js?v=safelight1"></script>
 </body>
 </html>

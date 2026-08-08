@@ -77,6 +77,11 @@
       <div class="lobby__right">
         <h1 class="display lobby__wordmark">Hitster</h1>
         <p class="lobby__tag">Name the year. Build the timeline. First to <span id="lobby-target">10</span> wins.</p>
+        <p id="lobby-music" class="lobby__music readout">Spotify warm-up playlist · shuffled</p>
+        <div class="volume lobby__volume">
+          <span class="eyebrow">Vol</span>
+          <input id="volume-lobby" type="range" min="0" max="100" value="60" aria-label="Playback volume" />
+        </div>
         <p class="eyebrow lobby__players-label">In the room</p>
         <ul id="lobby-players" class="lobby__players"></ul>
         <p id="lobby-hint" class="lobby__hint"></p>

@@ -1,7 +1,7 @@
 /**
  * HUES & CUES — sound.
  *
- * Synthesised on the fly, like Mayday's and Draft Night's: no audio files,
+ * Synthesised on the fly, like Mafia's and Draft Night's: no audio files,
  * nothing to load before the first pin lands.
  *
  * The brief for this one is restraint. Nothing here is a stinger. A pin makes

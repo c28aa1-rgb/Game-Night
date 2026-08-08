@@ -22,13 +22,13 @@
  * handlers.
  */
 
-const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
 const QRCode = require('qrcode');
 
 const { app, io } = require('../../lib/host');
+const joinCodes = require('../../lib/join');
 const GRID = require('./public/grid-data.js');
 
 /** Where this game's pages live on the site. */
@@ -257,14 +257,32 @@ const PHASES = {
   GAME_OVER: 'game_over',
 };
 
+/*
+ * Codes are checked against the whole site, not just this game's rooms. Every
+ * QR on the site now encodes /j/CODE and is forwarded on the code alone, so two
+ * games holding the same four letters at once would send half a room to the
+ * wrong game — and the vocabularies genuinely collide: TONE and GOLD are in
+ * Hitster's list too. See lib/join.js.
+ */
 function newCode() {
-  const free = CODE_WORDS.filter((word) => !rooms.has(word));
+  const free = CODE_WORDS.filter((word) => !rooms.has(word) && joinCodes.isFree(word));
   if (free.length) return free[Math.floor(Math.random() * free.length)];
   let code;
   do {
     code = Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random() * 24)]).join('');
-  } while (rooms.has(code));
+  } while (rooms.has(code) || !joinCodes.isFree(code));
   return code;
+}
+
+/**
+ * Take a room out of play and give its code back to the site, so a later game
+ * can be handed those four letters again. Every path that ends a room goes
+ * through here rather than calling rooms.delete directly — a code still
+ * claimed by a room that no longer exists is a code nobody can ever reuse.
+ */
+function dropRoom(code) {
+  rooms.delete(code);
+  joinCodes.release(code);
 }
 
 function createRoom() {
@@ -330,6 +348,7 @@ function createRoom() {
     createdAt: Date.now(),
   };
   rooms.set(code, room);
+  joinCodes.claim(code, 'hues-cues', `${BASE}/play`);
   return room;
 }
 
@@ -351,22 +370,69 @@ function reassignHost(room) {
 
 const clueGiver = (room) => room.players[room.turnIndex] || null;
 
-/** Everybody who is expected to pin something this cycle. */
+/**
+ * Everybody who is expected to pin something this cycle, seated: the player
+ * one place along from the clue-giver first, wrapping round the table and
+ * finishing beside them again.
+ *
+ * Whether their phone is currently answering is deliberately not a condition
+ * here, and this was a real bug rather than a nicety. The queue is built once,
+ * at the instant the clue-giver opens the board, so filtering on `connected`
+ * meant a phone that happened to be mid-reconnect for that one instant — a
+ * lock screen, a wifi blip, socket.io swapping transports — dropped its owner
+ * out of the entire cycle. They stayed connected as far as they could tell,
+ * vanished from every roster on the TV and on the other phones, were never
+ * given a turn, and then reappeared next turn when a fresh queue was built.
+ *
+ * Being offline when the queue reaches you is already handled, and handled
+ * better: advanceGuess parks on you and the room is told who it is waiting for.
+ * That answer only works if you are in the queue to be waited for.
+ */
 function guessers(room) {
   const giver = clueGiver(room);
-  return room.players.filter((p) => p.connected && (!giver || p.id !== giver.id));
+  const from = giver ? room.players.indexOf(giver) + 1 : 0;
+  return room.players
+    .map((_, step) => room.players[(from + step) % room.players.length])
+    .filter((p) => !giver || p.id !== giver.id);
 }
 
 /**
  * The order guessers pin in for a cycle.
  *
- * Join order after the first clue, reversed after the second. Going last is an
- * advantage — you have watched everybody else commit — so the second cycle
- * hands that advantage to whoever had to guess first with nothing to go on.
+ * Round the table from the clue-giver after the first clue, and back the other
+ * way after the second. Going last is an advantage — you have watched
+ * everybody else commit — so the second cycle hands that advantage to whoever
+ * had to guess first with nothing to go on. Reversing is also the cheapest way
+ * to guarantee that the two cycles start and end on different people, which is
+ * the part the table actually notices.
  */
 function buildGuessQueue(room, cycle) {
   const order = guessers(room).map((p) => p.id);
   return cycle === 2 ? order.reverse() : order;
+}
+
+/**
+ * Put a player who has just come back into the cycle that is already running.
+ *
+ * A backstop rather than the fix. Now that the queue is built from everybody
+ * at the table there should be no way to be mid-cycle, owing a pin, and absent
+ * from it — but the queue is a snapshot taken once, and the bug this game
+ * shipped with was exactly that kind of gap, silent from every screen in the
+ * room. Cheap to close, and it closes any future one too.
+ *
+ * Appending puts them last, which is the only honest place: everybody ahead of
+ * them has been waiting, and going late is the advantage, so it should not be
+ * a reward for having dropped off.
+ */
+function ensureQueued(room, player) {
+  if (room.phase !== PHASES.GUESS || !room.cycle) return;
+  if (clueGiver(room)?.id === player.id) return;
+  if (room.guesses[room.cycle - 1].has(player.id)) return;
+  if (room.guessQueue.includes(player.id)) return;
+  room.guessQueue.push(player.id);
+  // The queue may have been parked on nobody, waiting to be spent. Re-park it
+  // so the wait clock starts from now rather than from whenever it last moved.
+  advanceGuess(room);
 }
 
 /**
@@ -587,6 +653,18 @@ function beginTurn(room) {
  * Split out from rotate() because the reveal needs to name them while the
  * current turn is still the current turn — the TV counts down to "Bo is up"
  * before Bo is actually up.
+ *
+ * This is the one place a dropped phone is still stepped over, and on purpose:
+ * a turn cannot run at all without its clue-giver, since the four secret
+ * coordinates only exist on their screen and the clue is said out loud by
+ * them. Handing the turn to an empty chair would stall the game outright,
+ * where the host's skip only exists to unstall it.
+ *
+ * What it costs somebody is one lap and never their place. The search walks
+ * seats forward from the current one, so a player passed over while their
+ * phone was locked is still sitting between the same two neighbours next time
+ * round, and the rotation reaches them again. Compare the guess queue, which
+ * does wait — there the room can afford to.
  */
 function peekNextClueGiver(room) {
   for (let step = 1; step <= room.players.length; step++) {
@@ -739,16 +817,37 @@ function closeCycle(room) {
 
 function startGame(room) {
   for (const player of room.players) player.score = 0;
-  room.turnIndex = 0;
   room.turnNo = 0;
   room.suddenDeath = false;
   room.winnerId = null;
   // A fresh game gets the whole board back.
   room.usedTargets = new Set();
   room.usedHexes = new Set();
-  // Whoever is first in join order might have wandered off between joining and
-  // the host pressing start.
-  if (!room.players[0]?.connected) rotate(room);
+
+  /*
+   * Deal the seats rather than keeping join order.
+   *
+   * Join order is not a neutral order. It is the order people got their phones
+   * out in, and it decided two things all evening: the host — whoever set the
+   * TV up — always gave the first clue, and the guess queue ran down the same
+   * list every single turn. Shuffling once, here, settles both at a stroke.
+   * The table still has an order, which the queue needs; it is simply no
+   * longer the order the room happened to arrive in.
+   *
+   * Safe to reorder because nothing outside this list identifies a player by
+   * position: hostId is an id, and turnIndex is set from the new order below.
+   */
+  room.players = shuffle(room.players);
+
+  /*
+   * The opening clue-giver is the first seat with somebody awake in it, which
+   * after the shuffle is a uniformly random one — and skips anybody who
+   * wandered off between joining and the host pressing start without costing
+   * them their seat in the rotation.
+   */
+  const opener = room.players.findIndex((p) => p.connected);
+  room.turnIndex = opener >= 0 ? opener : 0;
+
   beginTurn(room);
 }
 
@@ -794,24 +893,13 @@ app.get(BASE, page('start.html'));
 app.get(`${BASE}/play`, page('play.html'));
 app.get(`${BASE}/tv`, page('tv.html'));
 
-/** LAN address, so the QR code points somewhere a phone can actually reach. */
-function lanAddress() {
-  for (const entries of Object.values(os.networkInterfaces())) {
-    for (const entry of entries || []) {
-      if (entry.family === 'IPv4' && !entry.internal) return entry.address;
-    }
-  }
-  return null;
-}
-
-function joinUrlFor(req, code) {
-  const host = req.get('host') || `localhost:${PORT}`;
-  const isLoopback = /^(localhost|127\.0\.0\.1|\[::1\])(:|$)/.test(host);
-  const lan = lanAddress();
-  const target = isLoopback && lan ? `${lan}:${PORT}` : host;
-  const protocol = isLoopback ? 'http' : req.protocol;
-  return `${protocol}://${target}${BASE}/play?room=${code}`;
-}
+/*
+ * Both of these moved to lib/join.js when every game's QR started encoding the
+ * site-wide /j/CODE address rather than this game's own join page. A shorter
+ * string makes a less dense symbol, which is the entire point: the code is
+ * scanned across a room, off a TV, by whoever is sitting furthest from it.
+ */
+const { lanAddress, joinUrl: joinUrlFor } = joinCodes;
 
 /**
  * The ten colours, and which of them are gone.
@@ -937,6 +1025,9 @@ nsp.on('connection', (socket) => {
       returning.socketId = socket.id;
       attach(target);
       reassignHost(target);
+      // Back mid-cycle and still owing a pin: make sure the running order knows
+      // about them, or they would watch a cycle they are part of go past.
+      ensureQueued(target, returning);
       ack?.({ ok: true, code: target.code, playerId: returning.id });
       broadcast(target);
       return;
@@ -997,6 +1088,9 @@ nsp.on('connection', (socket) => {
     player.socketId = socket.id;
     attach(target);
     reassignHost(target);
+    // Same as the join path: a phone that reloaded mid-cycle rejoins the
+    // running order rather than the cycle finishing without it.
+    ensureQueued(target, player);
     ack?.({ ok: true, code: target.code, playerId: player.id });
     if (displaced && displaced !== socket.id) {
       nsp.to(displaced).emit('seat_taken', { name: player.name });
@@ -1191,8 +1285,12 @@ nsp.on('connection', (socket) => {
     target.guessQueue = buildGuessQueue(target, target.cycle);
     target.guessAt = 0;
     target.guessOn = null;
-    // If nobody can guess the cycle stays open rather than racing to a reveal
-    // nobody saw; the host unsticks it.
+    /*
+     * The queue holds everybody else in the game, awake or not, so the only way
+     * it comes up empty is a table that has been whittled down to the
+     * clue-giver alone. The cycle stays open in that case rather than racing to
+     * a reveal nobody saw; skip on the host's phone closes it.
+     */
     advanceGuess(target);
     ack?.({ ok: true });
     broadcast(target);
@@ -1304,7 +1402,7 @@ nsp.on('connection', (socket) => {
     // A lobby that empties out entirely takes the room with it.
     if (target.phase === PHASES.LOBBY && !target.players.some((p) => p.connected) && !target.tvSockets.size) {
       clearRevealTimer(target);
-      rooms.delete(target.code);
+      dropRoom(target.code);
       return;
     }
 
@@ -1327,7 +1425,7 @@ setInterval(() => {
     const empty = !target.tvSockets.size && !target.players.some((p) => p.connected);
     if (empty && target.createdAt < cutoff) {
       clearRevealTimer(target);
-      rooms.delete(code);
+      dropRoom(code);
     }
   }
 }, 10 * 60 * 1000);
