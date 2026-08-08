@@ -50,6 +50,11 @@ function renderCards() {
           <img src="${esc(game.art)}" alt="" width="1200" height="675" decoding="async" />
           ${badge}
         </span>
+        <span class="card-facts" aria-label="Game details">
+          <span class="fact"><b>${esc(game.age || 'All ages')}</b><small>AGE</small></span>
+          <span class="fact"><b>${esc(game.time || 'Flexible')}</b><small>TIME</small></span>
+          <span class="fact fact--players"><b>${esc(game.players.split(' · ')[0])}</b><small>PLAYERS</small></span>
+        </span>
         <span class="meta">
           <h2 class="visually-hidden">${esc(game.name)}</h2>
           <p class="tagline">${esc(game.tagline)}</p>
@@ -137,8 +142,8 @@ app.get('/j/:code', (req, res) => {
 
 /** Machine-readable version of the registry, for anything else that wants it. */
 app.get('/api/games', (req, res) => {
-  res.json(games.map(({ id, name, tagline, players, accent, art, status, basePath, href }) => ({
-    id, name, tagline, players, accent, art, status, basePath, href: href || basePath,
+  res.json(games.map(({ id, name, tagline, players, age, time, accent, art, status, basePath, href }) => ({
+    id, name, tagline, players, age, time, accent, art, status, basePath, href: href || basePath,
   })));
 });
 
