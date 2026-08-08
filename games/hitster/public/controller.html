@@ -89,21 +89,23 @@
         </div>
         <div class="wheel__card" aria-hidden="true"><span>?</span></div>
 
-        <!-- Which end is which. Nothing else on this screen says that dragging
-             up means older, and that has to be readable for the whole turn
-             rather than in a hint that has come and gone by the time anyone
-             needs it. Pinned to the wheel, not to the rail, so the two words
-             hold their ends while the years run past between them. -->
+        <!-- A single, quiet legend keeps the gesture obvious without adding
+             another control beside the timeline. -->
         <p class="eyebrow wheel__edge wheel__edge--older">
-          <span class="wheel__arrow" aria-hidden="true">↑</span>Older
+          OLDER
         </p>
         <p class="eyebrow wheel__edge wheel__edge--newer">
-          <span class="wheel__arrow" aria-hidden="true">↓</span>Newer
+          NEWER
         </p>
+        <p class="wheel__hint" aria-hidden="true">
+          <span class="wheel__direction wheel__direction--up"><span class="wheel__arrow"></span></span>
+          <span>SCROLL</span>
+          <span class="wheel__direction wheel__direction--down"><span class="wheel__arrow"></span></span>
+        </p>
+        <p class="wheel__readout readout" id="gap-label" aria-live="polite">—</p>
       </div>
 
       <div class="dock">
-        <p class="wheel__readout readout" id="gap-label">—</p>
         <button id="place-btn" class="btn btn--block">Place it here</button>
         <button id="skip-btn-2" class="btn btn--ghost btn--block" hidden>This song won&rsquo;t play — skip it</button>
       </div>
