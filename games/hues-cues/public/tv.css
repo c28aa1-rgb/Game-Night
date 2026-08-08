@@ -151,6 +151,19 @@
 /* The clue-giver's name carries their colour, and nothing else in the rail does. */
 .banner__who { color: var(--tone, var(--chalk)); }
 
+/* How many are still to come — a footnote to the name, not a second headline. */
+.banner__rest {
+  margin-left: 0.7rem;
+  padding-left: 0.7rem;
+  border-left: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--graphite-dim);
+  vertical-align: 0.22em;
+}
+
 /* A cycle counter that reads as two lamps rather than a number. */
 .cycles {
   display: inline-flex;
@@ -458,11 +471,18 @@
   100% { opacity: 0.28; transform: scale(1); }
 }
 
+/*
+ * What each ring pays, tucked just outside its own corner.
+ *
+ * Which corner is not fixed. Anchored permanently to the top left, a target up
+ * in the first rows or the first columns pushed its numbers off the board —
+ * and with the reveal zoomed in, off the screen entirely, so the one turn
+ * where the room most wants to read "3 · 2 · 1" was the turn it could not.
+ * The corner is chosen from where the target actually sits, once, so all three
+ * still step outward along the same diagonal.
+ */
 .ring__value {
   position: absolute;
-  top: -2px;
-  left: -2px;
-  transform: translate(-100%, -100%);
   padding: 0.1rem 0.3rem;
   background: var(--chalk);
   color: var(--void);
@@ -471,6 +491,11 @@
   font-size: 0.6rem;
   font-weight: 600;
 }
+
+.ring--tl .ring__value { top: -2px; left: -2px; transform: translate(-100%, -100%); }
+.ring--tr .ring__value { top: -2px; right: -2px; transform: translate(100%, -100%); }
+.ring--bl .ring__value { bottom: -2px; left: -2px; transform: translate(-100%, 100%); }
+.ring--br .ring__value { bottom: -2px; right: -2px; transform: translate(100%, 100%); }
 
 /* A pin that just scored, lit as its ring passes over it. */
 .mark-pin.is-scoring {
@@ -603,6 +628,65 @@
 
 .goal { margin: 0; white-space: nowrap; }
 .goal b { color: var(--chalk); font-weight: 600; }
+
+/* --------------------------------------------------------------------------
+   Waiting on one phone
+   -------------------------------------------------------------------------- */
+
+/*
+ * Deliberately not a sheet, and deliberately one line.
+ *
+ * Every other panel that covers the board has replaced it as the thing to look
+ * at. This one has not: the room is still reading the pins that are already
+ * down, and is being told why no more are arriving. A card deep enough to hold
+ * three lines ate the bottom three rows of the grid to say something the top
+ * rail was already half saying, so it is a bar instead — one row deep, sitting
+ * on the outermost rank of squares, which is the one strip of this board that
+ * is never a target anyway.
+ */
+.stall {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--rail-h, 64px) + 4px);
+  z-index: 16;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  max-width: 94vw;
+  padding: 0.35rem 1rem;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--tone, var(--fault));
+  border-radius: var(--radius);
+  background: rgba(17, 20, 23, 0.97);
+  box-shadow: 0 10px 34px -10px rgba(8, 9, 11, 0.95);
+  white-space: nowrap;
+  animation: stall-in 300ms var(--ease);
+}
+
+.stall__name {
+  font-size: 1.05rem;
+  color: var(--tone, var(--chalk));
+}
+
+.stall__why {
+  font-size: 0.85rem;
+  color: var(--chalk);
+}
+
+/* The part addressed to one person in the room, held back from the rest. */
+.stall__fix {
+  padding-left: 0.7rem;
+  border-left: 1px solid var(--rule);
+  color: var(--graphite-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes stall-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translateX(-50%); }
+}
 
 /* --------------------------------------------------------------------------
    The tally — what the turn was worth, at reading distance
@@ -797,12 +881,29 @@
   align-items: center;
 }
 
-.lobby__join { text-align: center; }
+/*
+ * One centred column, all four parts sharing an axis.
+ *
+ * text-align alone was not enough and looked like a bug: the QR is a block of
+ * a fixed size, so it sat flush left while the label above it centred itself
+ * across the whole column — and the column was as wide as the join URL, which
+ * is much wider than the QR. Everything was centred on something, just not on
+ * each other. Grid centring puts the box on the same axis as the text, and
+ * capping the URL to the QR's own width stops it setting the column width in
+ * the first place.
+ */
+.lobby__join {
+  --qr-size: clamp(180px, 20vw, 280px);
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
 .lobby__join .readout { margin: 0 0 0.9rem; }
 
 .qr {
-  width: clamp(180px, 20vw, 280px);
-  height: clamp(180px, 20vw, 280px);
+  width: var(--qr-size);
+  height: var(--qr-size);
   padding: 10px;
   background: var(--chalk);
   border-radius: var(--radius);
@@ -812,6 +913,8 @@
 
 .lobby__url {
   margin: 0.9rem 0 0;
+  /* Wraps under the QR rather than stretching the column out from under it. */
+  max-width: var(--qr-size);
   font-family: var(--font-mono);
   font-size: 0.68rem;
   color: var(--graphite-dim);

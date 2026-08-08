@@ -106,7 +106,18 @@
 
     <!-- Guesser: the wheels -->
     <div class="panel-view panel-view--guess" id="guessView" hidden>
-      <p class="readout" id="guessLabel">Place your pin</p>
+      <div class="guess__head">
+        <p class="readout" id="guessLabel">Place your pin</p>
+        <!--
+          Yours alone, and it only does anything while you are the one pinning.
+          Some people want the board magnified around the square they are on;
+          some are still reading the whole grid and want it left where it is.
+        -->
+        <button class="toggle" type="button" id="zoomBtn" aria-pressed="true">
+          <span class="toggle__label">TV zoom</span>
+          <span class="toggle__state" id="zoomState">On</span>
+        </button>
+      </div>
 
       <div class="preview" id="preview">
         <span class="preview__chip" id="previewChip"></span>

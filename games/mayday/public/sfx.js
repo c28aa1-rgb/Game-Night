@@ -43,6 +43,13 @@ window.MaydaySFX = (() => {
   /** True while the opening's score is running, which changes how cut() behaves. */
   let scoring = false;
 
+  // The opening's dialogue.
+  let voiceBus = null;
+  /** Decoded lines, keyed by url, so a replay costs no network and no decode. */
+  const voiceCache = new Map();
+  /** The line currently sounding, so it can be cut when the opening is skipped. */
+  let voiceNode = null;
+
   function build() {
     const Ctor = window.AudioContext || window.webkitAudioContext;
     if (!Ctor) return false;
@@ -66,6 +73,20 @@ window.MaydaySFX = (() => {
     musicBus = ctx.createGain();
     musicBus.gain.value = 0.0001;
     musicBus.connect(master);
+
+    /*
+     * The crew.
+     *
+     * The opening's dialogue is pre-rendered audio rather than synthesis — see
+     * scripts/build-voices.js for why — but it still belongs in this graph and
+     * not in a loose <audio> element. Routing it here means one mixer decides
+     * what is audible: the score and the ship's ambience duck under a voice
+     * automatically, the sound toggle silences it like everything else, and the
+     * whole cinematic stops dead on a single disconnect.
+     */
+    voiceBus = ctx.createGain();
+    voiceBus.gain.value = 1;
+    voiceBus.connect(master);
 
     const frames = ctx.sampleRate;
     noise = ctx.createBuffer(1, frames, ctx.sampleRate);
@@ -479,9 +500,91 @@ window.MaydaySFX = (() => {
     },
   };
 
+  /**
+   * The crew's dialogue in the opening.
+   *
+   * Pre-rendered lines, decoded once and played through the mixer. `play`
+   * resolves when the line finishes, which is what lets the cinematic advance
+   * on the dialogue rather than on a timer — a slow network or a long line
+   * moves the pictures with it instead of drifting out of sync.
+   */
+  const voice = {
+    /** Decode ahead of time. Returns how many are ready, never throws. */
+    async load(urls = []) {
+      if (!live()) return 0;
+      let ready = 0;
+      await Promise.all(urls.map(async (url) => {
+        if (voiceCache.has(url)) { ready += 1; return; }
+        try {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(String(res.status));
+          const buf = await ctx.decodeAudioData(await res.arrayBuffer());
+          voiceCache.set(url, buf);
+          ready += 1;
+        } catch {
+          // A missing line is survivable — the caption still carries it.
+        }
+      }));
+      return ready;
+    },
+
+    loaded(url) { return voiceCache.has(url); },
+
+    /**
+     * Speak one line. Resolves when it ends, or immediately if the audio never
+     * loaded — the cinematic then falls back to holding for the caption's own
+     * reading time rather than stalling forever on a line that cannot play.
+     */
+    play(url) {
+      const buffer = voiceCache.get(url);
+      if (!buffer || !live() || !voiceBus) return Promise.resolve(false);
+
+      voice.stop();
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      const g = ctx.createGain();
+      g.gain.value = 1;
+      src.connect(g);
+      g.connect(voiceBus);
+
+      // A little of the room, so the crew sound like they are somewhere.
+      const send = ctx.createGain();
+      send.gain.value = 0.12;
+      g.connect(send);
+      send.connect(reverbSend);
+
+      /*
+       * Deliberately no ducking here. The lines land four hundred milliseconds
+       * apart, and a duck ramp is longer than that — ducking per line would
+       * make the score pump in and out fourteen times instead of sitting under
+       * the scene. The cinematic ducks once, for its whole run.
+       */
+      src.start();
+      voiceNode = src;
+
+      return new Promise((resolve) => {
+        src.onended = () => {
+          if (voiceNode === src) voiceNode = null;
+          resolve(true);
+        };
+      });
+    },
+
+    stop() {
+      if (!voiceNode) return;
+      const node = voiceNode;
+      voiceNode = null;
+      node.onended = null;
+      try { node.stop(); } catch { /* already finished */ }
+    },
+
+    get speaking() { return !!voiceNode; },
+  };
+
   const api = {
     get enabled() { return enabled; },
     intro,
+    voice,
 
     /** Called from the first gesture so the context is warm before the first night. */
     prime() {

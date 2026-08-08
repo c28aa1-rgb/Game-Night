@@ -83,8 +83,14 @@ const ROLE_DEAL_MS = envInt('MAYDAY_ROLE_DEAL_MS', 8000);
  * The opening: the ship, the wound, and how the crew ended up in this room.
  * Long, because it is a story rather than a phase — the host can cut it short
  * from their phone once the room has heard it a few times.
+ *
+ * Two minutes covers the filmed opening — roughly ninety seconds of crew
+ * dialogue and dead air, then the ship's closing lines over the roll call. This
+ * is only the ceiling: the phase actually ends through endPhase(), so the TV
+ * being mid-sentence holds it, and a screen that falls back to the shorter
+ * drawn opening releases it early rather than sitting on a black screen.
  */
-const INTRO_MS = envInt('MAYDAY_INTRO_MS', 54000);
+const INTRO_MS = envInt('MAYDAY_INTRO_MS', 120000);
 /**
  * Breathing room after everybody in a window has acted. The clock jumps to
  * this rather than to zero, so the narrator's line lands and the room gets a
@@ -947,7 +953,8 @@ function startGame(room) {
   // Roles are dealt at the *end* of the opening. Nobody should be reading a
   // secret off their phone while the ship is still explaining what happened.
   setBeat(room, 'intro', { crew: room.players.map((p) => ({ name: p.name, colour: colourById(p.colour) })) });
-  startClock(room, INTRO_MS, () => dealRoom(room));
+  // Through endPhase, so the deal never lands on top of the ship's last line.
+  startClock(room, INTRO_MS, () => endPhase(room, () => dealRoom(room)));
   broadcast(room);
   return { ok: true };
 }

@@ -22,18 +22,46 @@ window.MaydayNarrator = (() => {
    */
   const LINES = {
     /**
-     * The opening. Not a pool of interchangeable one-liners — this is the story,
-     * told in order over the intro cutscene, so it is a list of *sequences* and
-     * one whole sequence is picked. Every version has to land the same four
-     * facts: the ship is dying, help is not coming, the crew is small, and
-     * something aboard is not crew.
+     * The opening's last word, and the only part of it the ship says.
+     *
+     * The disaster itself is now told by the crew who did not survive it, in
+     * pre-rendered audio — see scripts/build-voices.js. By the time these lines
+     * arrive the channel has been dead for three seconds and the room has just
+     * worked out that nobody is coming. So the ship does not narrate the story;
+     * it arrives late, counts the survivors, and states the problem.
+     *
+     * Told in order, so this is a list of *sequences* and one whole sequence is
+     * picked. Both have to land the same three facts: the log has ended, the
+     * numbers are bad, and one of the suits in the room did this.
      */
     intro: [
+      [
+        'Automated log ends. Elapsed time since incident: two hours, eleven minutes.',
+        'Surviving crew: {count}. Rescue, one hundred and twenty-two days. Life support, nineteen.',
+        'The sequence was executed from inside a crew suit. The suit is still aboard. Good luck.',
+      ],
+      [
+        'Log ends. No further transmissions were received, because none were sent.',
+        'Surviving crew: {count}. The ship can count you. It cannot vouch for you.',
+        'Whatever did this is wearing one of those suits. The ship has no stake in the outcome, and will be recording.',
+      ],
+    ],
+
+    /**
+     * The whole story, for when the film cannot play.
+     *
+     * If the footage never loaded, nobody has told the room what happened — the
+     * three lines above assume a dying crew already did. So this pool carries
+     * the original opening: six lines over the drawn sequence's six scenes,
+     * landing the same four facts on its own. It is a complete opening, not a
+     * message about a missing one, and nothing in it should read as degraded.
+     */
+    intro_full: [
       [
         'Automated distress relay. Mayday, mayday, mayday.',
         'This is the survey vessel Kestrel, eleven months out, on the wrong side of nowhere.',
         'Two hours ago something opened the reactor shielding from the inside. Then it opened the long-range array.',
-        'Casualties: most of you. Survivors: the people in this room.',
+        'Casualties: most of you. Survivors: the {count} people in this room.',
         'Rescue is four months away, and life support has three weeks in it. So that is settled.',
         'One more thing, and the ship apologises for the timing. Whatever did this is still aboard, and it is wearing a crew suit.',
       ],
@@ -41,7 +69,7 @@ window.MaydayNarrator = (() => {
         'Mayday. Mayday. This is the Kestrel, and this is the last thing it will ever say.',
         'Somebody cut the array while the rest of the crew slept. Somebody who knew exactly which cable to cut.',
         'Then the reactor. Then the shielding. It was thorough. It was also, statistically, one of you.',
-        'What is left of the crew is standing in this room. The ship can count you. It cannot vouch for you.',
+        'What is left of the crew is standing in this room. The ship can count {count} of you. It cannot vouch for any of you.',
         'No rescue. No comms. One airlock, and a vote.',
         'Good luck. The ship has no stake in the outcome and will be recording either way.',
       ],
@@ -343,18 +371,25 @@ window.MaydayNarrator = (() => {
   const readingTime = (text) => Math.min(9000, 600 + text.length * 62);
 
   /**
-   * Some platforms accept an utterance and then never fire `end`.
+   * Speech engines lie in two opposite directions, and both have to be caught.
    *
-   * That used to be survivable — the guard timer moved the queue on and the
-   * game carried on regardless. Now that phases wait for the narrator, a device
-   * like that would make every single line take its full guard and drag the
-   * whole game with it. So: if two lines in a row are only ever finished by the
-   * guard, and none has ever ended by itself, stop believing the speech engine
-   * and drive the captions on the reading clock instead.
+   * Some platforms accept an utterance and then never fire `end`. That used to
+   * be survivable — the guard timer moved the queue on — but now that phases
+   * wait for the narrator, a device like that would make every line take its
+   * full guard and drag the whole game with it.
+   *
+   * Others accept an utterance and report it finished immediately, which is
+   * what a browser with no usable voice does. Believing that blows the entire
+   * queue in one frame: three lines land on the same millisecond and the room
+   * sees captions flicker past unread.
+   *
+   * Either way the answer is the same — stop believing the engine and drive the
+   * captions on the reading clock, which is what the caption is for.
    */
   let speechTrusted = true;
   let naturalEnds = 0;
   let guardFires = 0;
+  let instantEnds = 0;
 
   function pump() {
     if (speaking || !queue.length) return;
@@ -381,7 +416,20 @@ window.MaydayNarrator = (() => {
     utterance.rate = 0.96;
     utterance.pitch = /natural|neural|online/i.test(voice?.name || '') ? 0.92 : 0.78;
     utterance.volume = 1;
-    utterance.onend = () => { naturalEnds += 1; guardFires = 0; done(); };
+    const startedAt = Date.now();
+    utterance.onend = () => {
+      guardFires = 0;
+      // A sentence that "finished" in a fraction of the time it takes to say it
+      // was never said. Two of those and the engine has stopped being evidence.
+      if (Date.now() - startedAt < readingTime(item.text) * 0.35) {
+        instantEnds += 1;
+        if (instantEnds >= 2) speechTrusted = false;
+      } else {
+        naturalEnds += 1;
+        instantEnds = 0;
+      }
+      done();
+    };
     utterance.onerror = () => { naturalEnds += 1; done(); };
     speech.speak(utterance);
 
@@ -448,10 +496,21 @@ window.MaydayNarrator = (() => {
     return push(textFor(kind, vars), kind, vars);
   }
 
-  /** The opening story, queued as one run of lines. */
-  function sayIntro() {
+  /**
+   * The ship's part of the opening, queued as one run of lines.
+   *
+   * `vars` carries the survivor count, which is the one thing in the opening
+   * that cannot be pre-rendered — it depends on who actually turned up.
+   *
+   * `full` asks for the whole story rather than just the closing, and is what
+   * the drawn opening uses when the film could not play. The two pools are
+   * different lengths on purpose, because they are doing different jobs: three
+   * lines over a roll call and a title, or six over six scenes.
+   */
+  function sayIntro(vars = {}, { full = false } = {}) {
     queue.length = 0;
-    const sequence = pick(LINES.intro, 'intro');
+    const key = full ? 'intro_full' : 'intro';
+    const sequence = pick(LINES[key], key).map((text) => fill(text, vars));
     sequence.forEach((text, index) => {
       push(text, 'intro', { index, total: sequence.length });
     });

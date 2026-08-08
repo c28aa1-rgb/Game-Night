@@ -85,13 +85,21 @@ The only reveal is the target itself, after cycle 2 submissions close:
 3. Rings pulse outward from the target (3×3 → ring 2 → ring 3) as a visual
    scoring guide, each ring briefly highlighting the pins from both cycles
    that fall inside it.
-4. Score deltas count up next to each player's chip in the score bar
-   (small "+3" / "+1" / "+0" pop-ins), clue-giver's chip ticks up
-   separately.
-5. Beat, then advance to next clue-giver.
+4. **The board holds, still, for five seconds.** Everything is now on
+   screen — the target lit, every pin sitting in whatever ring it earned —
+   and this is the only point in the turn where that picture is worth
+   reading. Cutting to the numbers threw it away exactly when it had become
+   interesting.
+5. The turn counts up, one player at a time, full-screen and large enough to
+   read from the sofa. Everybody in the turn gets a row, zeroes included;
+   the clue-giver's row is marked as theirs.
+6. The handoff: the next clue-giver is named and the room counts down to
+   them.
 
-Tap-to-skip on the host's phone speeds this up if the room wants to move
-faster.
+The hold is the game's only clock, and its length is derived rather than
+chosen — the count is per player, so a ten-player turn holds longer than a
+three-player one. Tap-to-skip on the host's phone cuts it short. A turn that
+ends the game skips the handoff entirely.
 
 ## 5. Screens
 
@@ -164,3 +172,12 @@ runtime).
 - Reconnect/disconnect handling for a player mid-guess (out of scope for
   design, follow Mayday's existing reconnect pattern in
   `games/mayday/server.js`).
+
+  *Settled in build:* the guess queue does **not** step over a player whose
+  phone has dropped. Skipping silently is indistinguishable from a bug when
+  you are watching from a sofa, and it costs somebody a clue for standing up.
+  Instead the queue holds, the TV names who it is holding for and why, and the
+  host gets two buttons — skip them, or remove them from the game. Removal is
+  restricted to a player who has dropped or who is currently holding the queue
+  up; anybody else is off limits, since "the host can remove whoever they
+  like" is a different game.

@@ -17,6 +17,7 @@ const A = window.MaydayAvatar;
 const SFX = window.MaydaySFX;
 const Narrator = window.MaydayNarrator;
 const Cutscene = window.MaydayCutscene;
+const Film = window.MaydayFilm;
 
 let state = null;
 let lastBeatId = 0;
@@ -73,6 +74,9 @@ Narrator.onLine((text, kind, meta) => {
   // That is the signature beat, and it only lands if it happens on the syllable.
   SFX.cut();
   el('caption').hidden = false;
+  // The opening leaves a crew member's name in the caption's speaker slot, and
+  // everything after it is the ship again.
+  el('caption').querySelector('.caption__who').textContent = 'Ship AI';
   el('caption-line').textContent = text;
   // The opening's pictures follow its sentences rather than a timer, so a slow
   // voice on a slow device never runs ahead of the story.
@@ -133,20 +137,112 @@ const AMBIENCE_FOR = {
 };
 
 // ---------------------------------------------------------------------------
+// The opening
+// ---------------------------------------------------------------------------
+
+/**
+ * Clear whatever is performing.
+ *
+ * There are two stages now — the filmed opening and the drawn cutscenes — and
+ * every reason to stop one is a reason to stop the other. Anything that ends a
+ * game abruptly (the menu, a reset, a room closing) goes through here, so a
+ * ninety-second cinematic can never keep playing over a lobby.
+ */
+function stopShow() {
+  Film.stop();
+  Cutscene.stop();
+}
+
+/**
+ * Show a caption for somebody other than the ship.
+ *
+ * The crew are pre-rendered audio, so they never touch the narrator — but the
+ * caption is not decoration. Synthesised or recorded, the line on screen is
+ * what actually carries the plot in a loud room, and with three voices it now
+ * has to say who is talking as well as what they said.
+ */
+function crewCaption(who, text) {
+  el('caption').hidden = false;
+  el('caption').querySelector('.caption__who').textContent = who;
+  el('caption-line').textContent = text;
+}
+
+/**
+ * The opening, in two halves.
+ *
+ * First the filmed disaster, told by three crew who do not survive it. Then
+ * three seconds of nothing. Then the ship — in the same synthesised voice it
+ * will use for the rest of the game — counts the survivors over the roll call.
+ *
+ * If the film is not ready, the drawn opening plays instead and tells the whole
+ * story itself. That path is not a degraded mode anyone should notice; it is
+ * the opening this game shipped with, kept working on purpose.
+ */
+async function playOpening(crew) {
+  SFX.cut();
+
+  if (Film.ready) {
+    /*
+     * Hold the phase open for the film.
+     *
+     * The server already waits for this screen to stop talking before it moves
+     * on, but it learns that from the narrator — and for the next ninety
+     * seconds the narrator says nothing while three recorded voices do all the
+     * work. Without this the deal would land somewhere in the middle of the
+     * reactor breach. The heartbeat re-arms the server's cap (fifteen seconds)
+     * from inside it, and deliberately never reports false: the ship's closing
+     * lines pick the state straight up, so there is no gap between the film
+     * ending and the narrator starting for the phase to slip through.
+     */
+    socket.emit('narration', { speaking: true });
+    const holding = setInterval(() => socket.emit('narration', { speaking: true }), 5000);
+
+    let finished = false;
+    try {
+      finished = await Film.play({
+        onLine: ({ who, text }) => crewCaption(who, text),
+        onClear: () => { el('caption').hidden = true; },
+      });
+    } finally {
+      clearInterval(holding);
+    }
+
+    if (!finished) {
+      /*
+       * Cut short: the host skipped, or a newer beat arrived. Whoever cancelled
+       * it has already cleared the stage and may well be drawing on it now, so
+       * do not tidy up on their behalf — Film.stop() here would pull the
+       * is-cutscene class out from under whatever is playing. Just release the
+       * phase, since nothing is about to speak.
+       */
+      socket.emit('narration', { speaking: false });
+      return;
+    }
+
+    Film.stop();
+    Cutscene.playIntro(crew, { short: true });
+    Narrator.sayIntro({ count: crew.length });
+    return;
+  }
+
+  // No film, so nobody has told the room what happened. The ship tells the
+  // whole story over the drawn sequence instead of just closing it out.
+  Cutscene.playIntro(crew);
+  Narrator.sayIntro({ count: crew.length }, { full: true });
+}
+
+// ---------------------------------------------------------------------------
 // Beats
 // ---------------------------------------------------------------------------
 
 async function handleBeat(beat) {
   switch (beat.kind) {
     case 'intro':
-      // The whole opening: ship, wound, systems, crew, title — narrated.
-      Cutscene.playIntro(beat.crew || []);
-      SFX.cut();
-      Narrator.sayIntro();
+      await playOpening(beat.crew || []);
       break;
 
     case 'game_start':
-      Cutscene.stop();
+      stopShow();
       await alarmThen('game_start');
       break;
 
@@ -215,7 +311,7 @@ async function handleBeat(beat) {
     case 'win_crew':
     case 'win_saboteurs': {
       const crew = beat.kind === 'win_crew';
-      Cutscene.stop();
+      stopShow();
       klaxonFlash(crew);
       await sleep(560);
       SFX.cut();
@@ -326,10 +422,15 @@ socket.on('game_state', (next) => {
   // Dropped back to the lobby mid-game — by this screen's menu or by the host's
   // phone. Whatever was playing is now about a game that no longer exists.
   if (phaseChanged && next.phase === 'lobby') {
-    Cutscene.stop();
+    stopShow();
     Narrator.cancel();
     el('caption-line').textContent = '';
   }
+
+  // Every trip through the lobby is another chance to have the opening ready
+  // before it is wanted — including the second game of the night, and the case
+  // where this screen reconnected after the sound gate was already dealt with.
+  if (next.phase === 'lobby') warmTheFilm();
 
   render();
 
@@ -653,6 +754,34 @@ function openTheDoors() {
   // Speaking one short line here is what actually unlocks speech synthesis for
   // the rest of the session on the strict browsers.
   if (SFX.enabled) Narrator.say('sound_check');
+  // Decoding the opening's dialogue needs a running AudioContext, which needs
+  // this gesture. Everything else could start earlier; the voices could not.
+  warmTheFilm();
+}
+
+/**
+ * Fetch the opening ahead of time.
+ *
+ * The cinematic is about ten megabytes of footage, and there is exactly one
+ * stretch of a Mayday session where nobody is waiting on the screen: the lobby,
+ * while people find the room code and type their names. That is where this
+ * belongs. By the time the host presses start it is either ready or it is not,
+ * and if it is not the drawn opening plays instead — nobody waits on a loading
+ * bar in front of a room.
+ *
+ * Safe to call repeatedly: the first call owns the work and the rest join it.
+ */
+function warmTheFilm() {
+  // Not `ready` alone: the pictures can be loaded while the dialogue is not,
+  // and stopping here on `ready` would mean a voice decode that failed before
+  // the sound gate never got a second chance.
+  if (!Film || (Film.ready && Film.voiced)) return;
+  Film.preload(document.body).then((res) => {
+    if (res && res.loaded) return;
+    // Not fatal, and not worth saying out loud on screen — the fallback is a
+    // complete opening. Leave a trace for whoever is looking at the console.
+    console.info('[mayday] filmed opening unavailable; using the drawn one', res);
+  });
 }
 
 el('gate-btn').addEventListener('click', openTheDoors);
@@ -746,7 +875,7 @@ function sendControl(name) {
 
 el('menu-lobby').addEventListener('click', (event) => {
   arm(event.currentTarget, 'Back to the lobby', () => {
-    Cutscene.stop();
+    stopShow();
     Narrator.cancel();
     sendControl('reset_game');
   });
@@ -754,7 +883,7 @@ el('menu-lobby').addEventListener('click', (event) => {
 
 el('menu-close').addEventListener('click', (event) => {
   arm(event.currentTarget, 'Close the room', () => {
-    Cutscene.stop();
+    stopShow();
     Narrator.cancel();
     sendControl('close_room');
   });
@@ -762,7 +891,7 @@ el('menu-close').addEventListener('click', (event) => {
 
 // Somebody closed the room — this screen picks up the fresh code and starts over.
 socket.on('room_closed', ({ code }) => {
-  Cutscene.stop();
+  stopShow();
   Narrator.cancel();
   SFX.ambience(null);
   lastBeatId = 0;
@@ -810,8 +939,10 @@ refreshVoices();
 setTimeout(refreshVoices, 1200);
 setTimeout(refreshVoices, 3500);
 
-// Mount the cutscene stage once; every sequence reuses it.
+// Mount both stages once; every sequence reuses them. The film goes in after
+// the cutscene layer so the roll call and the title draw over it, not under.
 Cutscene.mount(document.body);
+Film.mount(document.body);
 
 el('sound-btn').textContent = SFX.enabled ? 'Sound on' : 'Sound off';
 Narrator.setEnabled(SFX.enabled);

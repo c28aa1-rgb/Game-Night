@@ -52,6 +52,8 @@
 
   let state = null;
   let previous = null;
+  /** When the current payload arrived, so its wait clock can keep running. */
+  let stateAt = 0;
   let cell = 10;
   let revealTimers = [];
   let revealedTurn = null;
@@ -81,6 +83,17 @@
   const yAt = (row) => rowIndex(row) * step();
   const span = (n) => n * cell + (n - 1) * GAP;
 
+  /**
+   * The score rail grows and shrinks with the number of players. Anything
+   * floating above it has to clear it without covering it, so its height is
+   * published rather than guessed at.
+   */
+  function measureRail() {
+    const rail = document.querySelector('.rail--bottom');
+    const h = Math.round(rail.getBoundingClientRect().height);
+    document.body.style.setProperty('--rail-h', `${h}px`);
+  }
+
   function measure() {
     const stage = document.querySelector('.stage');
     const box = stage.getBoundingClientRect();
@@ -99,6 +112,8 @@
     cell = Math.max(6, next);
     $board.style.setProperty('--cell', `${cell}px`);
     $board.style.setProperty('--gap', `${GAP}px`);
+
+    measureRail();
     if (state) drawLayer();
     applyFocus();
   }
@@ -123,37 +138,28 @@
    * Where the room is looking while guessing — or null, meaning show the whole
    * board.
    *
-   * The gate here matters more than the maths. Players read the colours off
-   * this screen to choose, so zooming while anybody is still deciding would
-   * take away the very thing they are deciding from. It only closes in once
-   * every guesser has either pinned or has both wheels down, which is exactly
-   * the moment the question stops being "which colour" and becomes "who went
-   * where".
+   * One rule: follow whoever is pinning, from the moment their crosshair is on
+   * a single square. Nothing else is consulted. An earlier version framed every
+   * pin on the board at once and gave up whenever they were spread too far
+   * apart, which meant the zoom came and went depending on how well the room
+   * happened to be agreeing — the same action producing a different screen each
+   * time, which reads as broken rather than as responsive.
+   *
+   * Waiting for both wheels is the one condition, and it is not a hedge: with
+   * only a row chosen the crosshair is a band thirty squares wide, and closing
+   * in would cut off the thing it is drawing.
    */
   function focusFromGuessing() {
     if (!state || state.phase !== 'guess') return null;
 
-    const submitted = (state.guesses || [])[state.cycle - 1] || [];
-    const points = submitted.map((g) => ({ r: rowIndex(g.row), c: g.col }));
-    const settled = new Set(submitted.map((g) => g.playerId));
+    const active = playerById(state.activeGuesserId);
+    // Their call, not the TV's — see the zoom toggle on the guess panel.
+    if (!active || active.zoom === false) return null;
 
-    for (const draft of (state.drafts || [])) {
-      if (!draft.row || !draft.col) continue;
-      points.push({ r: rowIndex(draft.row), c: draft.col });
-      settled.add(draft.playerId);
-    }
+    const draft = (state.drafts || []).find((d) => d.playerId === active.id);
+    if (!draft || !draft.row || !draft.col) return null;
 
-    const owed = (state.waitingOn || []).filter((id) => !settled.has(id));
-    if (owed.length || !points.length) return null;
-
-    const rows = points.map((p) => p.r);
-    const cols = points.map((p) => p.c);
-    const r1 = Math.min(...rows), r2 = Math.max(...rows);
-    const c1 = Math.min(...cols), c2 = Math.max(...cols);
-
-    // Spread wider than the window? Then there is no shared focus to show.
-    if (r2 - r1 + 1 > FOCUS_ROWS || c2 - c1 + 1 > FOCUS_COLS) return null;
-    return windowAround((r1 + r2) / 2, (c1 + c2) / 2);
+    return windowAround(rowIndex(draft.row), draft.col);
   }
 
   function applyFocus() {
@@ -403,6 +409,27 @@
     return { row: ROWS[r1], col: c1, rowSpan: r2 - r1 + 1, colSpan: c2 - c1 + 1 };
   }
 
+  /**
+   * Which corner the ring values hang off, given where the target landed.
+   *
+   * They sit *outside* their ring, so the question is only ever which two
+   * sides have a square to spare. The outermost ring reaches two cells from
+   * the target and the label needs about one more beyond that, so a target
+   * within three of an edge has to hang its numbers the other way. Answered
+   * once for the whole reveal rather than per ring, so the three of them keep
+   * stepping outward along one diagonal instead of fanning apart.
+   *
+   * The zoom does not change the answer: its window is nine rows by seventeen
+   * columns around the target, which is wider on every side than the ring plus
+   * its label, so anything that clears the board's edge also clears the frame.
+   */
+  function valueCorner(target) {
+    const room = 3;
+    const vertical = rowIndex(target.row) >= room ? 't' : 'b';
+    const horizontal = target.col > room ? 'l' : 'r';
+    return vertical + horizontal;
+  }
+
   function addRevealBox(key, className, target, radius) {
     const next = new Map(overlay);
     const box = node(next, `reveal:${key}`, className);
@@ -473,9 +500,11 @@
       { at: 6200, radius: 2, distance: 2, value: 1 },
     ];
 
+    const corner = valueCorner(target);
+
     for (const ring of RINGS) {
       later(ring.at, () => {
-        const box = addRevealBox(`ring${ring.value}`, 'ring', target, ring.radius);
+        const box = addRevealBox(`ring${ring.value}`, `ring ring--${corner}`, target, ring.radius);
         box.innerHTML = `<span class="ring__value">${ring.value}</span>`;
         const hits = lightRing(reveal, ring.distance);
         if (ring.value === 3 && hits) SFX.bullseye();
@@ -483,19 +512,29 @@
       });
     }
 
-    // 4 — pull back out to the whole board, then count the turn up.
-    const tallyEnd = runTally(reveal, 7600);
+    /*
+     * 4 — hold. The rings have finished and nothing moves for five seconds:
+     * the target is lit, everybody's pin is sitting in whatever ring it earned,
+     * and this is the only moment in the turn where the room can look at that
+     * and argue about it. Cutting straight to the numbers threw the picture
+     * away right when it had become worth reading.
+     */
+    const tallyEnd = runTally(reveal, reveal.tallyAt || TALLY_AT);
 
-    // 5 — the handoff, if there is a turn to hand off to. A game that just
-    // ended skips this entirely; the winner is the thing to look at.
+    // 5 — then count the turn up, and hand off, if there is a turn to hand off
+    // to. A game that just ended skips this; the winner is the thing to look at.
     if (!reveal.final && reveal.nextClueGiverName) {
-      const at = Math.min(HANDOFF_AT, tallyEnd + 1200);
+      const at = tallyEnd + 1200;
       later(at, () => startHandoff(reveal, at));
     }
   }
 
-  /** Latest the handoff may start, whatever the tally is doing. */
-  const HANDOFF_AT = 12000;
+  /**
+   * When the tally arrives, if the server has not said. The server derives its
+   * reveal hold from this same number and sends it back as `reveal.tallyAt`,
+   * so the two can only disagree if a state payload predates the server.
+   */
+  const TALLY_AT = 11200;
   const TALLY_STEP = 620;
 
   /**
@@ -628,21 +667,24 @@
     }
     /*
      * Whose clue it is has been on screen for two phases by now. What the room
-     * actually needs during guessing is who it is still waiting for, so that
-     * goes in the big line and the clue-giver drops to the label.
+     * actually needs during guessing is the one person it is waiting for, so
+     * that goes in the big line and the clue-giver drops to the label.
+     *
+     * One name, never a list. Only one phone is open at a time, so naming
+     * everybody who will eventually pin told the room four names of which
+     * three were not actionable — and buried the one that was.
      */
     if (state.phase === 'guess') {
       label.innerHTML = `${escape(giver?.name)}'s clue${cycles}`;
-      if (!waiting.length) {
+      const active = playerById(state.activeGuesserId);
+      if (!active) {
         main.textContent = 'All pins in';
         return;
       }
-      const names = (state.waitingOn || []).map((id) => playerById(id)).filter(Boolean);
-      // One name wears their own colour; a list stays neutral, since a row of
-      // differently coloured names is a stripe rather than a sentence.
-      main.innerHTML = names.length === 1
-        ? `Waiting on <span class="banner__who" style="--tone:${escape(names[0].colour.hex)}">${escape(names[0].name)}</span>`
-        : `Waiting on ${escape(names.slice(0, 3).map((p) => p.name).join(', '))}${names.length > 3 ? ` +${names.length - 3}` : ''}`;
+      const left = Math.max(0, waiting.length - 1);
+      main.innerHTML =
+        `<span class="banner__who" style="--tone:${escape(active.colour.hex)}">${escape(active.name)}</span> is pinning`
+        + (left ? `<span class="banner__rest">${left} to go</span>` : '');
       return;
     }
     if (state.phase === 'reveal') {
@@ -651,6 +693,52 @@
         ? `${escape(state.reveal.target.name)} <span class="banner__who" style="--tone:var(--graphite)">${state.reveal.target.row}${state.reveal.target.col}</span>`
         : 'Revealing';
     }
+  }
+
+  /**
+   * The room is waiting on one phone, and has been for a while.
+   *
+   * Two things can stall a turn and they look identical from the sofa: a phone
+   * that has dropped off, and a phone that is on but face down on a sideboard.
+   * Neither used to say anything — the board simply stopped, and the room
+   * worked out between themselves whose fault it was. This names them, says
+   * which of the two it is, and points at the person who can fix it.
+   *
+   * Nothing here is a timer that acts. It only ever tells the room something;
+   * skipping and removing stay decisions somebody makes.
+   */
+  const STALL_AFTER_MS = 25000;
+
+  function renderStall() {
+    const card = el('stall');
+    const active = playerById(state.activeGuesserId);
+
+    if (state.phase !== 'guess' || !active) {
+      card.hidden = true;
+      return;
+    }
+
+    // Time on the clock is the server's, plus however long this page has been
+    // sitting on the payload that carried it.
+    const waited = (state.activeWaitMs || 0) + (Date.now() - stateAt);
+    const gone = !active.connected;
+    if (!gone && waited < STALL_AFTER_MS) {
+      card.hidden = true;
+      return;
+    }
+
+    card.style.setProperty('--tone', active.colour.hex);
+    el('stallName').textContent = active.name;
+    el('stallWhy').textContent = gone
+      ? 'is up — their phone has dropped out'
+      : `is up — ${Math.round(waited / 1000)} seconds so far`;
+
+    const host = playerById(state.hostId);
+    const who = host && host.id !== active.id ? host.name : 'The host';
+    el('stallFix').textContent = gone
+      ? `Waiting for them to come back · ${who} can skip or remove them`
+      : `${who} can skip ahead`;
+    card.hidden = false;
   }
 
   function escape(text) {
@@ -832,8 +920,10 @@
   function render() {
     renderBanner();
     renderScores();
+    measureRail();
     renderLobby();
     renderOver();
+    renderStall();
     drawLayer();
     // Something to arrive to while the room fills up, and silence once the
     // game is actually running.
@@ -843,6 +933,7 @@
   socket.on('game_state', (next) => {
     previous = state;
     state = next;
+    stateAt = Date.now();
     el('code').textContent = state.code;
 
     const turnKey = `${state.turnNo}:${state.phase}`;
@@ -942,6 +1033,10 @@
   document.addEventListener('keydown', unlock, { once: true });
 
   window.addEventListener('resize', measure);
+
+  // A wait gets longer without anything being sent, so this one panel has to
+  // be driven by the clock rather than by state arriving.
+  setInterval(() => { if (state) renderStall(); }, 1000);
 
   buildBoard();
   measure();

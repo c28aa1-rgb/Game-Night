@@ -235,7 +235,41 @@
 }
 
 .roster__tag.is-in { color: var(--live); }
-.roster li.is-off { opacity: 0.45; }
+
+/*
+ * Dim the person, not the row. Fading the whole li took the Remove button with
+ * it — and an away player is the one row where that button matters.
+ */
+.roster li.is-off .who__dot,
+.roster li.is-off .who__name,
+.roster li.is-off .roster__tag { opacity: 0.45; }
+
+/*
+ * Only the host ever sees this, and only on a row that is holding the game up.
+ * Sized to be tappable next to a name without becoming the loudest thing in a
+ * list the host scrolls past all evening.
+ */
+.roster__kick {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--graphite);
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 160ms var(--ease), border-color 160ms var(--ease);
+}
+
+/* Armed. The second tap is the one that does it, so it stops being quiet. */
+.roster__kick.is-armed {
+  border-color: var(--fault);
+  color: var(--fault);
+}
+
+.roster__kick:active { transform: scale(0.94); }
 
 /* Whoever is holding the board right now. */
 .roster li.is-active {
@@ -282,6 +316,17 @@
 }
 
 .hostbar .btn { flex: 1; }
+
+/*
+ * Armed, waiting for the second tap. It has to stop looking like the button
+ * it was a moment ago — the whole point of the two taps is that the state in
+ * between is visible, not just recorded somewhere.
+ */
+.btn.is-armed {
+  border-color: var(--fault);
+  color: var(--fault);
+  background: color-mix(in srgb, var(--fault) 12%, transparent);
+}
 
 /* --------------------------------------------------------------------------
    Clue-giver
@@ -357,6 +402,47 @@
    -------------------------------------------------------------------------- */
 
 .panel-view--guess { gap: 0.8rem; }
+
+/* The label and the zoom toggle share a line — the toggle is a setting about
+   the panel, not a step in it, so it sits beside the heading rather than in
+   the run of controls the thumb works down. */
+.guess__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.guess__head .readout { margin: 0; }
+
+.toggle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bench);
+  cursor: pointer;
+}
+
+.toggle__label {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--graphite-dim);
+}
+
+.toggle__state {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--live);
+}
+
+.toggle[aria-pressed="false"] { background: transparent; }
+.toggle[aria-pressed="false"] .toggle__state { color: var(--graphite-dim); }
+.toggle:active { transform: scale(0.96); }
 
 .preview {
   display: grid;

@@ -506,14 +506,25 @@ window.MaydayCutscene = (() => {
   ];
 
   /**
-   * Six scenes, and none of them advance on their own — introScene() is called
-   * as each narrated line starts. If a line runs long because the device's
-   * voice is slow, the picture waits for it.
+   * The drawn opening. None of it advances on its own — introScene() is called
+   * as each narrated line starts, so a slow voice on a slow device drags the
+   * pictures along rather than being left behind by them.
+   *
+   * Two shapes:
+   *
+   *   full    every scene. This is the fallback for when the filmed opening
+   *           cannot play — clips still downloading, no codec, sound never
+   *           unlocked — and it is a complete opening in its own right, which
+   *           is the only reason the filmed one is allowed to be optional.
+   *   short   the roll call and the title only. Runs after the film, over the
+   *           ship's three closing lines, once the crew are all dead and the
+   *           survivors are the people in the room.
    */
-  function playIntro(crew = []) {
+  function playIntro(crew = [], options = {}) {
     if (!root) return;
     stop();
-    current = { intro: true };
+    const short = !!options.short;
+    current = { intro: true, short };
 
     const suits = crew.slice(0, 12).map((player) => `
       <div class="lineup__member">
@@ -531,13 +542,8 @@ window.MaydayCutscene = (() => {
                         animation-delay:${delay}ms;animation-duration:${duration}ms"></i>`;
     }).join('');
 
-    root.hidden = false;
-    showing(true);
-    root.className = 'cut cut--intro';
-    root.innerHTML = `
-      <div class="intro">
-        <div class="intro__space">${starfield(1.4)}</div>
-
+    // The scenes the film has already covered, and which the short form drops.
+    const story = short ? '' : `
         <div class="intro__scene intro__scene--ship is-live">
           <div class="intro__ship">${SHIP}</div>
           <div class="beacon">
@@ -560,9 +566,16 @@ window.MaydayCutscene = (() => {
               <li class="systems__row"><span>${name}</span><b>${state}</b></li>`).join('')}
           </ul>
           <div class="scanline"></div>
-        </div>
+        </div>`;
 
-        <div class="intro__scene intro__scene--crew">
+    root.hidden = false;
+    showing(true);
+    root.className = `cut cut--intro${short ? ' cut--intro-short' : ''}`;
+    root.innerHTML = `
+      <div class="intro">
+        <div class="intro__space">${starfield(1.4)}</div>
+${story}
+        <div class="intro__scene intro__scene--crew${short ? ' is-live' : ''}">
           <p class="readout intro__eyebrow">Surviving crew</p>
           <div class="lineup">${suits}</div>
         </div>
@@ -579,9 +592,16 @@ window.MaydayCutscene = (() => {
         <div class="intro__bar intro__bar--bottom" aria-hidden="true"></div>
       </div>`;
 
-    // The music starts with the picture and runs the whole way through.
-    window.MaydaySFX?.intro.start();
-    window.MaydaySFX?.intro.scene(0);
+    /*
+     * The short form arrives out of the film's dead air, where the score has
+     * already been stopped on purpose. Restarting it here would fill the exact
+     * silence the whole sequence has been building toward, so it stays quiet
+     * and only comes back for the title.
+     */
+    if (!short) {
+      window.MaydaySFX?.intro.start();
+      window.MaydaySFX?.intro.scene(0);
+    }
   }
 
   /** Move the opening on. Scenes are 0-indexed and clamp at both ends. */
@@ -589,6 +609,31 @@ window.MaydayCutscene = (() => {
     if (!root || !root.classList.contains('cut--intro')) return;
     const scenes = Array.from(root.querySelectorAll('.intro__scene'));
     if (!scenes.length) return;
+
+    /*
+     * Short form: three ship lines over two scenes. The log-ends line and the
+     * head count both play over the roll call — the survivors need a moment to
+     * be looked at — and the title lands on the line about the suit.
+     */
+    if (root.classList.contains('cut--intro-short')) {
+      const shortMap = [0, 0, 1];
+      const target = scenes[shortMap[Math.min(index, shortMap.length - 1)]] || scenes[0];
+      const first = !target.classList.contains('is-live');
+      for (const scene of scenes) scene.classList.toggle('is-live', scene === target);
+
+      if (first && target.classList.contains('intro__scene--title')) {
+        window.MaydaySFX?.titleHit?.();
+      }
+      // One of the suits in the line-up is lying, and says so for a frame.
+      if (index >= 1 && target.classList.contains('intro__scene--crew')) {
+        const members = target.querySelectorAll('.lineup__member');
+        if (members.length && !target.querySelector('.lineup__member.is-wrong')) {
+          members[Math.floor(Math.random() * members.length)].classList.add('is-wrong');
+          window.MaydaySFX?.glitch();
+        }
+      }
+      return;
+    }
 
     // Six narrated lines over five scenes: the last two lines share the crew
     // line-up, which is when the narrator mentions that one of them is lying.

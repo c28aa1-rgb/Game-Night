@@ -18,6 +18,8 @@
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
+    "ffmpeg-static": "^5.3.0",
+    "msedge-tts": "^2.0.7",
     "sharp": "^0.35.3"
   }
 }

@@ -1,0 +1,114 @@
+[
+  {
+    "file": "01-comms.mp3",
+    "beat": "calm",
+    "who": "Comms",
+    "text": "Kestrel survey control, cycle four one zero two. Long range check. Nothing on the band, same as yesterday.",
+    "seconds": 11.18,
+    "cut": false
+  },
+  {
+    "file": "02-comms.mp3",
+    "beat": "wrong",
+    "who": "Comms",
+    "text": "Control, I've lost the array. Not degraded. Gone.",
+    "seconds": 6.31,
+    "cut": false
+  },
+  {
+    "file": "03-captain.mp3",
+    "beat": "wrong",
+    "who": "Captain",
+    "text": "Reroute through the backup mast.",
+    "seconds": 3.05,
+    "cut": false
+  },
+  {
+    "file": "04-comms.mp3",
+    "beat": "wrong",
+    "who": "Comms",
+    "text": "That's what I'm looking at. The backup went first.",
+    "seconds": 4.61,
+    "cut": false
+  },
+  {
+    "file": "05-engineering.mp3",
+    "beat": "reactor",
+    "who": "Engineering",
+    "text": "Bridge. Bridge, the shielding's open. Manual override, deck four. Somebody did this by hand.",
+    "seconds": 8.35,
+    "cut": false
+  },
+  {
+    "file": "06-captain.mp3",
+    "beat": "reactor",
+    "who": "Captain",
+    "text": "Say again?",
+    "seconds": 1.78,
+    "cut": false
+  },
+  {
+    "file": "07-engineering.mp3",
+    "beat": "reactor",
+    "who": "Engineering",
+    "text": "It's open from the inside. There's no fault, there's a—",
+    "seconds": 4.03,
+    "cut": true
+  },
+  {
+    "file": "08-captain.mp3",
+    "beat": "loss",
+    "who": "Captain",
+    "text": "Seal four. Seal four! Comms, get the mayday out.",
+    "seconds": 5.21,
+    "cut": false
+  },
+  {
+    "file": "09-comms.mp3",
+    "beat": "loss",
+    "who": "Comms",
+    "text": "Mayday, mayday, mayday. This is survey vessel Kestrel, eleven months out. Reactor breach and casualties. Any vessel, any vessel",
+    "seconds": 9.55,
+    "cut": false
+  },
+  {
+    "file": "10-captain.mp3",
+    "beat": "loss",
+    "who": "Captain",
+    "text": "It won't transmit. The array's gone.",
+    "seconds": 4.22,
+    "cut": false
+  },
+  {
+    "file": "11-comms.mp3",
+    "beat": "sequence",
+    "who": "Comms",
+    "text": "Captain. The array. Then the backup. Then the shielding. In that order.",
+    "seconds": 10.54,
+    "cut": false
+  },
+  {
+    "file": "12-captain.mp3",
+    "beat": "sequence",
+    "who": "Captain",
+    "text": "I know.",
+    "seconds": 2.11,
+    "cut": false
+  },
+  {
+    "file": "13-comms.mp3",
+    "beat": "sequence",
+    "who": "Comms",
+    "text": "That's not a fault. That's a sequence.",
+    "seconds": 4.75,
+    "cut": false
+  },
+  {
+    "file": "14-comms.mp3",
+    "beat": "sequence",
+    "who": "Comms",
+    "text": "Captain, there's someone in here with m—",
+    "seconds": 2.52,
+    "cut": true
+  }
+]

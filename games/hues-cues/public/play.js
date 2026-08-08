@@ -28,6 +28,9 @@
   let paletteCache = [];
   /** Which cycle the wheels were last reset for, so they clear exactly once. */
   let wheelCycle = null;
+  /** The player whose Remove button is one tap from firing, if any. */
+  let armedKick = null;
+  let kickTimer = null;
 
   function readSession() {
     try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { return null; }
@@ -263,8 +266,62 @@
       mark.className = `roster__tag${done ? ' is-in' : ''}`;
       mark.textContent = tag;
       li.append(dot, name, mark);
+
+      const why = removable(player);
+      if (why) li.append(removeButton(player, why));
       return li;
     }));
+  }
+
+  /**
+   * Why the host may take this player out — or null, meaning they may not.
+   *
+   * The same two cases the server enforces, worked out here as well so the
+   * button only exists where it would be honoured. A phone that has gone, and
+   * the phone the whole room is currently waiting on.
+   */
+  function removable(player) {
+    if (!priv?.isHost || player.id === priv.playerId) return null;
+    if (!player.connected) return 'gone';
+    if (state.phase === 'guess' && state.activeGuesserId === player.id) return 'stalling';
+    return null;
+  }
+
+  /**
+   * Armed on the first tap, fired on the second.
+   *
+   * Removing somebody is the one control here that cannot be undone — they
+   * lose their score and their seat — and it lives in a list the host scrolls
+   * past all game. One tap is not enough of a decision for that.
+   */
+  function removeButton(player, why) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'roster__kick';
+    btn.textContent = why === 'gone' ? 'Remove' : 'Remove?';
+    btn.setAttribute('aria-label', `Remove ${player.name} from the game`);
+
+    if (armedKick === player.id) {
+      btn.classList.add('is-armed');
+      btn.textContent = 'Sure?';
+    }
+
+    btn.addEventListener('click', () => {
+      buzz(10);
+      if (armedKick === player.id) {
+        armedKick = null;
+        clearTimeout(kickTimer);
+        socket.emit('kick_player', { playerId: player.id }, guard(el('gameError')));
+        return;
+      }
+      armedKick = player.id;
+      clearTimeout(kickTimer);
+      // Disarms itself rather than staying hot behind whatever the host does
+      // next, so a stale confirm cannot be collected by a later tap.
+      kickTimer = setTimeout(() => { armedKick = null; if (state) route(); }, 4000);
+      route();
+    });
+    return btn;
   }
 
   /**
@@ -298,7 +355,10 @@
       player,
       active: player.id === active,
       done: !waiting.has(player.id),
-      tag: player.id === active ? 'Pinning now'
+      // The player who is up and offline is the one the room is stuck behind,
+      // so that reads as the problem rather than as two neutral facts.
+      tag: player.id === active
+        ? (player.connected ? 'Pinning now' : 'Up · offline')
         : !player.connected ? 'Away'
           : waiting.has(player.id) ? 'Up next' : 'Pinned',
     }));
@@ -401,6 +461,10 @@
     show('guessView');
     el('guessLabel').textContent =
       `Your turn · ${state.clueGiverName}'s clue ${state.cycle} of 2`;
+
+    const zoom = me()?.zoom !== false;
+    el('zoomBtn').setAttribute('aria-pressed', String(zoom));
+    el('zoomState').textContent = zoom ? 'On' : 'Off';
 
     // Fresh wheels each cycle: the second clue is meant to be reconsidered, not
     // nudged from where the first one left off.
@@ -522,7 +586,15 @@
     const arriving = state && state.clueGiverId !== next.clueGiverId
       && next.clueGiverId === priv?.playerId;
     const ending = state && state.phase !== 'game_over' && next.phase === 'game_over';
+    // An armed button is aimed at the phase it was armed in. Once that has
+    // moved on, the tap that would have confirmed it means something else.
+    const moved = state && state.phase !== next.phase;
     state = next;
+    if (moved) {
+      disarmHost.forEach((disarm) => disarm());
+      clearTimeout(kickTimer);
+      armedKick = null;
+    }
     if (arriving) buzz([14, 60, 14]);
     // The TV has the sound; the phones join in the only way they can.
     if (ending) buzz([24, 50, 24, 50, 90]);
@@ -600,6 +672,11 @@
     socket.emit('start_game', {}, guard(el('gameError')));
   });
 
+  el('zoomBtn').addEventListener('click', () => {
+    buzz(8);
+    socket.emit('set_zoom', { zoom: me()?.zoom === false }, guard(el('gameError')));
+  });
+
   el('openBtn').addEventListener('click', () => {
     buzz(14);
     socket.emit('open_guessing', {}, guard(el('gameError')));
@@ -626,15 +703,53 @@
     });
   }
 
-  el('skipBtn').addEventListener('click', () => {
-    buzz(10);
-    socket.emit('force_advance', {}, guard(el('gameError')));
-  });
+  /**
+   * Two taps for anything that cannot be taken back.
+   *
+   * The host bar sits under every panel for the whole game, a thumb's width
+   * from the controls people are actually using — and both buttons on it throw
+   * away somebody's work: one ends a player's turn out from under them, the
+   * other ends the game. The second tap is the decision. The first is just
+   * reaching for it.
+   *
+   * Returns a disarm, because an armed button has to go cold when the thing it
+   * was aimed at changes.
+   */
+  function confirms(button, label, sure, run) {
+    let armed = null;
 
-  el('resetBtn').addEventListener('click', () => {
-    buzz(10);
-    socket.emit('reset_game', {}, guard(el('gameError')));
-  });
+    const disarm = () => {
+      clearTimeout(armed);
+      armed = null;
+      button.classList.remove('is-armed');
+      button.textContent = label;
+    };
+
+    button.addEventListener('click', () => {
+      buzz(armed ? 18 : 8);
+      if (armed) {
+        disarm();
+        run();
+        return;
+      }
+      button.classList.add('is-armed');
+      button.textContent = sure;
+      // Goes cold on its own rather than staying hot for the rest of the
+      // evening, waiting to collect a tap meant for whatever replaced it.
+      armed = setTimeout(disarm, 4000);
+    });
+
+    return disarm;
+  }
+
+  const disarmHost = [
+    confirms(el('skipBtn'), 'Skip ahead', 'Skip — sure?', () => {
+      socket.emit('force_advance', {}, guard(el('gameError')));
+    }),
+    confirms(el('resetBtn'), 'New game', 'End game?', () => {
+      socket.emit('reset_game', {}, guard(el('gameError')));
+    }),
+  ];
 
   renderPreview();
 })();

@@ -36,8 +36,8 @@ const BASE = require('../registry').find((game) => game.id === 'hues-cues').base
 
 /**
  * `Number(x) || fallback` silently discards an explicit 0, which would make
- * HUES_REVEAL_MS=0 mean "fourteen seconds" instead of "no pause". This only
- * falls back when the variable is genuinely unset or unparseable.
+ * HUES_TALLY_AT_MS=0 mean "eleven seconds" instead of "straight away". This
+ * only falls back when the variable is genuinely unset or unparseable.
  */
 function envInt(name, fallback) {
   const raw = process.env[name];
@@ -54,18 +54,37 @@ const PORT = envInt('PORT', 3000);
  * holding the clue is a party game nobody enjoys. The host can cut this short
  * from their phone.
  *
- * The tail of it is the handoff: once the scoring has played out the TV names
- * the next clue-giver and counts down, so the gap between turns is something
- * to watch rather than dead air.
+ * It is derived rather than chosen. The TV plays a fixed timeline — the rings,
+ * then a long beat holding the board so the room can see how close everybody
+ * got, then the turn counted up one player at a time — and the hold has to
+ * outlast it, or the phase changes out from under the animation and the tally
+ * disappears mid-count. Since the count is per player, so is the hold.
+ *
+ * `tallyAt` rides along in the reveal payload so the TV takes its cue from
+ * here rather than keeping a second copy of the number.
  */
-const REVEAL_MS = envInt('HUES_REVEAL_MS', 15000);
+const TALLY_AT_MS = envInt('HUES_TALLY_AT_MS', 11200);
+/** From the tally appearing to its first row landing. */
+const TALLY_LEAD_MS = 260;
+const TALLY_ROW_MS = 620;
+/** A beat on the last row before anything replaces it. */
+const TALLY_REST_MS = 700;
+
+/** After the tally: the handoff card naming the next clue-giver, and its countdown. */
+const HANDOFF_MS = envInt('HUES_HANDOFF_MS', 5400);
 
 /**
  * The last reveal of the game gets out of the way fast. Nobody wants a
  * countdown to a turn that is never coming — the winner is the thing to look
- * at, so this is only long enough to finish scoring the final turn.
+ * at, so the final turn's tally is followed by nothing at all.
  */
-const WIN_REVEAL_MS = envInt('HUES_WIN_REVEAL_MS', 11500);
+const WIN_TAIL_MS = envInt('HUES_WIN_TAIL_MS', 1500);
+
+function revealHoldMs(rows, final) {
+  const tallyEnd = TALLY_AT_MS + TALLY_LEAD_MS
+    + Math.max(0, rows - 1) * TALLY_ROW_MS + TALLY_REST_MS;
+  return tallyEnd + (final ? WIN_TAIL_MS : HANDOFF_MS);
+}
 
 const MIN_PLAYERS = 2;
 /** Ten, because there are ten player colours and no two players may share. */
@@ -287,6 +306,12 @@ function createRoom() {
     guessQueue: [],
     guessAt: 0,
     /**
+     * Who the queue is parked on and since when, so the TV can say how long
+     * the room has been waiting on one phone.
+     */
+    guessOn: null,
+    guessSince: 0,
+    /**
      * Targets already used this game, by coordinate and by colour, so the same
      * square — or the same colour wearing a different coordinate — is never
      * clued twice.
@@ -367,18 +392,33 @@ function activeGuesserId(room) {
 }
 
 /**
- * Park the queue on the next player who can actually act, skipping anybody who
- * has already pinned or has left. Returns false when the queue is spent, which
- * is what closes the cycle.
+ * Park the queue on the next player who still owes a pin. Returns false when
+ * the queue is spent, which is what closes the cycle.
+ *
+ * A player whose phone has dropped is *not* skipped. Sliding silently past
+ * them looks identical to a bug from the sofa — the board just moves on and
+ * whoever it was never finds out they missed a clue. So the queue stops on
+ * them and the TV says so, which turns it into something the room can answer:
+ * wait while they reload, or have the host skip or remove them. Only a player
+ * who has actually been removed from the game is stepped over here.
  */
 function advanceGuess(room) {
   const submitted = room.guesses[room.cycle - 1];
   while (room.guessAt < room.guessQueue.length) {
     const id = room.guessQueue[room.guessAt];
-    const player = findPlayer(room, id);
-    if (player && player.connected && !submitted.has(id)) return true;
+    if (findPlayer(room, id) && !submitted.has(id)) {
+      // Stamped on arrival, not on every call, or "how long have we been
+      // waiting" would reset with each broadcast.
+      if (room.guessOn !== id) {
+        room.guessOn = id;
+        room.guessSince = Date.now();
+      }
+      return true;
+    }
     room.guessAt += 1;
   }
+  room.guessOn = null;
+  room.guessSince = 0;
   return false;
 }
 
@@ -426,6 +466,12 @@ function publicState(room) {
     clueGiverName: giver?.name || null,
     /** Whose turn it is to pin. One player, or nobody. */
     activeGuesserId: activeGuesserId(room),
+    /**
+     * How long the room has been waiting on them, in milliseconds. Sent as a
+     * duration rather than a timestamp so a TV whose clock is minutes off
+     * still counts the same wait as everybody else.
+     */
+    activeWaitMs: room.guessSince ? Date.now() - room.guessSince : 0,
     /** The whole running order for this cycle, so screens can show what's coming. */
     guessQueue: room.guessQueue.slice(),
     /**
@@ -456,6 +502,8 @@ function publicState(room) {
       colour: colourById(p.colour),
       connected: p.connected,
       score: p.score,
+      /** Their own answer to "close in on the board while I pin?". */
+      zoom: p.zoom !== false,
     })),
   };
 }
@@ -527,6 +575,8 @@ function beginTurn(room) {
   room.drafts = new Map();
   room.guessQueue = [];
   room.guessAt = 0;
+  room.guessOn = null;
+  room.guessSince = 0;
   room.reveal = null;
   broadcast(room);
 }
@@ -669,7 +719,18 @@ function closeCycle(room) {
   room.reveal.final = !!won;
   room.reveal.nextClueGiverId = next?.id || null;
   room.reveal.nextClueGiverName = next?.name || null;
-  room.reveal.holdMs = won ? WIN_REVEAL_MS : REVEAL_MS;
+
+  /*
+   * The tally shows a row per player in the turn — everybody who scored, plus
+   * the clue-giver even on a turn that earned them nothing. Count them the
+   * same way the TV does, since the hold is only correct if both agree.
+   */
+  const counted = new Set(room.reveal.deltas.map((delta) => delta.playerId));
+  if (room.reveal.clueGiverId) counted.add(room.reveal.clueGiverId);
+  const rows = room.players.filter((p) => counted.has(p.id)).length;
+
+  room.reveal.tallyAt = TALLY_AT_MS;
+  room.reveal.holdMs = revealHoldMs(rows, won);
 
   room.phase = PHASES.REVEAL;
   armReveal(room, room.reveal.holdMs);
@@ -703,6 +764,8 @@ function resetToLobby(room) {
   room.drafts = new Map();
   room.guessQueue = [];
   room.guessAt = 0;
+  room.guessOn = null;
+  room.guessSince = 0;
   room.reveal = null;
   room.suddenDeath = false;
   room.winnerId = null;
@@ -896,6 +959,8 @@ nsp.on('connection', (socket) => {
       colour: colour.id,
       connected: true,
       score: 0,
+      /** Whether the TV closes in on this player's crosshair while they pin. */
+      zoom: true,
     };
     target.players.push(player);
     // First one in runs the game.
@@ -1013,6 +1078,71 @@ nsp.on('connection', (socket) => {
     ack?.({ error: 'Nothing to skip right now.' });
   });
 
+  /**
+   * Take somebody out of the game.
+   *
+   * Only two people are ever removable, and both are cases where leaving them
+   * in means the game cannot continue: a player whose phone has gone, and the
+   * player the guess queue is currently parked on. Anyone else — sitting on a
+   * score, waiting their turn — is off limits, because "the host can remove
+   * whoever they like" is a different game to the one being played.
+   */
+  socket.on('kick_player', (payload = {}, ack) => {
+    const target = room();
+    if (!target) return ack?.({ error: 'That game has ended.' });
+    if (!canControl(target, ack)) return;
+
+    const player = findPlayer(target, String(payload.playerId || ''));
+    if (!player) return ack?.({ error: 'They have already left.' });
+    if (player.id === target.hostId) return ack?.({ error: 'You cannot remove yourself.' });
+
+    const holdingUp = target.phase === PHASES.GUESS && activeGuesserId(target) === player.id;
+    if (player.connected && !holdingUp) {
+      return ack?.({ error: `${player.name} is still playing.` });
+    }
+
+    /*
+     * Hold the clue-giver by identity before the list changes under us.
+     * turnIndex is a position, and removing anybody sitting ahead of it in
+     * join order shifts every position after them by one — so reading the
+     * index afterwards would quietly hand the turn to the wrong player.
+     */
+    const giver = clueGiver(target);
+    const wasClueGiver = giver?.id === player.id;
+
+    /*
+     * Everything they left on the board goes with them. A pin whose owner is
+     * no longer in the player list has no colour and no name, so it would sit
+     * there for the rest of the turn as an anonymous marker nobody can score.
+     */
+    for (const cycleGuesses of target.guesses) cycleGuesses.delete(player.id);
+    target.drafts.delete(player.id);
+    target.players = target.players.filter((p) => p.id !== player.id);
+
+    const stillThere = wasClueGiver ? -1 : target.players.indexOf(giver);
+    target.turnIndex = stillThere >= 0
+      ? stillThere
+      : target.turnIndex % Math.max(1, target.players.length);
+    reassignHost(target);
+    ack?.({ ok: true });
+
+    if (!target.players.length || target.phase === PHASES.LOBBY) return broadcast(target);
+
+    /*
+     * The turn cannot survive losing the person whose colour it was — nobody
+     * else knows what the clue was for — so it is re-dealt to the next player.
+     */
+    if (wasClueGiver) {
+      rotate(target);
+      beginTurn(target);
+      return;
+    }
+    if (target.phase === PHASES.GUESS) {
+      if (!advanceGuess(target)) return closeCycle(target);
+    }
+    broadcast(target);
+  });
+
   socket.on('reset_game', (payload, ack) => {
     const target = room();
     if (!target) return ack?.({ error: 'That game has ended.' });
@@ -1060,6 +1190,7 @@ nsp.on('connection', (socket) => {
     target.drafts = new Map();
     target.guessQueue = buildGuessQueue(target, target.cycle);
     target.guessAt = 0;
+    target.guessOn = null;
     // If nobody can guess the cycle stays open rather than racing to a reveal
     // nobody saw; the host unsticks it.
     advanceGuess(target);
@@ -1091,6 +1222,26 @@ nsp.on('connection', (socket) => {
     else target.drafts.set(player.id, { row, col });
 
     broadcastDrafts(target);
+  });
+
+  /**
+   * Whether the TV closes in while you pin.
+   *
+   * A preference rather than a setting: it is yours, it lasts the game, and it
+   * only does anything on the turns you are actually pinning. Some people want
+   * the neighbourhood magnified to choose within; some are still reading the
+   * whole board and want it left alone.
+   */
+  socket.on('set_zoom', (payload = {}, ack) => {
+    const target = room();
+    if (!target) return ack?.({ error: 'That game has ended.' });
+
+    const player = findBySocket(target, socket.id);
+    if (!player) return ack?.({ error: 'You are not in this game.' });
+
+    player.zoom = !!payload.zoom;
+    ack?.({ ok: true });
+    broadcast(target);
   });
 
   socket.on('submit_guess', (payload = {}, ack) => {
@@ -1158,17 +1309,13 @@ nsp.on('connection', (socket) => {
     }
 
     /*
-     * The room was waiting on the person who just left. Moving the queue on
-     * here rather than making the host notice is the difference between a game
-     * that pauses when somebody's phone dies and one that does not.
+     * Note what is deliberately missing: the queue is not moved along. A phone
+     * that drops out mid-turn is usually a phone that is about to come back —
+     * a lock screen, a reload, a walk past the router — and skipping the owner
+     * the instant the socket closes means they lose a clue for standing up.
+     * The queue holds its place, the TV says who it is holding for, and the
+     * host has a button if they are really gone. See advanceGuess.
      */
-    if (target.phase === PHASES.GUESS) {
-      if (!advanceGuess(target)) {
-        closeCycle(target);
-        return;
-      }
-    }
-
     broadcast(target);
   });
 });

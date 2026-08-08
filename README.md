@@ -99,12 +99,48 @@ games/mayday/public/
   play.html / play.js        the phone: role, night actions, votes
   avatar.js                  the crew — one suit, twelve colours, drawn in SVG
   narration.js               the AI's voice lines, and speechSynthesis
-  cutscene.js / .css         the opening, and deaths composed as method × role:
-                             three ways to be vented, three to be ejected, one
-                             sidearm, one false alarm, six role flourishes —
-                             picked at random, never the same one twice running
+  cutscene.js / .css         deaths composed as method × role: three ways to be
+                             vented, three to be ejected, one sidearm, one false
+                             alarm, six role flourishes — picked at random,
+                             never the same one twice running. Also the drawn
+                             opening, which is now the fallback
+  film.js / .css             the opening cinematic: footage cut to recorded crew
+                             dialogue
+  film/                      nine graded clips, ~8.7 MB, built by
+                             scripts/build-film.js
+  vox/                       fourteen lines of crew dialogue and a manifest,
+                             ~520 KB, built by scripts/build-voices.js
   sfx.js                     synthesised alarms — no audio files
   theme.css                  the emergency-lighting palette and type
+```
+
+**The opening is filmed; everything else is drawn.** The rest of the game
+composes its cutscenes out of SVG and CSS, because they report events. The
+opening has to establish a world instead, so it is cut from stock footage and
+carried by three crew — Comms, Engineering and the Captain — who do not survive
+it. The dialogue is pre-rendered to audio at build time with neural voices,
+because the only speech engine available at runtime is the Web Speech API, and
+on a typical machine that means three formant voices from the 1990s; three of
+those talking to each other is worse than one.
+
+The ship's AI deliberately keeps that synthesised voice. It arrives after three
+seconds of silence, once the last crew member has been cut off mid-word, and
+counts the survivors over the roll call. Nothing degrades at the seam into
+gameplay, and the machine sounding like a machine reads as a choice rather than
+as a limitation.
+
+None of it is required. The clips and the dialogue are fetched during the lobby,
+while people are still typing their names, and if anything is missing — still
+downloading, no codec, a decode that failed — the drawn opening plays instead
+and tells the whole story itself, on a longer script written for exactly that.
+A cinematic that might not play is not allowed to be the only opening.
+
+Rebuilding either needs the sources, which live outside the repo for the same
+reason the key art does:
+
+```
+node scripts/build-voices.js                 # dialogue; no sources needed
+node scripts/build-film.js <dir-of-masters>  # footage; optionally name shots
 ```
 
 **The host is a player, not the TV.** Whoever joins first gets the setup
@@ -133,11 +169,14 @@ the floor opens: the voting phase is not when voting becomes possible, it is the
 time set aside for people who have not decided yet, and it collapses the moment
 they have.
 
-**Sound is four layers.** A bed (the ship, per phase, ducking under the
+**Sound is five layers.** A bed (the ship, per phase, ducking under the
 narrator rather than stopping), one-shots (doors, gunshots, ballots,
 decompression), the klaxon — killed outright the instant the narrator speaks —
-and the opening's score. All synthesised: no audio files, nothing to load, and
-nothing whose licence has to be checked before this ships anywhere.
+the opening's score, and the opening's crew dialogue. The first four are
+synthesised, with no files to load. The dialogue is the one exception, and it
+still runs through the same Web Audio graph rather than a loose `<audio>`
+element, so one mixer decides what is audible and the whole cinematic stops on a
+single disconnect.
 
 The score is a single continuous piece in D minor that follows the story rather
 than looping under it: a sub drone that never leaves, a distress-beacon motif,
@@ -167,6 +206,15 @@ built-in formant voices are down-ranked. The TV has a picker in its status bar.
 Lines are queued, never cancelled mid-sentence — a new beat clears what is
 *pending* and lets the sentence in progress finish, which is what stops two
 beats landing together from cutting each other off.
+
+Speech engines lie in both directions and both are caught. Some accept an
+utterance and never report it finished, which would make every line take its
+full guard timeout now that phases wait for the narrator. Others report it
+finished immediately, which is what a browser with no usable voice does, and
+believing that blows the whole queue in one frame — three lines on the same
+millisecond, captions flickering past unread. Either way the narrator stops
+trusting the engine after two offences and paces the captions on a reading
+clock instead.
 
 Two rules hold the game together and are worth keeping if it is ever changed:
 
