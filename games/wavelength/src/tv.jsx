@@ -5,6 +5,7 @@ function App() {
   const [state, setState] = useState(null);
   const [notice, setNotice] = useState('Creating a calibration room...');
   const [soundOn, setSoundOn] = useState(() => window.WavelengthSFX?.enabled ?? true);
+  const [result, setResult] = useState(null);
   const last = useRef({ phase: null, marker: null });
   const { connected, emit } = useRoomSocket(({ state: next }) => next && setState(next));
 
@@ -27,6 +28,19 @@ function App() {
     fetch(`/wavelength/api/join-info?code=${encodeURIComponent(state.code)}`)
       .then((response) => response.json()).then(setJoin).catch(() => setJoin(null));
   }, [state?.code]);
+
+  const revealedResult = state?.phase === 'reveal' ? state.reveal : null;
+  const resultSignature = revealedResult
+    ? `${state.code}:${state.turn}:${revealedResult.team}:${revealedResult.targetIndex}:${revealedResult.points}`
+    : null;
+  useEffect(() => {
+    if (!revealedResult || !resultSignature) {
+      setResult(null);
+      return undefined;
+    }
+    setResult({ ...revealedResult, key: resultSignature });
+    return undefined;
+  }, [resultSignature]);
 
   useEffect(() => {
     if (!state || !soundOn || !window.WavelengthSFX) return;
@@ -55,20 +69,24 @@ function App() {
 
   if (!state) return <main className="tv tv--loading"><p className="readout">{notice}</p></main>;
   const reveal = state.reveal;
+  const roundLabel = state.tiebreaker ? 'SUDDEN DEATH' : `TURN ${Math.min(state.turn + (state.phase !== 'reveal' ? 1 : 0), state.roundCount)} OF ${state.roundCount}`;
+  const turnMessage = state.phase === 'clue' ? `${teamName(state.activeTeam)} IS FINDING THE SIGNAL` : state.phase === 'guess' ? `${teamName(state.activeTeam)} IS CALIBRATING` : state.phase === 'reveal' ? 'THE SIGNAL IS REVEALED' : roundLabel;
   return <main className="tv">
     <header className="tv__bar">
       <a className="wordmark" href="/wavelength">WAVELENGTH</a>
-      <div className="tv__status"><span className={`lamp ${connected ? 'lamp--on' : ''}`} /> <span className="readout">{state.code}</span></div>
-      <div className="scores" aria-label="Scores">
-        {state.scores.map((score, team) => <div className={`score score--${team + 1}`} key={team}><span>{teamName(team)}</span><b>{score}</b></div>)}
-      </div>
+      <div className="tv__status"><span className={`lamp ${connected ? 'lamp--on' : ''}`} /><span className="readout">{state.code}</span></div>
       <button className={`sound-toggle ${soundOn ? 'sound-toggle--on' : ''}`} onClick={toggleSound} aria-pressed={soundOn}>{soundOn ? 'Sound on' : 'Enable sound'}</button>
     </header>
 
     <section className="tv__main">
+      <AnimatePresence>
+        {result && <motion.aside key={result.key} className="reveal-card" initial={{ opacity: 0, x: 28, scale: 0.94 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: 16, scale: 0.98 }} transition={{ duration: 0.34, ease: [0.18, 0.78, 0.18, 1] }}>
+          <span className="readout">{teamName(result.team)} · {scoreWords(result.points)}</span><strong>+{result.points}</strong>
+        </motion.aside>}
+      </AnimatePresence>
       {state.phase === 'lobby' ? <Lobby state={state} join={join} notice={notice} /> : <div className="tv-round">
         <div className="prompt"><span>{state.prompt?.low}</span><i>&harr;</i><span>{state.prompt?.high}</span></div>
-        <div className="round-meta"><p className="readout turn-label">{state.phase === 'clue' ? `${teamName(state.activeTeam)} IS FINDING THE SIGNAL` : state.phase === 'guess' ? `${teamName(state.activeTeam)} IS CALIBRATING` : state.tiebreaker ? 'SUDDEN DEATH' : `TURN ${Math.min(state.turn + (state.phase !== 'reveal' ? 1 : 0), state.roundCount)} OF ${state.roundCount}`}</p>
+        <div className="round-meta"><div className="round-scoreboard" aria-label="Scores and turn status"><div className="score score--1"><span>{teamName(0)}</span><b>{state.scores[0]}</b></div><p className="readout turn-label">{turnMessage}</p><div className="score score--2"><span>{teamName(1)}</span><b>{state.scores[1]}</b></div></div>
           <AnimatePresence>{reveal && <motion.aside className="reveal-card" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}><span className="readout">{teamName(reveal.team)} · {scoreWords(reveal.points)}</span><strong>+{reveal.points}</strong></motion.aside>}</AnimatePresence>
         </div>
         <div className="tv-dial"><SpectrumArc markerIndex={state.markerIndex} targetIndex={reveal?.targetIndex ?? null} lowLabel={state.prompt?.low} highLabel={state.prompt?.high} /></div>

@@ -236,6 +236,15 @@ window.HuesSFX = (() => {
       transient(0, 0.035 + level * 0.075, 3600 + level * 900, 6, 0.018 + level * 0.025);
     },
 
+    /** The final-ten-seconds clock: a real, room-readable beat rather than a UI detent. */
+    countdownTick(seconds) {
+      if (!live()) return;
+      const urgency = Math.max(0, Math.min(1, (10 - seconds) / 9));
+      transient(0, 0.095 + urgency * 0.045, 1550 + urgency * 260, 3.2, 0.055);
+      tone(740 + urgency * 90, 0, 0.12, 0.035 + urgency * 0.02, 'square', 0.12);
+      if (seconds <= 3) tone(1180, 0.035, 0.13, 0.03, 'sine', 0.22);
+    },
+
     /**
      * A pin landing. `index` walks the scale so a room submitting together
      * builds a chord rather than a stutter.

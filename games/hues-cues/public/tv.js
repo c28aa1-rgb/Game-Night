@@ -93,8 +93,8 @@
     const urgent = seconds <= 10;
     clock.classList.toggle('is-urgent', urgent);
     if (urgent && seconds > 0 && seconds !== lastGuessSecond) {
-      // The final ten are a single escalating cue: quiet at ten, insistent at one.
-      SFX.tick((10 - seconds) / 9);
+      // A distinct, once-per-second audible clock for the final ten.
+      SFX.countdownTick(seconds);
     }
     lastGuessSecond = seconds;
   }
@@ -734,40 +734,6 @@
    * Nothing here is a timer that acts. It only ever tells the room something;
    * skipping and removing stay decisions somebody makes.
    */
-  const STALL_AFTER_MS = 25000;
-
-  function renderStall() {
-    const card = el('stall');
-    const active = playerById(state.activeGuesserId);
-
-    if (state.phase !== 'guess' || !active) {
-      card.hidden = true;
-      return;
-    }
-
-    // Time on the clock is the server's, plus however long this page has been
-    // sitting on the payload that carried it.
-    const waited = (state.activeWaitMs || 0) + (Date.now() - stateAt);
-    const gone = !active.connected;
-    if (!gone && waited < STALL_AFTER_MS) {
-      card.hidden = true;
-      return;
-    }
-
-    card.style.setProperty('--tone', active.colour.hex);
-    el('stallName').textContent = active.name;
-    el('stallWhy').textContent = gone
-      ? 'is up — their phone has dropped out'
-      : `is up — ${Math.round(waited / 1000)} seconds so far`;
-
-    const host = playerById(state.hostId);
-    const who = host && host.id !== active.id ? host.name : 'The host';
-    el('stallFix').textContent = gone
-      ? `Waiting for them to come back · ${who} can skip or remove them`
-      : `${who} can skip ahead`;
-    card.hidden = false;
-  }
-
   function escape(text) {
     return String(text == null ? '' : text).replace(/[&<>"']/g, (ch) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -950,7 +916,6 @@
     measureRail();
     renderLobby();
     renderOver();
-    renderStall();
     drawLayer();
     // Something to arrive to while the room fills up, and silence once the
     // game is actually running.
@@ -1061,10 +1026,6 @@
   document.addEventListener('keydown', unlock, { once: true });
 
   window.addEventListener('resize', measure);
-
-  // A wait gets longer without anything being sent, so this one panel has to
-  // be driven by the clock rather than by state arriving.
-  setInterval(() => { if (state) renderStall(); }, 1000);
 
   buildBoard();
   measure();

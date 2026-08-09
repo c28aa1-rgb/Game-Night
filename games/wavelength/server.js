@@ -239,7 +239,7 @@ app.get(`${BASE}/api/join-info`, async (req, res) => {
     connected: !!team?.socketId,
   })) : [];
   try {
-    const qr = await QRCode.toDataURL(url, { margin: 1, width: 420, color: { dark: '#06111E', light: '#FFF0CD' } });
+    const qr = await QRCode.toDataURL(url, { margin: 1, width: 420, color: { dark: '#06111E', light: '#FFFFFF' } });
     res.json({ url, qr, teams });
   } catch { res.json({ url, qr: null, teams }); }
 });

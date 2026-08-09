@@ -658,50 +658,6 @@
  * on the outermost rank of squares, which is the one strip of this board that
  * is never a target anyway.
  */
-.stall {
-  position: fixed;
-  left: 50%;
-  bottom: calc(var(--rail-h, 64px) + 4px);
-  z-index: 16;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: baseline;
-  gap: 0.7rem;
-  max-width: 94vw;
-  padding: 0.35rem 1rem;
-  border: 1px solid var(--rule);
-  border-left: 3px solid var(--tone, var(--fault));
-  border-radius: var(--radius);
-  background: rgba(17, 20, 23, 0.97);
-  box-shadow: 0 10px 34px -10px rgba(8, 9, 11, 0.95);
-  white-space: nowrap;
-  animation: stall-in 300ms var(--ease);
-}
-
-.stall__name {
-  font-size: 1.05rem;
-  color: var(--tone, var(--chalk));
-}
-
-.stall__why {
-  font-size: 0.85rem;
-  color: var(--chalk);
-}
-
-/* The part addressed to one person in the room, held back from the rest. */
-.stall__fix {
-  padding-left: 0.7rem;
-  border-left: 1px solid var(--rule);
-  color: var(--graphite-dim);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-@keyframes stall-in {
-  from { opacity: 0; transform: translate(-50%, 10px); }
-  to { opacity: 1; transform: translateX(-50%); }
-}
-
 /* --------------------------------------------------------------------------
    The tally — what the turn was worth, at reading distance
    -------------------------------------------------------------------------- */

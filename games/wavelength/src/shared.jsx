@@ -49,10 +49,16 @@ function ScoreNumber({ index, value }) {
  */
 export function SpectrumArc({ markerIndex = MIDPOINT, targetIndex = null, className = '', privateView = false, lowLabel, highLabel }) {
   const showTarget = Number.isInteger(targetIndex);
+  const hasRevealed = useRef(false);
   const rotation = needleRotation(markerIndex);
   const left = cleanLabel(lowLabel, 'LOW');
   const right = cleanLabel(highLabel, 'HIGH');
   const target = targetIndex ?? MIDPOINT;
+  const shieldInitial = hasRevealed.current ? { rotate: 180, opacity: 1 } : { rotate: -8, opacity: 0 };
+
+  useEffect(() => {
+    if (showTarget) hasRevealed.current = true;
+  }, [showTarget]);
 
   return (
     <svg className={`spectrum ${className}`} viewBox="0 0 1000 720" role="img"
@@ -81,13 +87,15 @@ export function SpectrumArc({ markerIndex = MIDPOINT, targetIndex = null, classN
         </motion.g>}
       </AnimatePresence>
 
-      <AnimatePresence initial={false}>
-        {!showTarget && <motion.g key="shield" className="wheel__shield" clipPath="url(#wheelStageClip)" initial={{ rotate: -8, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 180 }} transition={{ duration: 1.06, ease: [0.22, 0.78, 0.18, 1] }} style={{ originX: .5, originY: 1 }}>
+      <g clipPath="url(#wheelStageClip)">
+        <AnimatePresence initial={false}>
+          {!showTarget && <motion.g key="shield" className="wheel__shield" initial={shieldInitial} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 180, opacity: 1 }} transition={{ duration: 1.06, ease: [0.22, 0.78, 0.18, 1] }} style={{ originX: .5, originY: 1 }}>
           <path className="wheel__shield-panel" d={sectorPath(0, POSITIONS - 1, 404, 132)} />
           <path className="wheel__shield-arc" d={arcPath(4, POSITIONS - 5, 365)} />
           <text x="500" y="317">SECRET TARGET</text><text x="500" y="343">SEALED FOR THE CLUE-GIVER</text>
-        </motion.g>}
-      </AnimatePresence>
+          </motion.g>}
+        </AnimatePresence>
+      </g>
 
       <motion.g className="wheel__needle" initial={false} animate={{ rotate: rotation }} style={{ originX: .5, originY: 1 }} transition={{ type: 'spring', stiffness: 310, damping: 27, mass: .9 }}>
         <path d="M 500 569 L 494 178 L 506 178 Z" />

@@ -71,6 +71,7 @@ const SETS_PATH = path.join(__dirname, 'sets.json');
 // when this file stood alone.
 const { app, server, io } = require('../../lib/host');
 const joinCodes = require('../../lib/join');
+const popExpansion = require('./pop-expansion');
 
 /** Where this game's pages live on the site. */
 const BASE = require('../registry').find((game) => game.id === 'hitster').basePath;
@@ -101,7 +102,7 @@ const TRACK_URI = /^spotify:track:[A-Za-z0-9]{22}$/;
  */
 const SETS = [
   { id: 'classic', label: 'Classic', kind: 'special', blurb: 'One song per year, 1960 to 2023' },
-  { id: 'pop', label: 'Pop', kind: 'genre' },
+  { id: 'pop', label: 'Pop Music', kind: 'genre' },
   { id: 'rock', label: 'Rock', kind: 'genre' },
   { id: 'hiphop', label: 'Hip-hop', kind: 'genre' },
   { id: 'rnb', label: 'R&B / Soul', kind: 'genre' },
@@ -138,7 +139,7 @@ function loadSongs() {
 
   let catalog = [];
   try {
-    catalog = JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8'));
+    catalog = [...JSON.parse(fs.readFileSync(CATALOG_PATH, 'utf8')), ...popExpansion];
   } catch (err) {
     console.error('Could not read song-catalog.json:', err.message);
     // With no catalog, fall back to whatever songs.json already had.
@@ -147,9 +148,16 @@ function loadSongs() {
   }
 
   const key = (song) => `${song.title}|${song.artist}`.toLowerCase();
+  const seenCatalogEntries = new Set();
+  const uniqueCatalog = catalog.filter((entry) => {
+    const entryKey = key(entry);
+    if (seenCatalogEntries.has(entryKey)) return false;
+    seenCatalogEntries.add(entryKey);
+    return true;
+  });
   const known = new Map(resolved.map((song) => [key(song), song]));
 
-  songPool = catalog.map((entry) => {
+  songPool = uniqueCatalog.map((entry) => {
     const previous = known.get(key(entry));
     return {
       id: previous?.id ?? null,

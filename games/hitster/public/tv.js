@@ -50,6 +50,12 @@ let lobbyPlaybackStarted = false;
 // slider's chosen level as soon as active play resumes.
 let musicVolume = 60;
 let musicDucked = false;
+// A separate multiplier lets a song taper out without overwriting the
+// room's saved volume setting. New tracks always restore it to full.
+let trackFade = 1;
+let fadeTimer = null;
+let fadePromise = null;
+let gameTrackLoaded = false;
 
 // ---------------------------------------------------------------------------
 // Boot
@@ -398,6 +404,14 @@ async function playTrack(uri) {
   startingTrack = true;
   playbackGeneration += 1;
   try {
+    // Let the outgoing game track breathe away rather than hard-cutting the
+    // room as the next card begins. The first track has nothing to fade.
+    if (gameTrackLoaded) {
+      await fadeOutTrack();
+      await player?.pause().catch(() => {});
+      gameTrackLoaded = false;
+    }
+    resetTrackFade();
     await claimDevice();
     const res = await spotifyFetch(`/me/player/play?device_id=${deviceId}`, {
       method: 'PUT',
@@ -412,6 +426,7 @@ async function playTrack(uri) {
     // The Web API request starts the right URI; seeking once more clears the
     // rare cached SDK progress that can make a new song begin mid-track.
     await player?.seek(0).catch(() => {});
+    gameTrackLoaded = true;
   } finally {
     startingTrack = false;
   }
@@ -486,6 +501,8 @@ async function startLobbyPlayback() {
   if (!lobbyWanted || lobbyStarting || !deviceId || !audioReady) return;
   lobbyStarting = true;
   try {
+    resetTrackFade();
+    gameTrackLoaded = false;
     const playlistId = await lobbyPlaylistId().catch(() => null);
     // State can change while Spotify is creating the playlist. Do not bring
     // music back once the first card is already in play.
@@ -525,9 +542,10 @@ async function startLobbyPlayback() {
 }
 
 function stopLobbyPlayback() {
+  const wasPlayingLobby = lobbyWanted || lobbyPlaybackStarted;
   lobbyWanted = false;
   lobbyPlaybackStarted = false;
-  if (player) player.pause().catch(() => {});
+  if (wasPlayingLobby && player) player.pause().catch(() => {});
 }
 
 function syncLobbyPlayback(inLobby) {
@@ -567,8 +585,50 @@ function wireVolume() {
 }
 
 function applyMusicVolume() {
-  const level = musicDucked ? musicVolume * 0.38 : musicVolume;
+  const level = (musicDucked ? musicVolume * 0.38 : musicVolume) * trackFade;
   player?.setVolume(Math.max(0, Math.min(100, level)) / 100);
+}
+
+function setTrackFade(value) {
+  trackFade = Math.max(0, Math.min(1, value));
+  applyMusicVolume();
+}
+
+function resetTrackFade() {
+  clearTimeout(fadeTimer);
+  fadeTimer = null;
+  fadePromise = null;
+  setTrackFade(1);
+}
+
+/** Taper the current music bed over one second before it is paused or replaced. */
+function fadeOutTrack() {
+  if (!player || trackFade <= 0) return Promise.resolve();
+  if (fadePromise) return fadePromise;
+
+  const from = trackFade;
+  const startedAt = performance.now();
+  fadePromise = new Promise((resolve) => {
+    const step = () => {
+      const progress = Math.min(1, (performance.now() - startedAt) / 1000);
+      setTrackFade(from * (1 - progress));
+      if (progress >= 1) {
+        fadeTimer = null;
+        fadePromise = null;
+        resolve();
+        return;
+      }
+      fadeTimer = window.setTimeout(step, 50);
+    };
+    step();
+  });
+  return fadePromise;
+}
+
+async function fadeAndPauseMusic() {
+  await fadeOutTrack();
+  await player?.pause().catch(() => {});
+  gameTrackLoaded = false;
 }
 
 function setMusicDucked(ducked) {
@@ -752,9 +812,16 @@ function startProgressLoop() {
     disc.classList.toggle('record--paused', playback.paused);
     wave.classList.toggle('is-idle', playback.paused);
     const pct = playback.duration ? (playback.position / playback.duration) * 100 : 0;
+    // Spotify does not expose its stream to Web Audio, but the player does
+    // report duration and position. Ten small volume steps in this final
+    // second make the natural end of every song feel intentional.
+    if (!fadePromise) {
+      const remaining = playback.duration - playback.position;
+      setTrackFade(!playback.paused && playback.duration ? remaining / 1000 : 1);
+    }
     el('progress-fill').style.width = `${pct}%`;
     el('np-elapsed').textContent = formatTime(playback.position);
-  }, 500);
+  }, 100);
 }
 
 /**
@@ -875,7 +942,7 @@ socket.on('song_started', ({ spotifyUri }) => playTrack(spotifyUri));
 // an in-flight song is never cut off during a steal question.
 socket.on('pause_music', () => setMusicDucked(true));
 socket.on('resume_music', () => setMusicDucked(false));
-socket.on('stop_music', () => player?.pause());
+socket.on('stop_music', () => { void fadeAndPauseMusic(); });
 
 socket.on('steal_attempt', ({ playerName, answerMs }) => {
   SFX.stealClaimed();
