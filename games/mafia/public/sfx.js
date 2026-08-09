@@ -583,6 +583,9 @@ window.MafiaSFX = (() => {
 
   const api = {
     get enabled() { return enabled; },
+    // Browsers cannot read the operating system master-volume slider. This is
+    // the app-level level the TV can actually verify.
+    get volumeLevel() { return enabled ? 1 : 0; },
     intro,
     voice,
 

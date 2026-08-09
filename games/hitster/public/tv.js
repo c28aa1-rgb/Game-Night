@@ -265,16 +265,13 @@ function watchForGesture() {
  * if it is on screen, the alternative is silence with no explanation.
  */
 function showAudioGate() {
-  if (audioReady) return;
-  el('audio').hidden = false;
+  // Sound-check UI removed. Browser unlock still happens from normal page
+  // gestures via watchForGesture().
+  return;
 }
 
 function wireAudioGate() {
-  el('audio-btn').addEventListener('click', async () => {
-    if (!(await tryUnlockAudio())) {
-      el('audio-error').textContent = 'The browser still will not allow sound — try tapping again.';
-    }
-  });
+  // Kept as a compatibility hook for initPlayer; no sound-check prompt.
 }
 
 function initPlayer() {

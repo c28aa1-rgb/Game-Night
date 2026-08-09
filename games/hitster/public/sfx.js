@@ -84,6 +84,13 @@
   const SFX = {
     unlock,
 
+    /** Short audible check used when the playback level is muted/too low. */
+    soundCheck() {
+      unlock();
+      tone({ freq: 660, type: 'sine', duration: 0.14, peak: 0.65 });
+      tone({ freq: 880, type: 'sine', start: 0.16, duration: 0.22, peak: 0.65 });
+    },
+
     /** Someone hit steal. A stab and a rising swell — the room should look up. */
     stealClaimed() {
       noise({ duration: 0.18, peak: 0.55, frequency: 2600, q: 0.7 });

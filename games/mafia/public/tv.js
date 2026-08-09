@@ -751,6 +751,16 @@ setInterval(tickClock, 250);
  * whole game silently.
  */
 function openTheDoors() {
+  if (!SFX.enabled || SFX.volumeLevel < 0.25) {
+    SFX.prime();
+    if (SFX.enabled) Narrator.say('sound_check');
+    const note = document.querySelector('.gate__note');
+    if (note) note.textContent = SFX.enabled
+      ? 'Sound check sent. If you heard it, turn the volume up and press retry.'
+      : 'Sound is muted. Turn it on, then press retry.';
+    el('gate-btn').textContent = SFX.enabled ? 'Retry after turning volume up' : 'Turn sound on, then retry';
+    return;
+  }
   el('gate').hidden = true;
   SFX.prime();
   // The same gesture lets the lobby bed in. It would catch this click by itself
@@ -791,7 +801,6 @@ function warmTheFilm() {
   });
 }
 
-el('gate-btn').addEventListener('click', openTheDoors);
 document.addEventListener('click', () => SFX.prime(), { once: true });
 
 // ---------------------------------------------------------------------------
