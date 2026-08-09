@@ -581,6 +581,32 @@ function startGame(room) {
   return { ok: true };
 }
 
+/** Return the same table to setup without discarding its code or players. */
+function returnToLobby(room) {
+  clearTimers(room);
+  room.phase = PHASES.LOBBY;
+  room.round = 0;
+  room.currentPlayerIndex = 0;
+  room.currentCard = null;
+  room.placerId = null;
+  room.pool = [];
+  room.deck = [];
+  room.deckIndex = 0;
+  room.discardPile = [];
+  room.dealtIds = new Set();
+  room.stealClaim = null;
+  room.stealBlocked = new Set();
+  room.stealOutcome = null;
+  room.stealOpensAt = 0;
+  room.stealDeadline = 0;
+  room.lastReveal = null;
+  room.winner = null;
+  room.playbackFailed = false;
+  for (const player of room.players) player.timeline = [];
+  toTv(room, 'stop_music', {});
+  broadcast(room);
+}
+
 /**
  * Begin a fresh pass once the current one has dealt everything it can.
  *
@@ -1243,6 +1269,17 @@ io.on('connection', (socket) => {
     dropRoom(target.code);
 
     ack?.({ ok: true, code: fresh.code });
+  });
+
+  /** Same room, same code, same people — just clear the finished game. */
+  socket.on('return_to_lobby', (payload, ack) => {
+    const target = room();
+    if (!target) return ack?.({ error: 'That game has ended.' });
+    const player = findPlayerBySocket(target, socket.id);
+    if (!player || player.id !== target.hostId) return ack?.({ error: 'Only the host can return everyone to the lobby.' });
+    if (target.phase !== PHASES.GAME_OVER) return ack?.({ error: 'Finish the current game first.' });
+    returnToLobby(target);
+    ack?.({ ok: true });
   });
 
   // --- Turn actions -------------------------------------------------------

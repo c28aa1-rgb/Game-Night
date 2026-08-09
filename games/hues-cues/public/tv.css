@@ -63,6 +63,20 @@
   letter-spacing: -0.03em;
 }
 
+.turnclock {
+  margin: 0;
+  min-width: 3.1ch;
+  color: var(--chalk);
+  font-size: clamp(1.35rem, 2.6vw, 2.3rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.turnclock.is-urgent {
+  color: var(--fault);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--fault) 48%, transparent);
+}
+
 /* The ampersand is the one piece of the wordmark that is allowed to be quiet. */
 .mark__amp {
   margin: 0 0.12em;

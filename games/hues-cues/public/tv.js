@@ -58,6 +58,8 @@
   let revealTimers = [];
   let revealedTurn = null;
   let winTimer = null;
+  let guessClockTimer = null;
+  let lastGuessSecond = null;
   /** So the wave runs once per game, not once per state update. */
   let celebrated = false;
   /** Key -> element, so live overlays survive a re-render untouched. */
@@ -73,6 +75,31 @@
   }
 
   const playerById = (id) => (state?.players || []).find((p) => p.id === id) || null;
+
+  function updateGuessClock() {
+    const clock = el('turnClock');
+    if (!state || state.phase !== 'guess' || !state.activeGuesserId) {
+      clock.hidden = true;
+      lastGuessSecond = null;
+      return;
+    }
+    const serverDeadline = Number(state.guessDeadlineAt);
+    const remaining = Number.isFinite(serverDeadline) && serverDeadline > 0
+      ? Math.max(0, serverDeadline - Date.now())
+      : Math.max(0, (state.guessRemainingMs || 0) - (Date.now() - stateAt));
+    const seconds = Math.ceil(remaining / 1000);
+    clock.hidden = false;
+    clock.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    const urgent = seconds <= 10;
+    clock.classList.toggle('is-urgent', urgent);
+    if (urgent && seconds > 0 && seconds !== lastGuessSecond) {
+      // The final ten are a single escalating cue: quiet at ten, insistent at one.
+      SFX.tick((10 - seconds) / 9);
+    }
+    lastGuessSecond = seconds;
+  }
+
+  guessClockTimer = setInterval(updateGuessClock, 100);
 
   // -------------------------------------------------------------------------
   // Geometry
@@ -934,6 +961,7 @@
     previous = state;
     state = next;
     stateAt = Date.now();
+    updateGuessClock();
     el('code').textContent = state.code;
 
     const turnKey = `${state.turnNo}:${state.phase}`;

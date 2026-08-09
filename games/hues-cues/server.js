@@ -79,6 +79,8 @@ const HANDOFF_MS = envInt('HUES_HANDOFF_MS', 5400);
  * at, so the final turn's tally is followed by nothing at all.
  */
 const WIN_TAIL_MS = envInt('HUES_WIN_TAIL_MS', 1500);
+/** Each player gets one focused minute to settle their pin. */
+const GUESS_LIMIT_MS = envInt('HUES_GUESS_LIMIT_MS', 60000);
 
 function revealHoldMs(rows, final) {
   const tallyEnd = TALLY_AT_MS + TALLY_LEAD_MS
@@ -329,6 +331,8 @@ function createRoom() {
      */
     guessOn: null,
     guessSince: 0,
+    guessDeadline: 0,
+    guessTimer: null,
     /**
      * Targets already used this game, by coordinate and by colour, so the same
      * square — or the same colour wearing a different coordinate — is never
@@ -469,6 +473,7 @@ function activeGuesserId(room) {
  * who has actually been removed from the game is stepped over here.
  */
 function advanceGuess(room) {
+  clearGuessTimer(room);
   const submitted = room.guesses[room.cycle - 1];
   while (room.guessAt < room.guessQueue.length) {
     const id = room.guessQueue[room.guessAt];
@@ -478,6 +483,8 @@ function advanceGuess(room) {
       if (room.guessOn !== id) {
         room.guessOn = id;
         room.guessSince = Date.now();
+        room.guessDeadline = room.guessSince + GUESS_LIMIT_MS;
+        room.guessTimer = setTimeout(() => expireGuess(room, id), GUESS_LIMIT_MS);
       }
       return true;
     }
@@ -485,12 +492,31 @@ function advanceGuess(room) {
   }
   room.guessOn = null;
   room.guessSince = 0;
+  room.guessDeadline = 0;
   return false;
 }
 
 function clearRevealTimer(room) {
   if (room.revealTimer) clearTimeout(room.revealTimer);
   room.revealTimer = null;
+}
+
+function clearGuessTimer(room) {
+  if (room.guessTimer) clearTimeout(room.guessTimer);
+  room.guessTimer = null;
+}
+
+/** Time expiry acts exactly like pressing Submit at the current complete draft. */
+function expireGuess(room, playerId) {
+  if (room.phase !== PHASES.GUESS || activeGuesserId(room) !== playerId) return;
+  const draft = room.drafts.get(playerId);
+  if (draft && validCell(draft.row, draft.col) && !pinnedBy(room, draft.row, draft.col)) {
+    room.guesses[room.cycle - 1].set(playerId, { row: draft.row, col: draft.col });
+  }
+  room.drafts.delete(playerId);
+  room.guessAt += 1;
+  if (advanceGuess(room)) broadcast(room);
+  else closeCycle(room);
 }
 
 function shuffle(items) {
@@ -538,6 +564,12 @@ function publicState(room) {
      * still counts the same wait as everybody else.
      */
     activeWaitMs: room.guessSince ? Date.now() - room.guessSince : 0,
+    guessLimitMs: GUESS_LIMIT_MS,
+    guessRemainingMs: room.guessDeadline ? Math.max(0, room.guessDeadline - Date.now()) : 0,
+    // A real deadline lets a freshly loaded screen keep the clock moving even
+    // between state broadcasts; clients fall back to the relative value if
+    // their clock is unavailable or wildly wrong.
+    guessDeadlineAt: room.guessDeadline || null,
     /** The whole running order for this cycle, so screens can show what's coming. */
     guessQueue: room.guessQueue.slice(),
     /**
@@ -632,6 +664,7 @@ function broadcastDrafts(room) {
 /** Deal a fresh set of secret coordinates and hand the turn to its clue-giver. */
 function beginTurn(room) {
   clearRevealTimer(room);
+  clearGuessTimer(room);
   room.phase = PHASES.PICK_TARGET;
   room.turnNo += 1;
   room.cycle = 0;
@@ -643,6 +676,7 @@ function beginTurn(room) {
   room.guessAt = 0;
   room.guessOn = null;
   room.guessSince = 0;
+  room.guessDeadline = 0;
   room.reveal = null;
   broadcast(room);
 }
@@ -774,6 +808,7 @@ function armReveal(room, ms) {
 
 /** Every pin is in (or the host got bored). Move the turn along. */
 function closeCycle(room) {
+  clearGuessTimer(room);
   room.drafts = new Map();
 
   if (room.cycle === 1) {
@@ -853,6 +888,7 @@ function startGame(room) {
 
 function resetToLobby(room) {
   clearRevealTimer(room);
+  clearGuessTimer(room);
   room.phase = PHASES.LOBBY;
   room.turnIndex = 0;
   room.turnNo = 0;
@@ -865,6 +901,7 @@ function resetToLobby(room) {
   room.guessAt = 0;
   room.guessOn = null;
   room.guessSince = 0;
+  room.guessDeadline = 0;
   room.reveal = null;
   room.suddenDeath = false;
   room.winnerId = null;

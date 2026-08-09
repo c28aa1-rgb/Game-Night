@@ -28,6 +28,7 @@
   const el = (id) => document.getElementById(id);
 
   let state = null;
+  let stateAt = 0;
   let priv = null;
   let session = readSession();
   /** The colour chosen on the join form, before there is any room state. */
@@ -38,6 +39,24 @@
   /** The player whose Remove button is one tap from firing, if any. */
   let armedKick = null;
   let kickTimer = null;
+
+  function updateGuessClock() {
+    const clock = el('guessClock');
+    if (!state || state.phase !== 'guess' || !priv?.myTurn) {
+      clock.hidden = true;
+      return;
+    }
+    const serverDeadline = Number(state.guessDeadlineAt);
+    const remaining = Number.isFinite(serverDeadline) && serverDeadline > 0
+      ? Math.max(0, serverDeadline - Date.now())
+      : Math.max(0, (state.guessRemainingMs || 0) - (Date.now() - stateAt));
+    const seconds = Math.ceil(remaining / 1000);
+    clock.hidden = false;
+    clock.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    clock.classList.toggle('is-urgent', seconds <= 10);
+  }
+
+  setInterval(updateGuessClock, 100);
 
   function readSession() {
     try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { return null; }
@@ -284,7 +303,10 @@
       li.append(dot, name, mark);
 
       const why = removable(player);
-      if (why) li.append(removeButton(player, why));
+      if (why) {
+        li.classList.add('has-kick');
+        li.append(removeButton(player, why));
+      }
       return li;
     }));
   }
@@ -615,6 +637,8 @@
     // moved on, the tap that would have confirmed it means something else.
     const moved = state && state.phase !== next.phase;
     state = next;
+    stateAt = Date.now();
+    updateGuessClock();
     if (moved) {
       disarmHost.forEach((disarm) => disarm());
       clearTimeout(kickTimer);

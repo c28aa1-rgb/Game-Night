@@ -222,6 +222,16 @@
   font-weight: 600;
 }
 
+/* The remove action is a fourth item. Make it a fourth column rather than an
+   implicit second row, and keep a long player name on the one visible line. */
+.roster li.has-kick { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+.roster .who__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .roster--tight li { padding: 0.45rem 0.65rem; font-size: 0.9rem; }
 
 .roster li .who__dot { width: 14px; height: 14px; }
@@ -414,6 +424,16 @@
 }
 
 .guess__head .readout { margin: 0; }
+
+.guess__clock {
+  margin: 0 0 0 auto;
+  color: var(--chalk);
+  font-size: 1.45rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.guess__clock.is-urgent { color: var(--fault); }
 
 .toggle {
   display: inline-flex;

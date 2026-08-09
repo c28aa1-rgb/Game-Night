@@ -230,9 +230,10 @@ window.HuesSFX = (() => {
     },
 
     /** A wheel passing a detent. Quieter still — this can fire many times a second. */
-    tick() {
+    tick(urgency = 0) {
       if (!live()) return;
-      transient(0, 0.035, 3600, 6, 0.018);
+      const level = Math.max(0, Math.min(1, urgency));
+      transient(0, 0.035 + level * 0.075, 3600 + level * 900, 6, 0.018 + level * 0.025);
     },
 
     /**

@@ -422,6 +422,7 @@
   opacity: var(--o, 1);
   transition: transform 200ms var(--ease);
   will-change: transform, opacity;
+  scroll-snap-align: none;
 }
 
 /*
@@ -430,9 +431,10 @@
  * a boundary is the actual choice, and no year is ever a target.
  */
 .wmark {
-  height: 0;
+  height: 1px;
   flex: 0 0 auto;
   scroll-snap-align: center;
+  scroll-snap-stop: always;
 }
 
 /* The card being placed. Fixed dead centre; the years move around it. */

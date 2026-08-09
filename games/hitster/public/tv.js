@@ -69,6 +69,10 @@ let sdkLoaded = false;
  * phone — so without an explicit tap here, playback fails silently forever.
  */
 let audioReady = false;
+// Keep the recovery watchdog from reinstating Spotify's old position while a
+// newly dealt record is being claimed and explicitly restarted at 0:00.
+let startingTrack = false;
+let playbackGeneration = 0;
 
 window.onSpotifyWebPlaybackSDKReady = () => {
   // Retries can leave more than one copy of the SDK in flight, and a second
@@ -391,17 +395,25 @@ async function playTrack(uri) {
     if (deviceId && !audioReady) showAudioGate();
     return;
   }
-  await claimDevice();
-  const res = await spotifyFetch(`/me/player/play?device_id=${deviceId}`, {
-    method: 'PUT',
-    body: JSON.stringify({ uris: [uri], position_ms: 0 }),
-  });
-  if (!res.ok && res.status !== 204) {
-    const body = await res.json().catch(() => ({}));
-    toast(body.error?.message || 'Spotify would not start that track.');
-    // Skipping is not part of Hitster, so the control stays hidden until a
-    // track genuinely refuses to play and the turn would otherwise be stuck.
-    socket.emit('playback_failed');
+  startingTrack = true;
+  playbackGeneration += 1;
+  try {
+    await claimDevice();
+    const res = await spotifyFetch(`/me/player/play?device_id=${deviceId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ uris: [uri], position_ms: 0 }),
+    });
+    if (!res.ok && res.status !== 204) {
+      const body = await res.json().catch(() => ({}));
+      toast(body.error?.message || 'Spotify would not start that track.');
+      socket.emit('playback_failed');
+      return;
+    }
+    // The Web API request starts the right URI; seeking once more clears the
+    // rare cached SDK progress that can make a new song begin mid-track.
+    await player?.seek(0).catch(() => {});
+  } finally {
+    startingTrack = false;
   }
 }
 
@@ -753,7 +765,8 @@ function startProgressLoop() {
 let recoveringUntil = 0;
 
 async function recoverPlayback() {
-  if (!deviceId || !audioReady || Date.now() < recoveringUntil) return;
+  if (!deviceId || !audioReady || startingTrack || Date.now() < recoveringUntil) return;
+  const generation = playbackGeneration;
   recoveringUntil = Date.now() + 6000;
 
   const res = await spotifyFetch('/me/player').catch(() => null);
@@ -761,9 +774,10 @@ async function recoverPlayback() {
   if (!res || res.status === 204) return;
 
   const playback = await res.json().catch(() => null);
-  if (!playback?.is_playing || playback.device?.id === deviceId) return;
+  if (!playback?.is_playing || playback.device?.id === deviceId || startingTrack || generation !== playbackGeneration) return;
 
   await claimDevice();
+  if (startingTrack || generation !== playbackGeneration) return;
   await spotifyFetch(`/me/player/play?device_id=${deviceId}`, {
     method: 'PUT',
     body: JSON.stringify({ uris: [playback.item.uri], position_ms: playback.progress_ms || 0 }),
@@ -987,6 +1001,7 @@ function renderLobby() {
 function renderHeader() {
   el('round-label').textContent = `Round ${state.round}`;
   const placer = state.players.find((p) => p.id === state.placerId);
+  el('steal-clock-turn').textContent = placer ? `${placer.name}'s turn` : '—';
   el('turn-label').textContent = placer ? `${placer.name}'s turn` : '—';
 }
 
@@ -1110,6 +1125,10 @@ function isMatchPoint(player) {
 
 function renderPlayerBar() {
   const bar = el('playerbar');
+  // Keep up to twelve players in one or two readable rows rather than letting
+  // a third row get clipped at the foot of the shared screen.
+  bar.style.setProperty('--player-columns', String(Math.min(Math.max(state.players.length, 1), 6)));
+  bar.style.setProperty('--player-scale', String(Math.max(0.58, Math.min(1, 8 / Math.max(state.players.length, 1)))));
   bar.innerHTML = '';
   for (const p of state.players) {
     const pill = document.createElement('div');
@@ -1372,7 +1391,7 @@ function showWinnerOverlay() {
       <h2 class="overlay__headline win__score">${winner
         ? `${winner.score} card${winner.score === 1 ? '' : 's'}${drawn ? ' each' : ''}`
         : 'The crate is empty'}</h2>
-      <p class="overlay__sub">The host can start another game from their phone.</p>
+      <p class="overlay__sub">The host can return everyone to this lobby from their phone.</p>
     </div>`;
 }
 

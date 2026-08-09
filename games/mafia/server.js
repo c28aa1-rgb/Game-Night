@@ -83,7 +83,7 @@ const ROLE_DEAL_MS = envInt('MAFIA_ROLE_DEAL_MS', 8000);
  * A concise welcome from the House: establish the table, name the stakes, and
  * get out of the way before the players' own story begins.
  */
-const INTRO_MS = envInt('MAFIA_INTRO_MS', 30000);
+const INTRO_MS = envInt('MAFIA_INTRO_MS', 10000);
 /**
  * Breathing room after everybody in a window has acted. The clock jumps to
  * this rather than to zero, so the narrator's line lands and the room gets a
@@ -276,6 +276,8 @@ function createRoom() {
      * line it was supposed to wait for.
      */
     speakers: new Set(),
+    /** The opening has begun speaking; its final word is the cue to deal. */
+    introNarrationStarted: false,
     /** A phase transition that has come due and is waiting for the narrator. */
     pendingEnd: null,
     holdTimer: null,
@@ -962,6 +964,7 @@ function startGame(room) {
   room.winner = null;
   room.paused = false;
   room.phase = PHASES.INTRO;
+  room.introNarrationStarted = false;
   // Roles are dealt at the *end* of the opening. Nobody should be reading a
   // secret off their phone while the ship is still explaining what happened.
   setBeat(room, 'intro', { town: room.players.map((p) => ({ name: p.name, colour: colourById(p.colour) })) });
@@ -991,6 +994,7 @@ function resetToLobby(room) {
   room.revengeBy = null;
   room.winner = null;
   room.beat = null;
+  room.introNarrationStarted = false;
   room.paused = false;
   for (const player of room.players) {
     player.role = null;
@@ -1144,11 +1148,15 @@ nsp.on('connection', (socket) => {
 
     if (!payload.speaking) {
       target.speakers.delete(socket.id);
+      // The opening's story owns its duration. Once the final voiced line has
+      // landed, cut the remaining fallback clock and deal immediately.
+      if (target.phase === PHASES.INTRO && target.introNarrationStarted && target.clock) hurry(target, 0);
       if (!target.speakers.size) releaseHold(target);
       return;
     }
 
     target.speakers.add(socket.id);
+    if (target.phase === PHASES.INTRO) target.introNarrationStarted = true;
     // Still talking. Push the give-up cap back: it exists for a screen that has
     // stopped answering, not for a room that has a lot to be told.
     if (target.pendingEnd) {

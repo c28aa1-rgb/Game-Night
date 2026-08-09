@@ -132,6 +132,7 @@ function send(event, payload) {
 
 el('start-btn').addEventListener('click', () => send('start_game'));
 el('new-room-btn').addEventListener('click', () => send('new_room'));
+el('return-lobby-btn').addEventListener('click', () => send('return_to_lobby'));
 el('next-btn').addEventListener('click', () => send('ready_next_turn'));
 el('steal-btn').addEventListener('click', () => {
   el('steal-btn').disabled = true;
@@ -147,8 +148,19 @@ el('place-btn').addEventListener('click', () => {
 
 // Scrolling the wheel is the whole interaction; scroll-snap does the settling
 // and this just reports which slot ended up under the beam.
+let wheelSettleTimer = null;
 el('wheel-scroll').addEventListener('scroll', () => {
   requestAnimationFrame(updateWheel);
+  clearTimeout(wheelSettleTimer);
+  wheelSettleTimer = setTimeout(() => {
+    const scroller = el('wheel-scroll');
+    const mark = el('wheel-rail').querySelector(`.wmark[data-gap="${selectedGap}"]`);
+    if (!mark) return;
+    const target = mark.offsetTop - scroller.clientHeight / 2;
+    // Native momentum can stop a fraction away from a zero-ish target on some
+    // phones. Finish on the one legal gap, never an in-between pseudo-slot.
+    if (Math.abs(scroller.scrollTop - target) > 1) scroller.scrollTo({ top: target, behavior: 'smooth' });
+  }, 110);
 }, { passive: true });
 
 // Arrow keys for anyone not using a touchscreen.
@@ -463,6 +475,33 @@ function scrollToGap(index, smooth = true) {
   updateWheel();
 }
 
+// The full phone becomes the scroll surface when it is this player's turn.
+// Reaching for the thin rail wastes the short placement window; controls keep
+// their normal click/tap behaviour because only wheel input is redirected.
+document.addEventListener('wheel', (event) => {
+  if (el('screen-place').hidden || event.ctrlKey) return;
+  const delta = event.deltaY || event.deltaX;
+  if (!delta) return;
+  event.preventDefault();
+  el('wheel-scroll').scrollBy({ top: delta, behavior: 'auto' });
+}, { passive: false });
+
+let wheelTouchY = null;
+document.addEventListener('touchstart', (event) => {
+  if (!el('screen-place').hidden) wheelTouchY = event.touches[0]?.clientY ?? null;
+}, { passive: true });
+document.addEventListener('touchmove', (event) => {
+  if (el('screen-place').hidden || wheelTouchY === null) return;
+  const y = event.touches[0]?.clientY;
+  if (y === undefined) return;
+  const delta = wheelTouchY - y;
+  if (!delta) return;
+  event.preventDefault();
+  el('wheel-scroll').scrollBy({ top: delta, behavior: 'auto' });
+  wheelTouchY = y;
+}, { passive: false });
+document.addEventListener('touchend', () => { wheelTouchY = null; }, { passive: true });
+
 /** How far the years part to make room for the card sitting between them. */
 const GAP_H = 74;
 
@@ -657,10 +696,11 @@ function renderOver() {
     list.appendChild(item);
   }
 
+  el('return-lobby-btn').hidden = !me.isHost;
   el('new-room-btn').hidden = !me.isHost;
   el('over-hint').textContent = me.isHost
-    ? 'Opens a fresh room. Everyone rejoins with the new code.'
-    : 'The host can open a new room from here.';
+    ? 'Return to lobby keeps this room and everyone in it. New room changes the code.'
+    : 'The host can return everyone to this lobby, or open a new room.';
 }
 
 function renderVerticalTimeline(container) {
