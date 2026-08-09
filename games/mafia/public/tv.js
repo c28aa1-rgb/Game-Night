@@ -17,6 +17,7 @@ const A = window.MafiaAvatar;
 const SFX = window.MafiaSFX;
 const Narrator = window.MafiaNarrator;
 const Music = window.LobbyMusic;
+const Cinematics = window.MafiaCinematics;
 
 let state = null;
 let lastBeatId = 0;
@@ -162,7 +163,9 @@ function syncLobbyMusic(phase) {
  * game abruptly (the menu, a reset, a room closing) goes through here, so a
  * ninety-second cinematic can never keep playing over a lobby.
  */
-function stopShow() {}
+function stopShow() {
+  Cinematics?.stop?.();
+}
 
 /**
  * Show a caption for somebody other than the ship.
@@ -190,13 +193,14 @@ function townCaption(who, text) {
  * the opening this game shipped with, kept working on purpose.
  */
 async function playOpening(town) {
-  // A short house call, not a film. The server holds this phase for thirty
-  // seconds; the room gets a clean, spoken opening and then the cards are dealt.
   stopShow();
   SFX.cut();
   if (Music) Music.stop();
   el('caption').hidden = false;
   el('caption').querySelector('.caption__who').textContent = 'The House';
+  // The picture establishes the club while the House speaks. The scene is
+  // drawn from actual players, so the roll call belongs to this table.
+  Cinematics?.intro?.({ town });
   Narrator.sayIntro({ count: town.length });
 }
 
@@ -321,7 +325,9 @@ function flashReport(victimOrTitle, note) {
 
 function playDeath(victim, method, harsh) {
   flashReport(victim, method === 'hit' ? 'Gone before morning.' : 'The table has rendered its verdict.');
-  setTimeout(() => say('role_tag', { role: victim.role }), harsh ? 900 : 650);
+  Cinematics?.eliminate?.({ victim, method, seed: state?.beat?.id });
+  // Give the visual impact room to land before the public role is printed.
+  setTimeout(() => say('role_tag', { role: victim.role }), harsh ? 2200 : 2600);
 }
 
 // ---------------------------------------------------------------------------
@@ -639,6 +645,24 @@ function renderOver() {
       <span class="final__name">${A.escapeHtml(player.name)}</span>
       <span class="final__role">${A.escapeHtml(player.roleLabel)}</span>
     </div>`).join('');
+
+  // A win immediately after an ejection used to replace the tally screen with
+  // the winner screen. Keep the last public count on the final report, so the
+  // ending still answers the argument the room was just having.
+  const vote = state.lastVote;
+  const finalTally = el('over-tally');
+  finalTally.hidden = !vote;
+  if (vote) {
+    const top = Math.max(vote.needed, ...vote.tally.map((row) => row.votes), 1);
+    el('over-tally-rows').innerHTML = vote.tally.map((row) => `
+      <div class="over__tally-row${row.id === vote.eliminatedId ? ' is-out' : ''}">
+        <span>${A.escapeHtml(row.name)}</span>
+        <i><b style="width:${(row.votes / top) * 100}%"></b></i>
+        <strong>${row.votes}</strong>
+      </div>`).join('');
+    const ballots = vote.ballots?.length || 0;
+    el('over-tally-note').textContent = `${ballots} ballots cast · ${vote.abstained.length} abstained · ${vote.needed} needed`;
+  }
 
   el('over-next').textContent = state.hostName
     ? `${state.hostName} starts the next game from their phone`

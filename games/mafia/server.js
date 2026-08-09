@@ -1036,12 +1036,35 @@ app.get(`${BASE}/api/join-info`, async (req, res) => {
     const qr = await QRCode.toDataURL(url, {
       margin: 1,
       width: 420,
-      color: { dark: '#0A0D0F', light: '#C9D6DC' },
+      // Pure white keeps the code neutral on a TV and avoids the pale-blue
+      // selection/highlight look the old QR background created.
+      color: { dark: '#0A0D0F', light: '#FFFFFF' },
     });
     res.json({ url, qr });
   } catch {
     res.json({ url, qr: null });
   }
+});
+
+/**
+ * The join page is not in a Socket room yet, but it still needs to know which
+ * calling cards are already on the table. This exposes lobby-safe information
+ * only: colours, capacity, and whether the game has already begun.
+ */
+app.get(`${BASE}/api/lobby`, (req, res) => {
+  const code = String(req.query.code || '').trim().toUpperCase();
+  const room = rooms.get(code);
+  if (!room) return res.status(404).json({ error: 'No table found with that code.' });
+  res.json({
+    code: room.code,
+    phase: room.phase,
+    players: room.players.length,
+    maxPlayers: MAX_PLAYERS,
+    palette: PALETTE.map((colour) => ({
+      ...colour,
+      takenBy: room.players.find((player) => player.colour === colour.id)?.name || null,
+    })),
+  });
 });
 
 // ---------------------------------------------------------------------------

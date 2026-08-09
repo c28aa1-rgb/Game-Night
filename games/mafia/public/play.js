@@ -34,6 +34,8 @@ let clockLeft = 0;
 let clockStamp = Date.now();
 let toastTimer = null;
 let joinColour = 'red';
+let joinPalette = [];
+let joinPaletteTimer = null;
 
 const JOIN_PALETTE = [
   { id: 'red', name: 'Red', hex: '#E8402A' }, { id: 'blue', name: 'Blue', hex: '#2C5BE0' },
@@ -108,31 +110,24 @@ socket.on('connect', () => {
   });
 });
 
-function reviewJoin() {
+function join() {
   const name = el('name-input').value.trim();
   const code = el('code-input').value.trim().toUpperCase();
   if (!name) {
     el('join-error').textContent = 'Enter a name to join.';
     return;
   }
-
-  const colour = JOIN_PALETTE.find((entry) => entry.id === joinColour) || JOIN_PALETTE[0];
-  el('confirm-copy').textContent = `Table ${code || 'nearby'} · ${colour.name}`;
-  el('confirm-name').textContent = name;
-  el('confirm-colour').textContent = `${colour.name} calling card`;
-  el('confirm-figure').innerHTML = A.svg({ hex: colour.hex, size: 96, idle: true });
-  el('confirm-error').textContent = '';
-  show('screen-confirm');
-}
-
-function join() {
-  const name = el('name-input').value.trim();
-  const code = el('code-input').value.trim().toUpperCase();
-  el('confirm-join-btn').disabled = true;
+  const selected = joinPalette.find((entry) => entry.id === joinColour);
+  if (selected?.takenBy) {
+    el('join-error').textContent = `${selected.name} is already taken. Choose another colour.`;
+    return;
+  }
+  el('join-btn').disabled = true;
   socket.emit('join_game', { name, code, colour: joinColour }, (res) => {
-    el('confirm-join-btn').disabled = false;
+    el('join-btn').disabled = false;
     if (res?.error) {
-      el('confirm-error').textContent = res.error;
+      el('join-error').textContent = res.error;
+      schedulePaletteRefresh();
       return;
     }
     el('join-error').textContent = '';
@@ -142,26 +137,62 @@ function join() {
 }
 
 function drawJoinColours() {
-  el('join-colours').innerHTML = JOIN_PALETTE.map((colour) => `
-    <button class="swatch${colour.id === joinColour ? ' is-mine' : ''}" type="button"
-      data-colour="${colour.id}" style="--suit:${colour.hex}" aria-pressed="${colour.id === joinColour}">
+  const colours = joinPalette.length ? joinPalette : JOIN_PALETTE;
+  el('join-colours').innerHTML = colours.map((colour) => `
+    <button class="swatch${colour.id === joinColour ? ' is-mine' : ''}${colour.takenBy ? ' is-taken' : ''}" type="button"
+      data-colour="${colour.id}" data-label="${colour.takenBy ? 'Taken' : colour.name}" style="--suit:${colour.hex}"
+      aria-pressed="${colour.id === joinColour}" aria-label="${colour.name}${colour.takenBy ? ` is taken by ${colour.takenBy}` : ''}" ${colour.takenBy ? 'disabled' : ''}>
       <i></i><span class="visually-hidden">${colour.name}</span>
     </button>`).join('');
 }
 
+async function refreshJoinPalette() {
+  const code = el('code-input').value.trim().toUpperCase();
+  if (!code) {
+    joinPalette = JOIN_PALETTE.map((colour) => ({ ...colour, takenBy: null }));
+    drawJoinColours();
+    return;
+  }
+  try {
+    const res = await fetch(`/mafia/api/lobby?code=${encodeURIComponent(code)}`);
+    if (!res.ok) throw new Error('not found');
+    const info = await res.json();
+    // A code can change while this request is on its way back. Never let an
+    // earlier lookup paint its occupied colours onto the new table.
+    if (el('code-input').value.trim().toUpperCase() !== code) return;
+    joinPalette = info.palette;
+    const selected = joinPalette.find((colour) => colour.id === joinColour);
+    if (selected?.takenBy) joinColour = joinPalette.find((colour) => !colour.takenBy)?.id || joinColour;
+    drawJoinColours();
+    if (info.phase !== 'lobby') el('join-error').textContent = 'That game is already underway.';
+  } catch {
+    // Partial and expired codes should not leave the picker unusable. The
+    // server still confirms availability at the moment a player joins.
+    joinPalette = JOIN_PALETTE.map((colour) => ({ ...colour, takenBy: null }));
+    drawJoinColours();
+  }
+}
+
+function schedulePaletteRefresh() {
+  clearTimeout(joinPaletteTimer);
+  joinPaletteTimer = setTimeout(refreshJoinPalette, 220);
+}
+
 el('join-colours').addEventListener('click', (event) => {
   const button = event.target.closest('.swatch');
-  if (!button) return;
+  if (!button || button.disabled) return;
   joinColour = button.dataset.colour;
   drawJoinColours();
 });
 drawJoinColours();
 
-el('join-btn').addEventListener('click', reviewJoin);
-el('confirm-join-btn').addEventListener('click', join);
-el('confirm-back-btn').addEventListener('click', () => show('screen-join'));
+el('code-input').addEventListener('input', schedulePaletteRefresh);
+el('code-input').addEventListener('blur', refreshJoinPalette);
+setTimeout(refreshJoinPalette, 0);
+
+el('join-btn').addEventListener('click', join);
 for (const id of ['name-input', 'code-input']) {
-  el(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') reviewJoin(); });
+  el(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') join(); });
 }
 
 function send(event, payload) {
@@ -191,7 +222,7 @@ const ROLE_BRIEF = {
   vigilante: 'If the table votes you out, you name one player to take down with you.',
 };
 
-const SCREENS = ['screen-join', 'screen-confirm', 'screen-lobby', 'screen-role', 'screen-act', 'screen-vote',
+const SCREENS = ['screen-join', 'screen-lobby', 'screen-role', 'screen-act', 'screen-vote',
   'screen-quiet', 'screen-over'];
 
 function show(id) {

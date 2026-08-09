@@ -8,6 +8,7 @@
   <link rel="icon" href="/mafia/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/mafia/theme.css" />
   <link rel="stylesheet" href="/mafia/tv.css" />
+  <link rel="stylesheet" href="/mafia/cinematics.css" />
 </head>
 <body class="tv">
 
@@ -180,9 +181,14 @@
     <!-- Game over ----------------------------------------------------------- -->
     <section class="screen screen--over" id="screen-over" hidden>
       <div class="over">
-        <p class="readout" id="over-label">Final report</p>
-        <h2 class="display over__title" id="over-title">â€”</h2>
-        <div class="over__roster" id="over-roster"></div>
+      <p class="readout" id="over-label">Final report</p>
+      <h2 class="display over__title" id="over-title">â€”</h2>
+      <section class="over__tally" id="over-tally" hidden aria-label="Final ballot count">
+        <p class="readout">Last ballot</p>
+        <div class="over__tally-rows" id="over-tally-rows"></div>
+        <p class="over__tally-note readout" id="over-tally-note"></p>
+      </section>
+      <div class="over__roster" id="over-roster"></div>
         <p class="over__next readout" id="over-next">The host starts the next game from their phone</p>
       </div>
     </section>
@@ -204,6 +210,7 @@
   <script src="/mafia/avatar.js"></script>
   <script src="/mafia/sfx.js"></script>
   <script src="/mafia/narration.js"></script>
+  <script src="/mafia/cinematics.js"></script>
   <script src="/mafia/tv.js"></script>
 </body>
 </html>
