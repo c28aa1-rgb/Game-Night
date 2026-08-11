@@ -99,6 +99,7 @@ module.exports = [
     art: '/hub/art/chameleon.webp',
     basePath: '/chameleon',
     type: 'node',
+    status: 'draft',
   },
   {
     id: 'draft',
