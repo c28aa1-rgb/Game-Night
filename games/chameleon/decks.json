@@ -1,0 +1,51 @@
+[
+  {
+    "id": "night-market",
+    "category": "Night Market",
+    "difficulty": "easy",
+    "words": ["Lantern", "Noodles", "Skewer", "Mango", "Tea", "Dumpling", "Spice", "Fan", "Vendor", "Bargain", "Basket", "Incense", "Crowd", "Sweets", "Coconut", "Umbrella", "Music", "Steam", "Coins", "Soup", "Chopsticks", "Neon", "Scooter", "Fruit", "Stall"]
+  },
+  {
+    "id": "wildlife",
+    "category": "Wildlife",
+    "difficulty": "easy",
+    "words": ["Chameleon", "Tiger", "Otter", "Flamingo", "Panda", "Cobra", "Toucan", "Fox", "Sloth", "Dolphin", "Owl", "Gecko", "Elephant", "Penguin", "Lemur", "Shark", "Rabbit", "Peacock", "Wolf", "Turtle", "Gorilla", "Koala", "Moth", "Crocodile", "Seahorse"]
+  },
+  {
+    "id": "screen-time",
+    "category": "Screen Time",
+    "difficulty": "medium",
+    "words": ["Trailer", "Finale", "Villain", "Subtitle", "Spoiler", "Binge", "Pilot", "Cameo", "Reboot", "Credits", "Sitcom", "Documentary", "Cliffhanger", "Remote", "Streaming", "Commercial", "Episode", "Soundtrack", "Premiere", "Cartoon", "Drama", "Mystery", "Sequel", "Reality", "Marathon"]
+  },
+  {
+    "id": "on-the-road",
+    "category": "On the Road",
+    "difficulty": "easy",
+    "words": ["Map", "Motel", "Highway", "Snack", "Playlist", "Detour", "Traffic", "Gas", "Sunroof", "Exit", "Bridge", "Suitcase", "Rest Stop", "Hitchhiker", "Postcard", "Tunnel", "Speed", "Backseat", "Camera", "Compass", "Flat Tire", "Souvenir", "Roadside", "Driver", "Sunset"]
+  },
+  {
+    "id": "superpowers",
+    "category": "Superpowers",
+    "difficulty": "medium",
+    "words": ["Flying", "Invisibility", "Teleportation", "Strength", "Time Travel", "Mind Reading", "Healing", "Shapeshifting", "Speed", "Weather", "Force Field", "X-Ray Vision", "Elasticity", "Cloning", "Luck", "Ice", "Fire", "Gravity", "Dreams", "Underwater", "Animals", "Size", "Memory", "Technology", "Light"]
+  },
+  {
+    "id": "celebration",
+    "category": "Celebration",
+    "difficulty": "easy",
+    "words": ["Cake", "Confetti", "Toast", "Surprise", "Candles", "Dancing", "Gift", "Balloons", "Photos", "Speech", "Invitation", "Music", "Fireworks", "Costume", "Flowers", "Cheers", "Dinner", "Games", "Glitter", "Friends", "Banner", "Champagne", "Wish", "Decorations", "Afterparty"]
+  },
+  {
+    "id": "small-mysteries",
+    "category": "Small Mysteries",
+    "difficulty": "hard",
+    "words": ["Missing Sock", "Déjà Vu", "Locked Door", "Wrong Number", "Footprint", "Flickering Light", "Lost Key", "Whisper", "Empty Chair", "Strange Smell", "Coincidence", "Secret Note", "Shadow", "Unmarked Box", "Broken Clock", "Hidden Room", "Odd Photograph", "Unknown Caller", "Cold Spot", "New Scratch", "Open Window", "Familiar Face", "False Alarm", "Unsent Letter", "Extra Footstep"]
+  },
+  {
+    "id": "big-ideas",
+    "category": "Big Ideas",
+    "difficulty": "hard",
+    "words": ["Freedom", "Trust", "Ambition", "Justice", "Luck", "Home", "Courage", "Change", "Truth", "Beauty", "Power", "Memory", "Hope", "Chaos", "Time", "Identity", "Peace", "Loyalty", "Risk", "Success", "Fear", "Dream", "Balance", "Belonging", "Legacy"]
+  }
+]
+

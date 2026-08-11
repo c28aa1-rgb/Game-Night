@@ -11,6 +11,9 @@ Party games behind one hub page, served by one Express process.
 /mafia           Mafia — pick a screen
 /mafia/tv        Mafia — TV screen, and the ship's AI
 /mafia/play      Mafia — phone
+/chameleon       Chameleon - pick a screen
+/chameleon/tv    Chameleon - shared screen
+/chameleon/play  Chameleon - phone controller
 /codenames        Codenames
 /draft            Draft Night
 ```
@@ -38,6 +41,8 @@ games/registry.js    the list of games — the only file you edit to add one
 games/hitster/       server.js registers its own routes; public/ is its frontend
 games/mafia/        the same shape, but everything under /mafia — including
                      its socket namespace and its assets
+games/chameleon/    TV-and-phone social deduction, with its engine, curated
+                     decks, React source and built browser assets
 games/codenames/     static/ is the bundle, served as-is
 games/draft/         static/ is the bundle; theme/ is its design notes
                      (sfx.js synthesises its sound — no audio files)
@@ -112,6 +117,21 @@ than a bare 404 in somebody's hand.
 
 Player names are remembered site-wide under the `arcade.name` localStorage key,
 so you type your name once per evening rather than once per game.
+
+## Chameleon
+
+Social deduction for 4-12 players. The TV shows a 5x5 word grid while every
+town player privately receives the target word on their phone; the single
+Chameleon sees only the category and has to blend into one to three spoken clue
+rounds. Secret phone ballots support a runoff, and a caught Chameleon gets one
+final guess before the round scores. The first side to the configured target
+wins, with equal scores continuing into sudden death.
+
+The authoritative rules live in `games/chameleon/engine.js`, with curated
+25-word packs in `decks.json`. `server.js` owns rooms, clocks and secret state;
+`src/` contains the TV and phone interfaces compiled by
+`scripts/build-chameleon.js`. Runtime music and cues are synthesized in the
+browser, so there are no audio files to preload.
 
 ## Mafia
 

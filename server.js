@@ -53,15 +53,10 @@ function renderCards() {
         <span class="card-facts" aria-label="Game details">
           <span class="fact"><b>${esc(game.age || 'All ages')}</b><small>AGE</small></span>
           <span class="fact"><b>${esc(game.time || 'Flexible')}</b><small>TIME</small></span>
-          <span class="fact fact--players"><b>${esc(game.players.split(' · ')[0])}</b><small>PLAYERS</small></span>
+          <span class="fact fact--players"><b>${esc((game.players || 'Any number').split(' · ')[0])}</b><small>PLAYERS</small></span>
         </span>
         <span class="meta">
           <h2 class="visually-hidden">${esc(game.name)}</h2>
-          <p class="tagline">${esc(game.tagline)}</p>
-          <span class="players">
-            <span class="label">${esc(game.players)}</span>
-            <span class="play" aria-hidden="true">Play →</span>
-          </span>
         </span>
       </a>`;
     })

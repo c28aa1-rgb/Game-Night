@@ -167,6 +167,24 @@ window.LobbyMusic = (() => {
     },
 
     /*
+     * CHAMELEON — #98C93C, tropical leaf green threaded through a full
+     * spectrum. E minor keeps the deduction tense without turning sinister;
+     * added sixths and ninths let the harmony keep changing colour while a
+     * short triangle figure peeks out like a tell the room almost missed.
+     */
+    chameleon: {
+      root: 82.41,                                   // E2
+      chords: [[0, 3, 7, 14], [5, 9, 12, 16], [-2, 2, 5, 9], [7, 10, 14, 18]],
+      scale: [0, 3, 5, 7, 10],                       // E minor pentatonic
+      pad: 'triangle',
+      colour: 1750,
+      level: 0.82,
+      chordMs: 10800,
+      pulseMs: 2250,
+      sparkleMs: 3050,
+    },
+
+    /*
      * DRAFT NIGHT — #3AA0FF, broadcast blue. This one is pre-game television:
      * a studio bed under a countdown clock. G major, and the most regular
      * pulse of the five at roughly a resting heart rate, because the point is

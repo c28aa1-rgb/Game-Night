@@ -10,7 +10,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "build:wavelength": "node scripts/build-wavelength.js"
+    "build:wavelength": "node scripts/build-wavelength.js",
+    "build:chameleon": "node scripts/build-chameleon.js",
+    "test:chameleon": "node --test --test-concurrency=1 games/chameleon/*.test.js"
   },
   "dependencies": {
     "dotenv": "^16.4.7",

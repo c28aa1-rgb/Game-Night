@@ -719,17 +719,53 @@
     aspect-ratio: 16 / 9;
     overflow: hidden;
     border-radius: 10px;
-    background: var(--raise);
+    background: linear-gradient(110deg,
+      color-mix(in srgb, var(--accent) 14%, var(--raise)) 0%,
+      var(--raise) 34%,
+      color-mix(in srgb, var(--accent) 24%, var(--raise)) 52%,
+      var(--raise) 70%);
+    background-size: 240% 100%;
     border: 1px solid var(--line);
+    animation: poster-skeleton 1.25s ease-in-out infinite;
+  }
+
+  .frame::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background:
+      linear-gradient(90deg, transparent, rgba(255,255,255,.1), transparent),
+      radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 26%);
+    transform: translateX(-110%);
+    animation: poster-sheen 1.25s ease-in-out infinite;
+    pointer-events: none;
   }
 
   .frame img {
     display: block;
+    position: relative;
+    z-index: 2;
     width: 100%;
     height: 100%;
     object-fit: cover;
+    opacity: 0;
     filter: brightness(1) saturate(0.96);
-    transition: transform 420ms cubic-bezier(.2,.7,.3,1), filter 260ms ease;
+    transition: transform 420ms cubic-bezier(.2,.7,.3,1), filter 260ms ease, opacity 260ms ease;
+  }
+
+  .frame.is-loaded {
+    background-position: 100% 0;
+    animation: none;
+  }
+
+  .frame.is-loaded::before {
+    opacity: 0;
+    animation: none;
+  }
+
+  .frame.is-loaded img {
+    opacity: 1;
   }
 
   /* The accent bar draws itself across the foot of the poster on approach. */
@@ -744,6 +780,16 @@
     transform: scaleX(0);
     transform-origin: left;
     transition: transform 320ms cubic-bezier(.2,.7,.3,1);
+    z-index: 3;
+  }
+
+  @keyframes poster-skeleton {
+    0% { background-position: 0% 0; }
+    100% { background-position: 100% 0; }
+  }
+
+  @keyframes poster-sheen {
+    100% { transform: translateX(110%); }
   }
 
   .badge {
@@ -760,22 +806,10 @@
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--text);
+    z-index: 4;
   }
 
-  .meta { padding: 14px 2px 0; }
-
-  .tagline {
-    margin: 0 0 8px;
-    font-size: 0.98rem;
-    line-height: 1.45;
-  }
-
-  .players {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 12px;
-  }
+  .meta { padding: 0; }
 
   .card-facts {
     display: grid;
@@ -847,18 +881,6 @@
     letter-spacing: 0.15em;
   }
 
-  .play {
-    font-family: "Chivo Mono", ui-monospace, monospace;
-    font-size: 11px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--accent);
-    white-space: nowrap;
-    opacity: 0;
-    transform: translateX(-4px);
-    transition: opacity 240ms ease, transform 240ms ease;
-  }
-
   /* The spotlight: pointing at one poster steps the others back. */
   @media (hover: hover) {
     .wall:has(.card:hover) .card { opacity: 0.42; filter: saturate(0.65); }
@@ -883,9 +905,6 @@
 
   .card:hover .frame::after,
   .card:focus-visible .frame::after { transform: scaleX(1); }
-
-  .card:hover .play,
-  .card:focus-visible .play { opacity: 1; transform: none; }
 
   .card:hover .fact,
   .card:focus-visible .fact {
@@ -930,16 +949,10 @@
     border: 0;
   }
 
-  footer {
-    margin-top: clamp(40px, 6vw, 64px);
-    padding-top: 16px;
-    border-top: 1px solid var(--line);
-  }
-
-  footer code { font-family: "Chivo Mono", ui-monospace, monospace; color: var(--text); }
-
   @media (prefers-reduced-motion: reduce) {
     * { transition-duration: 1ms !important; }
+    .frame,
+    .frame::before { animation: none; }
     .card:hover .frame img { transform: none; }
     .fact { transform: none; }
   }
@@ -1097,20 +1110,25 @@
 
   <div class="shell menu" id="games">
     <header class="masthead">
-      <h1>What are we playing?</h1>
-      <p class="standfirst">Pick one, then get everyone looking at the same screen.</p>
+      <h1>Games</h1>
     </header>
 
     <nav class="wall">
       <!--TILES-->
     </nav>
-
-    <footer>
-      <p class="label">Another game goes in <code>games/registry.js</code></p>
-    </footer>
   </div>
 
 <script>
+  document.querySelectorAll('.frame img').forEach((img) => {
+    const frame = img.closest('.frame');
+    const loaded = () => frame?.classList.add('is-loaded');
+    if (img.complete && img.naturalWidth > 0) loaded();
+    else {
+      img.addEventListener('load', loaded, { once: true });
+      img.addEventListener('error', loaded, { once: true });
+    }
+  });
+
   /*
    * The landing and the menu are a screen each, so treat them as two stops:
    * any downward intent on the landing goes the whole way rather than leaving

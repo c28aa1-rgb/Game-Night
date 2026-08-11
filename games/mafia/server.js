@@ -642,6 +642,11 @@ function winner(room) {
  * last thing the room hears is who was ejected rather than who won.
  */
 function endIfWon(room, holdMs = 0) {
+  // A clock callback that was already queued must never be able to revive a
+  // finished room (or announce the winner a second time). Treat game over as
+  // terminal before looking at the counts again.
+  if (room.phase === PHASES.GAME_OVER) return true;
+
   const side = winner(room);
   if (!side) return false;
 
@@ -686,6 +691,11 @@ function kill(room, player, method) {
 // ---------------------------------------------------------------------------
 
 function beginNight(room) {
+  // Keep the win rule at the boundary as well as at each elimination. This is
+  // deliberately redundant: it prevents any delayed phase callback from
+  // starting another cycle after the last Mafia member has been removed.
+  if (endIfWon(room)) return;
+
   room.cycle += 1;
   room.votes = new Map();
   room.lastVote = null;
@@ -779,7 +789,7 @@ function resolveNight(room) {
   setBeat(room, victim ? 'morning_hit' : 'morning_quiet', { victim, cycle: room.cycle });
   broadcast(room);
 
-  if (victim && endIfWon(room, MORNING_MS)) return;
+  if (endIfWon(room, victim ? MORNING_MS : 0)) return;
 
   startClock(room, MORNING_MS, () => beginDiscussion(room));
   broadcast(room);
@@ -790,6 +800,8 @@ function resolveNight(room) {
 // ---------------------------------------------------------------------------
 
 function beginDiscussion(room) {
+  if (endIfWon(room)) return;
+
   const alive = livingPlayers(room);
   const segments = [];
 
@@ -843,6 +855,8 @@ function runDiscussionSegment(room) {
  * exists for the people who have not.
  */
 function beginVote(room) {
+  if (endIfWon(room)) return;
+
   room.discussion = null;
   room.phase = PHASES.VOTING;
   setBeat(room, 'vote_opens');
@@ -897,7 +911,9 @@ function closeVote(room) {
 
   if (!chosen) {
     setBeat(room, 'vote_none', { vote: room.lastVote });
-    startClock(room, ELIMINATION_MS, () => beginNight(room));
+    startClock(room, ELIMINATION_MS, () => {
+      if (!endIfWon(room)) beginNight(room);
+    });
     broadcast(room);
     return;
   }
@@ -918,6 +934,8 @@ function closeVote(room) {
 }
 
 function beginRevenge(room, officer) {
+  if (endIfWon(room)) return;
+
   room.revengeBy = { id: officer.id, name: officer.name, colour: colourById(officer.colour) };
   room.phase = PHASES.REVENGE;
   setBeat(room, 'revenge_opens', { officer: room.revengeBy });
@@ -933,7 +951,9 @@ function resolveRevenge(room, targetId) {
 
   if (!target || !target.alive) {
     setBeat(room, 'revenge_none', { officer });
-    startClock(room, ELIMINATION_MS, () => beginNight(room));
+    startClock(room, ELIMINATION_MS, () => {
+      if (!endIfWon(room)) beginNight(room);
+    });
     broadcast(room);
     return;
   }

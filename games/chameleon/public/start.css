@@ -1,0 +1,13 @@
+body { min-height: 100svh; overflow: hidden; }
+.start { position: relative; min-height: 100svh; display: grid; place-items: center; overflow: hidden; background: repeating-radial-gradient(circle at 78% 18%, transparent 0 72px, rgba(130,84,199,.08) 73px 88px, transparent 89px 132px), var(--night); }
+.start::before { content: "?"; position: absolute; right: 5vw; bottom: -16vw; color: rgba(246,212,71,.07); font: 900 58vw/.8 var(--display); pointer-events: none; }
+.start__choice { position: relative; z-index: 1; display: grid; width: min(700px, calc(100% - 2rem)); place-content: center; gap: 1.4rem; padding: clamp(2rem, 6vw, 6rem) 0; }
+.start__choice .brand { justify-content: flex-start; font-size: clamp(2.7rem, 6vw, 6.5rem); }
+.start__choice h1 { margin: 0; max-width: 12ch; font: 900 clamp(2.5rem, 5vw, 5rem)/.9 var(--display); letter-spacing: -.055em; }
+.start__choice p { max-width: 42ch; margin: 0; color: var(--muted); }
+.start__buttons { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+.start__buttons a { display: grid; gap: .35rem; min-height: 105px; padding: 1rem; border: 1px solid #403946; border-radius: 6px; background: #121014; color: var(--chalk); text-decoration: none; transition: transform var(--standard) var(--ease), border-color var(--standard); }
+.start__buttons a:hover { transform: translateY(-4px); border-color: var(--pollen); }
+.start__buttons b { font: 900 1.5rem/1 var(--display); }
+.start__buttons span { color: var(--muted); font-size: .8rem; }
+@media (max-width: 780px) { body { overflow: auto; } .start__choice { padding-block: 2rem; } }
