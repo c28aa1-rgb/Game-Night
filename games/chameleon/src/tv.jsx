@@ -38,9 +38,13 @@ function TV() {
     localStorage.setItem('chameleon.sound', next ? 'on' : 'off');
   }
 
-  function returnToLobby() {
-    if (!window.confirm('End this active game and return everyone to the lobby?')) return;
-    emit('end_game').then((result) => result.error && setNotice(result.error));
+  function newRoom() {
+    if (!window.confirm('Open a fresh Chameleon room?')) return;
+    emit('new_room').then((result) => {
+      if (result.error) return setNotice(result.error);
+      window.history.replaceState({}, '', `/chameleon/tv?room=${result.code}`);
+      setNotice('Scan the new code and choose a calling card.');
+    });
   }
 
   if (!state) return <main className="tv tv--loading"><Brand /><p className="utility">{notice}</p></main>;
@@ -54,7 +58,7 @@ function TV() {
       <div className="tvbar__phase"><span className="utility">Round {Math.max(1, state.roundNo)}</span><strong>{PHASE_LABELS[state.phase]}</strong></div>
       <div className="tvbar__actions">
         {state.phase !== 'lobby' && state.phase !== 'game_over' && <span className={`clock ${clock > 0 && clock < 10000 ? 'is-urgent' : ''}`}>{state.paused ? 'PAUSED' : formatClock(clock)}</span>}
-        {state.phase !== 'lobby' && state.phase !== 'game_over' && <button className="endbtn" type="button" aria-label="End game and return to lobby" onClick={returnToLobby}><span className="endbtn__full">Return to lobby</span><span className="endbtn__short">Lobby</span></button>}
+        {state.phase !== 'lobby' && state.phase !== 'game_over' && <button className="newroombtn" type="button" onClick={newRoom}>New room</button>}
         <button className="soundbtn" type="button" onClick={toggleSound} aria-pressed={sound}>{sound ? 'Sound on' : 'Sound off'}</button>
         <span className={`connection ${connected ? 'is-on' : ''}`} aria-label={connected ? 'Connected' : 'Reconnecting'} />
       </div>
@@ -172,7 +176,7 @@ function GameOver({ state }) {
     <h1>{townWon ? 'The Town saw through it.' : 'The Chameleon disappeared.'}</h1>
     <ScoreStrip state={state} />
     <div className="finalroster">{state.players.map((player) => <PlayerChip key={player.id} player={player} />)}</div>
-    <p>The host can return everyone to the lobby from their phone.</p>
+    <p>Use <b>New room</b> above to start a fresh table.</p>
   </PhaseShell>;
 }
 

@@ -29,6 +29,8 @@ function envInt(name, fallback) {
 
 const PORT = envInt('PORT', 3000);
 const TARGET_CARDS = envInt('TARGET_CARDS', 10);
+/** Matches the 2–10 player count advertised on the arcade hub. */
+const MAX_PLAYERS = 10;
 /** How long the reveal stays up before the game moves itself on. */
 const REVEAL_MS = envInt('REVEAL_MS', 5000);
 /** "Alex is up" breathing room between the reveal and the next song. */
@@ -1170,8 +1172,8 @@ io.on('connection', (socket) => {
     if (target.phase !== PHASES.LOBBY) {
       return ack?.({ error: 'That game is already underway.' });
     }
-    if (target.players.length >= 8) {
-      return ack?.({ error: 'This game is full (8 players).' });
+    if (target.players.length >= MAX_PLAYERS) {
+      return ack?.({ error: `This game is full (${MAX_PLAYERS} players).` });
     }
 
     const player = {

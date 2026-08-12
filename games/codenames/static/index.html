@@ -13,6 +13,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap"
   />
   <link rel="stylesheet" href="style.css?v=safelight1" />
+  <link rel="stylesheet" href="/hub/tutorial/tutorial.css" />
 </head>
 <body>
   <div class="vignette" aria-hidden="true"></div>
@@ -58,6 +59,10 @@
             <span class="entry-role">Join</span>
             <strong class="entry-title">Existing board</strong>
             <span class="entry-desc">Open a room's public board on a second screen.</span>
+          </button>
+
+          <button class="tutorial-launch" type="button" data-game-tutorial="codenames" style="--tutorial-accent:#E01B2E">
+            Watch how to play
           </button>
 
           <p id="homeMessage" class="message" role="status"></p>
@@ -297,6 +302,7 @@
        also the one asset here that only exists on the arcade host: on the
        standalone Firebase deploy this 404s, so every call site below checks. -->
   <script src="/hub/lobby-music.js"></script>
+  <script defer src="/hub/tutorial/tutorial.js"></script>
   <script type="module" src="app.js?v=safelight1"></script>
 </body>
 </html>

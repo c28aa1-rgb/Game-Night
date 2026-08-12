@@ -8,6 +8,7 @@
   <link rel="icon" href="/hues-cues/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/hues-cues/theme.css" />
   <link rel="stylesheet" href="/hues-cues/start.css" />
+  <link rel="stylesheet" href="/hub/tutorial/tutorial.css" />
 </head>
 <body class="start">
   <main class="start__inner">
@@ -61,6 +62,10 @@
       </a>
     </nav>
 
+    <button class="tutorial-launch" type="button" data-game-tutorial="hues-cues" style="--tutorial-accent:#F9680D">
+      Watch how to play
+    </button>
+
     <footer class="start__foot">
       <p class="readout">How it goes</p>
       <p class="start__rules">
@@ -75,6 +80,7 @@
   </main>
 
   <script src="/hues-cues/grid-data.js"></script>
+  <script defer src="/hub/tutorial/tutorial.js"></script>
   <script>
     /*
      * The board's own row K, laid end to end under the rules. The one piece of

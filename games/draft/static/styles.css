@@ -500,6 +500,20 @@ ol,ul{list-style:none}
   gap:clamp(1.2rem,3vw,2.4rem);flex-wrap:wrap;flex-shrink:0;
 }
 
+/* A 720p TV is the tightest common shared-screen height. Four teams create a
+   second row, so compress the result card rhythm there instead of making the
+   room scroll to reach the replay controls. Taller screens keep the more
+   spacious broadcast layout above. */
+@media (max-height:760px) and (min-width:1081px){
+  .page-final{gap:.85rem;padding-block:1rem}
+  .page-final .display-xl{font-size:clamp(3rem,8.5vh,4.2rem);margin:.12em 0}
+  .final-grid{gap:1rem clamp(1.2rem,2.4vw,2rem)}
+  .final-grid[data-teams="4"] .squad{padding:.9rem 1.35rem}
+  .final-grid[data-teams="4"] .squad-head{padding-bottom:.45rem;margin-bottom:.45rem}
+  .final-grid[data-teams="4"] .squad-row{padding:.16rem 0}
+  .final-foot .btn{font-size:1.2rem;padding:.5em 1.3em}
+}
+
 /* ═══ TEAM COUNT ════════════════════════════════════════ */
 .teamsel{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1.6rem}
 .teamsel-label{

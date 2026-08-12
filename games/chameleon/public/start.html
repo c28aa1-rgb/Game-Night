@@ -8,6 +8,7 @@
   <link rel="icon" href="/chameleon/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/chameleon/theme.css" />
   <link rel="stylesheet" href="/chameleon/start.css" />
+  <link rel="stylesheet" href="/hub/tutorial/tutorial.css" />
 </head>
 <body>
   <main class="start">
@@ -22,8 +23,12 @@
         <a href="/chameleon/tv"><b>TV</b><span>Open a new room</span></a>
         <a href="/chameleon/play"><b>Phone</b><span>Join with a code</span></a>
       </div>
-      <a href="/" style="color:#aaa397">← Game night</a>
+      <button class="tutorial-launch" type="button" data-game-tutorial="chameleon" style="--tutorial-accent:#98C93C">
+        Watch how to play
+      </button>
     </section>
   </main>
+  <a class="game-night-link" href="/">← Back to game night</a>
+  <script defer src="/hub/tutorial/tutorial.js"></script>
 </body>
 </html>

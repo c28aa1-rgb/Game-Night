@@ -22,9 +22,10 @@ body { overflow: hidden; }
 .clock.is-urgent { color: var(--danger); animation: urgent .7s ease-in-out infinite alternate; }
 @keyframes urgent { to { opacity: .48; } }
 .soundbtn { border: 1px solid #3a3541; border-radius: 4px; background: #151319; padding: .45rem .65rem; color: var(--muted); font: 700 .62rem/1 var(--utility); text-transform: uppercase; cursor: pointer; }
-.endbtn { border: 1px solid rgba(239,47,112,.55); border-radius: 4px; background: rgba(239,47,112,.1); padding: .45rem .65rem; color: #ff9ab8; font: 700 .62rem/1 var(--utility); text-transform: uppercase; cursor: pointer; }
-.endbtn:hover { border-color: var(--fuchsia); background: rgba(239,47,112,.2); color: var(--chalk); }
-.endbtn__short { display: none; }
+.newroombtn { border: 1px solid rgba(152,201,60,.65); border-radius: 4px; background: rgba(152,201,60,.12); padding: .45rem .65rem; color: var(--leaf); font: 700 .62rem/1 var(--utility); text-transform: uppercase; cursor: pointer; }
+.newroombtn:hover { border-color: var(--leaf); background: rgba(152,201,60,.24); color: var(--chalk); }
+.tv-back { position: fixed; z-index: 30; left: 1.2rem; bottom: 1.1rem; display: inline-flex; align-items: center; gap: .5rem; color: var(--muted); font: 700 .65rem/1 var(--utility); letter-spacing: .1em; text-transform: uppercase; text-underline-offset: .25em; }
+.tv-back:hover { color: var(--pollen); }
 .connection { width: 7px; aspect-ratio: 1; border-radius: 50%; background: var(--danger); box-shadow: 0 0 10px currentColor; }
 .connection.is-on { background: var(--leaf); }
 
@@ -107,9 +108,6 @@ body { overflow: hidden; }
   .tvbar { grid-template-columns: 1fr auto; }
   .tvbar__actions { gap: .35rem; }
   .clock { min-width: 44px; }
-  .endbtn { padding-inline: .45rem; }
-  .endbtn__full { display: none; }
-  .endbtn__short { display: inline; }
   .tvbar__phase { display: none; }
   .lobby { grid-template-columns: 1fr; }
   .lobby__poster { min-height: 220px; }

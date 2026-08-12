@@ -8,6 +8,7 @@
   <link rel="icon" href="/mafia/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/mafia/theme.css" />
   <link rel="stylesheet" href="/mafia/start.css" />
+  <link rel="stylesheet" href="/hub/tutorial/tutorial.css" />
 </head>
 <body class="start">
   <div class="alarm-wash is-live" aria-hidden="true"></div>
@@ -63,6 +64,10 @@
       </a>
     </nav>
 
+    <button class="tutorial-launch" type="button" data-game-tutorial="mafia" style="--tutorial-accent:#FF3B1F">
+      Watch how to play
+    </button>
+
     <footer class="start__foot">
       <p class="readout">How it goes</p>
       <p class="start__rules">
@@ -73,5 +78,6 @@
       </p>
     </footer>
   </main>
+  <script defer src="/hub/tutorial/tutorial.js"></script>
 </body>
 </html>

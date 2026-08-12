@@ -155,7 +155,7 @@ function PhoneLobby({ state, priv, act }) {
       <div className="setting"><div><b>Bounded timers</b><small>Auto-advance stalled turns</small></div><button className={`toggle ${timers ? 'is-on' : ''}`} onClick={() => { setTimers(!timers); update({ timers: !timers }); }} aria-pressed={timers}><span /></button></div>
       <button className="primary" disabled={state.players.length < state.minPlayers} onClick={() => act('start_game')}>{state.players.length < state.minPlayers ? `Need ${state.minPlayers - state.players.length} more` : 'Deal the roles'}</button>
     </div> : <p className="waitnote">Waiting for {state.hostName} to deal the roles.</p>}
-    <a className="home-link" href="/">Back to home</a>
+    <a className="home-link" href="/">Back to game night</a>
   </PhaseShell>;
 }
 

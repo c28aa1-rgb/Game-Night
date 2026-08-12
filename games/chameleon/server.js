@@ -369,6 +369,19 @@ nsp.on('connection', (socket) => {
     broadcast(room);
   });
 
+  socket.on('new_room', (payload, ack) => {
+    const oldRoom = currentRoom();
+    if (!oldRoom) return ack?.({ error: 'That room is gone.' });
+    if (!canEndGame(oldRoom, ack)) return;
+    const room = createRoom();
+    oldRoom.tvSockets.delete(socket.id);
+    attach(room);
+    room.tvSockets.add(socket.id);
+    dropRoom(oldRoom.code);
+    ack?.({ ok: true, code: room.code });
+    broadcast(room);
+  });
+
   socket.on('join_game', (payload = {}, ack) => {
     const name = String(payload.name || '').trim().slice(0, 16);
     const requested = String(payload.code || '').trim().toUpperCase();

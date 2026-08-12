@@ -10,4 +10,6 @@ body { min-height: 100svh; overflow: hidden; }
 .start__buttons a:hover { transform: translateY(-4px); border-color: var(--pollen); }
 .start__buttons b { font: 900 1.5rem/1 var(--display); }
 .start__buttons span { color: var(--muted); font-size: .8rem; }
+.game-night-link { position: fixed; z-index: 4; left: clamp(1rem, 3vw, 2.5rem); top: clamp(1rem, 3vw, 2.5rem); color: #aaa397; font: 700 .7rem/1 var(--utility); letter-spacing: .08em; text-transform: uppercase; text-underline-offset: .25em; }
+.game-night-link:hover { color: var(--pollen); }
 @media (max-width: 780px) { body { overflow: auto; } .start__choice { padding-block: 2rem; } }
