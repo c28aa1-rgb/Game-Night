@@ -350,6 +350,12 @@ function renderStealButton(playing) {
   }
 
   const tick = () => {
+    if (!state.stealClockStarted) {
+      button.disabled = true;
+      button.textContent = 'Waiting for music';
+      note.textContent = 'The steal clock starts with the first audible note.';
+      return;
+    }
     const remaining = stealOpensAt - Date.now();
     if (remaining > 0) {
       button.disabled = true;

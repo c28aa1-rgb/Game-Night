@@ -9,3 +9,17 @@
 .error { color: #ae422c; line-height: 1.4; }.error--fixed { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 1rem); left: 1rem; right: 1rem; z-index: 5; padding: .8rem; border: 1px solid var(--coral); background: #fff0e9; }
 @media (min-width: 600px) { .play { padding: 2rem; }.play__bar { max-width: 500px; width: 100%; margin: 0 auto; }.phone-score { max-width: 500px; width: 100%; margin: 1rem auto 1.4rem; } }
 @media (max-height: 680px) { .join-screen { gap: .65rem; }.join-screen header h1 { font-size: clamp(2.35rem, 12vw, 3.5rem); }.join-teams button { min-height: 92px; }.code-field input { min-height: 46px; font-size: 1.7rem; } }
+
+.phone-role { display: grid; justify-items: end; gap: .12rem; text-align: right; text-transform: uppercase; }
+.phone-role b { color: var(--ink); font: 700 .68rem/1 var(--mono); letter-spacing: .08em; }
+.phone-role em { color: var(--coral); font: 700 .74rem/1 var(--sans); letter-spacing: .08em; font-style: normal; }
+.phone-role small { color: var(--ink-soft); font: 500 .6rem/1 var(--mono); letter-spacing: .12em; }
+.ready-row--phones { display: grid; grid-template-columns: 1fr 1fr; }
+.ready-row--phones span { font-size: .53rem; }
+.join-teams button > span { display: block; font-weight: 700; line-height: 1.15; }
+.secondary { width: 100%; min-height: 48px; border: 1px solid var(--line); background: transparent; color: var(--ink-soft); font-weight: 700; }
+.skip-button { margin-top: .75rem; }
+.skip-confirm { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; margin-top: .75rem; padding: .75rem; border: 1px solid var(--coral); background: #fff4ed; }
+.skip-confirm p { grid-column: 1 / -1; margin: 0; color: var(--ink); font-weight: 700; }
+.skip-confirm button { min-height: 44px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-weight: 700; }
+.skip-confirm .skip-confirm__yes { border-color: var(--coral); background: var(--coral); color: #fff; }

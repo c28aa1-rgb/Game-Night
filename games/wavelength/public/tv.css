@@ -12,3 +12,32 @@
 .winner-card { position: fixed; left: 50%; bottom: 2rem; z-index: 2; transform: translateX(-50%); display: grid; justify-items: center; min-width: 240px; padding: 1.6rem 2.2rem; border: 2px solid var(--ink); background: var(--paper); box-shadow: 10px 10px 0 rgba(184,141,81,.35), 0 18px 50px rgba(91,69,45,.22); }.winner-card strong { margin: .35rem 0; color: var(--ink); font: 700 clamp(2.2rem, 5vw, 4rem)/.95 var(--display); }.winner-card span:last-child { color: var(--coral); font: 1.25rem var(--mono); }
 @media (max-width: 820px) { .tv__bar { grid-template-columns: 1fr auto; }.tv__status { display: none; }.score { min-width: 0; }.sound-toggle { grid-row: 1; }.tv-lobby { grid-template-columns: 1fr; }.qr-panel { justify-self: center; }.prompt { margin-top: .55rem; }.round-meta { gap: .45rem; }.round-scoreboard { width: 100%; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: .35rem; }.round-scoreboard .score { padding: .42rem .5rem; font-size: .56rem; }.round-scoreboard .score b { font-size: 1.6rem; }.turn-label { font-size: .56rem; }.reveal-card { top: auto; right: .7rem; bottom: .7rem; translate: none; min-width: 0; padding: .6rem .72rem; }.reveal-card strong { font-size: 2.7rem; }.reveal-card .readout { font-size: .56rem; } }
 @media (max-height: 580px) { .tv { padding-top: .55rem; padding-bottom: .55rem; }.prompt { font-size: clamp(.95rem, 2.4vw, 1.65rem); }.round-meta { min-height: 22px; }.turn-label { font-size: .57rem; } }
+
+/* Round status mirrors the score-gain card in the otherwise empty left rail. */
+.rounds-card { position: absolute; top: 52%; left: clamp(.8rem, 3vw, 3rem); z-index: 3; translate: 0 -50%; display: grid; justify-items: start; gap: .25rem; min-width: clamp(8.25rem, 15vw, 13rem); padding: .8rem 1rem .72rem; border: 2px solid var(--blue); background: #f2f8fb; box-shadow: -6px 6px 0 rgba(71,121,158,.17), 0 14px 32px rgba(91,69,45,.14); pointer-events: none; }
+.rounds-card strong { color: var(--blue); font: 700 clamp(3.2rem, 6vw, 5.75rem)/.78 var(--display); letter-spacing: -.06em; }
+
+/* Match wins take over the shared screen as a single celebratory beat. */
+.winner-card { inset: 0; left: 0; bottom: 0; transform: none; z-index: 20; min-width: 0; padding: clamp(1rem, 4vw, 4rem); border: 0; box-shadow: none; overflow: hidden; place-items: center; background: radial-gradient(circle at 50% 42%, rgba(255,250,241,.96) 0 18%, rgba(244,200,90,.94) 18.2% 38%, rgba(39,63,85,.97) 38.2% 100%); }
+.winner-card::before, .winner-card::after { content: ''; position: absolute; width: min(86vmin, 900px); aspect-ratio: 1; border: 2px solid rgba(255,250,241,.36); border-radius: 50%; animation: winner-pulse 1.8s ease-out infinite; }
+.winner-card::after { animation-delay: .58s; }
+.winner-card__copy { position: relative; z-index: 2; display: grid; justify-items: center; text-align: center; }
+.winner-card .winner-card__copy > strong { margin: .35rem 0 -.1em; color: var(--ink); font: 700 clamp(4.5rem, 14vw, 12rem)/.76 var(--display); letter-spacing: -.075em; text-shadow: 0 5px 0 rgba(255,255,255,.45); }
+.winner-card__copy > b { color: var(--coral); font: 700 clamp(4rem, 13vw, 11rem)/.8 var(--display); letter-spacing: -.06em; }
+.winner-card .winner-card__copy > span:last-child { margin-top: 1rem; color: var(--ink); font: 700 clamp(1.4rem, 3vw, 2.7rem)/1 var(--mono); }
+.confetti-field { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.confetti-field i { position: absolute; top: -12%; left: var(--left); width: 10px; height: 24px; border-radius: 2px; background: var(--confetti); animation: confetti-fall var(--duration) cubic-bezier(.18,.72,.24,1) var(--delay) infinite; }
+.confetti-field i:nth-child(3n) { width: 16px; height: 16px; border-radius: 50%; }
+.confetti-field i:nth-child(4n) { width: 8px; height: 30px; }
+@keyframes confetti-fall { 0% { transform: translate3d(0,-12vh,0) rotate(0deg); } 100% { transform: translate3d(var(--drift),120vh,0) rotate(780deg); } }
+@keyframes winner-pulse { from { transform: scale(.38); opacity: .85; } to { transform: scale(1.25); opacity: 0; } }
+
+@media (max-width: 820px) {
+  .rounds-card { top: auto; left: .7rem; bottom: .7rem; translate: none; min-width: 0; padding: .6rem .72rem; }
+  .rounds-card strong { font-size: 2.7rem; }
+  .rounds-card .readout { font-size: .56rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .confetti-field { display: none; }
+  .winner-card::before, .winner-card::after { animation: none; opacity: .22; }
+}

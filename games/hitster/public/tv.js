@@ -17,6 +17,8 @@ let deviceId = null;
 let accessToken = null;
 let pendingUri = null;
 let progressTimer = null;
+let expectedTrackUri = null;
+let reportedPlaybackUri = null;
 /** Identifies the reveal currently on screen, so it animates exactly once. */
 let shownRevealKey = null;
 let shownPhase = null;
@@ -390,6 +392,8 @@ async function playTrack(uri) {
   // A real game card always wins over the lobby playlist, including when a
   // slow playlist request finishes a moment after the host pressed Start.
   stopLobbyPlayback();
+  expectedTrackUri = uri;
+  reportedPlaybackUri = null;
   // Hold the track until the device exists and the tab is allowed to make
   // sound. One more quiet attempt first — by now the page has usually been
   // clicked at least once, which is all the browser was waiting for. Only if
@@ -811,6 +815,11 @@ function startProgressLoop() {
     disc.classList.toggle('is-playing', !playback.paused);
     disc.classList.toggle('record--paused', playback.paused);
     wave.classList.toggle('is-idle', playback.paused);
+    const liveUri = playback.track_window?.current_track?.uri;
+    if (!playback.paused && liveUri === expectedTrackUri && reportedPlaybackUri !== liveUri) {
+      reportedPlaybackUri = liveUri;
+      socket.emit('playback_started', { spotifyUri: liveUri });
+    }
     const pct = playback.duration ? (playback.position / playback.duration) * 100 : 0;
     // Spotify does not expose its stream to Web Audio, but the player does
     // report duration and position. Ten small volume steps in this final
@@ -879,6 +888,12 @@ function updateStealClock() {
   }
 
   clock.hidden = false;
+  if (!state.stealClockStarted) {
+    clock.classList.remove('stealclock--open');
+    el('steal-clock-label').textContent = 'Steals start with';
+    el('steal-clock-value').textContent = 'MUSIC';
+    return;
+  }
   const remaining = stealOpensAt - Date.now();
 
   if (remaining > 0) {
@@ -1010,7 +1025,12 @@ function render() {
   // The panel stays usable mid-game, but says so about what it can change.
   if (!el('sets-panel').hidden) renderSheetNote();
 
-  if (inLobby) return renderLobby();
+  if (inLobby) {
+    // The winner overlay is fixed and lives outside #game, so hiding the game
+    // alone leaves it covering a freshly restored lobby.
+    hideOverlay();
+    return renderLobby();
+  }
 
   renderHeader();
   renderNowPlaying();

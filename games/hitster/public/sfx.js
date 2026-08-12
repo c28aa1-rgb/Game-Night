@@ -24,7 +24,17 @@
       ctx = new Ctx();
       master = ctx.createGain();
       master.gain.value = 0.22;
-      master.connect(ctx.destination);
+      // The victory stack and steal hit can contain several simultaneous
+      // layers. A fast, gentle limiter keeps those peaks below clipping while
+      // preserving the deliberately low mix underneath Spotify.
+      const limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -9;
+      limiter.knee.value = 7;
+      limiter.ratio.value = 9;
+      limiter.attack.value = 0.003;
+      limiter.release.value = 0.18;
+      master.connect(limiter);
+      limiter.connect(ctx.destination);
     }
     if (ctx.state === 'suspended') ctx.resume();
     return ctx;

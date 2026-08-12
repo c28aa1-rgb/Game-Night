@@ -10,6 +10,8 @@ function TV() {
   const [join, setJoin] = useState(null);
   const [notice, setNotice] = useState('Opening a new hiding place…');
   const [sound, setSound] = useState(() => localStorage.getItem('chameleon.sound') !== 'off');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [armedAction, setArmedAction] = useState(null);
   const registered = useRef(false);
   const { connected, emit } = useRoomSocket(({ state: next }) => next && setState(next));
   const clock = useClock(state);
@@ -38,12 +40,26 @@ function TV() {
     localStorage.setItem('chameleon.sound', next ? 'on' : 'off');
   }
 
-  function newRoom() {
-    if (!window.confirm('Open a fresh Chameleon room?')) return;
-    emit('new_room').then((result) => {
+  function requestAction(action) {
+    if (armedAction !== action) {
+      setArmedAction(action);
+      window.setTimeout(() => setArmedAction((current) => current === action ? null : current), 2600);
+      return;
+    }
+    setArmedAction(null);
+    setMenuOpen(false);
+    if (action === 'gamenight') {
+      window.location.assign('/');
+      return;
+    }
+    emit(action === 'new' ? 'new_room' : 'end_game').then((result) => {
       if (result.error) return setNotice(result.error);
-      window.history.replaceState({}, '', `/chameleon/tv?room=${result.code}`);
-      setNotice('Scan the new code and choose a calling card.');
+      if (action === 'new') {
+        window.history.replaceState({}, '', `/chameleon/tv?room=${result.code}`);
+        setNotice('Scan the new code and choose a calling card.');
+      } else {
+        setNotice('Same room, same players. Ready for another match.');
+      }
     });
   }
 
@@ -58,7 +74,7 @@ function TV() {
       <div className="tvbar__phase"><span className="utility">Round {Math.max(1, state.roundNo)}</span><strong>{PHASE_LABELS[state.phase]}</strong></div>
       <div className="tvbar__actions">
         {state.phase !== 'lobby' && state.phase !== 'game_over' && <span className={`clock ${clock > 0 && clock < 10000 ? 'is-urgent' : ''}`}>{state.paused ? 'PAUSED' : formatClock(clock)}</span>}
-        {state.phase !== 'lobby' && state.phase !== 'game_over' && <button className="newroombtn" type="button" onClick={newRoom}>New room</button>}
+        {state.phase !== 'lobby' && <div className="gamemenu"><button className="newroombtn" type="button" onClick={() => { setMenuOpen(!menuOpen); setArmedAction(null); }} aria-expanded={menuOpen}>Game menu <span>⌄</span></button>{menuOpen && <motion.div className="gamemenu__list" initial={{ opacity: 0, y: -7, scale: .98 }} animate={{ opacity: 1, y: 0, scale: 1 }}><button onClick={() => requestAction('new')}>{armedAction === 'new' ? 'Tap again · New game' : 'New game'}</button><button onClick={() => requestAction('lobby')}>{armedAction === 'lobby' ? 'Tap again · Return to lobby' : 'Return to lobby'}</button><button onClick={() => requestAction('gamenight')}>{armedAction === 'gamenight' ? 'Tap again · Return to game night' : 'Return to game night'}</button></motion.div>}</div>}
         <button className="soundbtn" type="button" onClick={toggleSound} aria-pressed={sound}>{sound ? 'Sound on' : 'Sound off'}</button>
         <span className={`connection ${connected ? 'is-on' : ''}`} aria-label={connected ? 'Connected' : 'Reconnecting'} />
       </div>
@@ -72,6 +88,7 @@ function TV() {
       {state.phase === 'clue' && <Clue key={`clue-${state.clueRound}-${state.clueAt}`} state={state} speaker={activeSpeaker} />}
       {state.phase === 'voting' && <Vote key="voting" state={state} runoff={false} />}
       {state.phase === 'runoff' && <Vote key="runoff" state={state} runoff />}
+      {state.phase === 'tally' && <Tally key={`tally-${state.roundNo}-${state.tally?.ballots?.length}`} state={state} />}
       {state.phase === 'chameleon_guess' && <Guess key="guess" state={state} player={guessingPlayer} />}
       {state.phase === 'reveal' && <Reveal key={`reveal-${state.roundNo}`} state={state} />}
       {state.phase === 'game_over' && <GameOver key="game-over" state={state} />}
@@ -138,6 +155,34 @@ function Vote({ state, runoff }) {
   </PhaseShell>;
 }
 
+function Tally({ state }) {
+  const ballot = state.tally?.ballots?.at(-1);
+  const rows = state.players
+    .map((player) => ({ player, count: ballot?.counts?.[player.id] || 0 }))
+    .sort((a, b) => b.count - a.count || a.player.name.localeCompare(b.player.name));
+  const max = Math.max(1, ...rows.map((row) => row.count));
+  const accused = playerById(state, state.accusedId);
+  let verdict = 'The room is split.';
+  let next = 'A second ballot is coming.';
+  if (state.tallyNextPhase === 'chameleon_guess' && !accused) {
+    verdict = 'The vote tied.';
+    next = 'The Chameleon gets one guess.';
+  } else if (accused && state.roundResult?.caught) {
+    verdict = `${accused.name} was the Chameleon.`;
+    next = 'One last guess can change the score.';
+  } else if (accused) {
+    verdict = `${accused.name} was not the Chameleon.`;
+    next = 'The real Chameleon is about to be revealed.';
+  }
+  return <PhaseShell phase={`tally-${state.roundNo}`} className="tallyscene">
+    <div className="phasecopy"><span className="kicker">Ballot locked</span><h1>Count the room.</h1><p>Every vote is final.</p></div>
+    <motion.div className="tallyboard" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: .11, delayChildren: .18 } } }}>
+      {rows.map(({ player, count }) => <motion.div key={player.id} className="tallyrow" style={{ '--player': player.colour.hex }} variants={{ hidden: { opacity: 0, x: -22 }, show: { opacity: 1, x: 0 } }} transition={{ duration: .32, ease: [0.2, 0, 0, 1] }}><b>{player.name}</b><span><motion.i initial={{ scaleX: 0 }} animate={{ scaleX: count / max }} transition={{ duration: .68, delay: .45, ease: [0.05, .7, .1, 1] }} /></span><strong>{count}</strong></motion.div>)}
+    </motion.div>
+    <motion.div className="tallyverdict" initial={{ opacity: 0, y: 18, scale: .96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: .55, delay: 2.35, ease: [0.05, .7, .1, 1] }}><strong>{verdict}</strong><span>{next}</span></motion.div>
+  </PhaseShell>;
+}
+
 function Guess({ state, player }) {
   return <PhaseShell phase="chameleon_guess" className="guessscene">
     <div className="guessscene__mark">?</div>
@@ -176,7 +221,7 @@ function GameOver({ state }) {
     <h1>{townWon ? 'The Town saw through it.' : 'The Chameleon disappeared.'}</h1>
     <ScoreStrip state={state} />
     <div className="finalroster">{state.players.map((player) => <PlayerChip key={player.id} player={player} />)}</div>
-    <p>Use <b>New room</b> above to start a fresh table.</p>
+    <p>Use <b>Game menu</b> above for a new game, this lobby, or game night.</p>
   </PhaseShell>;
 }
 

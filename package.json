@@ -13,6 +13,7 @@
     "build:tutorial": "node scripts/build-tutorial.js",
     "build:wavelength": "node scripts/build-wavelength.js",
     "build:chameleon": "node scripts/build-chameleon.js",
+    "test:wavelength": "node --test games/wavelength/*.test.js",
     "test:chameleon": "node --test --test-concurrency=1 games/chameleon/*.test.js"
   },
   "dependencies": {

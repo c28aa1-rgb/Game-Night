@@ -199,7 +199,10 @@ window.HuesSFX = (() => {
       enabled = !!on;
       localStorage.setItem(KEY, enabled ? 'on' : 'off');
       if (enabled) live();
-      else stopBed();
+      else {
+        window.LobbyMusic?.stop();
+        stopBed();
+      }
     },
 
     /**
@@ -207,6 +210,11 @@ window.HuesSFX = (() => {
      * state update and it only acts on a change.
      */
     lobby(on) {
+      if (window.LobbyMusic) {
+        if (on && enabled) window.LobbyMusic.start({ key: 'hues-cues' });
+        else window.LobbyMusic.stop();
+        return;
+      }
       if (on) {
         if (bedOn || !live()) return;
         bedOn = true;
@@ -221,7 +229,7 @@ window.HuesSFX = (() => {
     },
 
     /** Called from a real gesture, to get past the autoplay policy. */
-    unlock() { live(); },
+    unlock() { window.LobbyMusic?.unlock(); live(); },
 
     /** Anything advancing on screen. Barely there on purpose. */
     click() {

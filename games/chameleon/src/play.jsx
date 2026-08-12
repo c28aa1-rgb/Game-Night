@@ -97,13 +97,14 @@ function Phone() {
       {state.phase === 'clue' && <PhoneClue key={`clue-${state.clueRound}-${state.clueAt}`} state={state} priv={priv} act={act} />}
       {state.phase === 'voting' && <PhoneVote key="vote" state={state} priv={priv} act={act} runoff={false} />}
       {state.phase === 'runoff' && <PhoneVote key="runoff" state={state} priv={priv} act={act} runoff />}
+      {state.phase === 'tally' && <PhoneTally key={`tally-${state.roundNo}`} state={state} />}
       {state.phase === 'chameleon_guess' && <PhoneGuess key="guess" state={state} priv={priv} selected={guess} setSelected={setGuess} act={act} />}
-      {state.phase === 'reveal' && <PhoneReveal key={`reveal-${state.roundNo}`} state={state} />}
+      {state.phase === 'reveal' && <PhoneReveal key={`reveal-${state.roundNo}`} state={state} priv={priv} act={act} />}
       {state.phase === 'game_over' && <PhoneOver key="over" state={state} priv={priv} act={act} />}
     </AnimatePresence>
 
     {notice && <motion.div className="toast" role="status" initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>{notice}</motion.div>}
-    {priv.isHost && !['lobby', 'game_over'].includes(state.phase) && <HostRail state={state} act={act} />}
+    {priv.isHost && !['lobby', 'reveal', 'game_over'].includes(state.phase) && <HostRail state={state} act={act} />}
   </main>;
 }
 
@@ -205,15 +206,21 @@ function PhoneVote({ state, priv, act, runoff }) {
   </PhaseShell>;
 }
 
+function PhoneTally({ state }) {
+  const accused = playerById(state, state.accusedId);
+  const verdict = !accused ? 'The room is split.' : state.roundResult?.caught ? `${accused.name} was the Chameleon.` : `${accused.name} was not the Chameleon.`;
+  return <PhaseShell phase="tally" className="phonepanel tallyphone"><span className="kicker">Votes locked</span><h1>Counting the room.</h1><div className="phone-tallypulse"><span /><span /><span /><span /></div><motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2.35, duration: .42 }}><b>{verdict}</b></motion.p><p className="waitnote">Watch the shared screen for what happens next.</p></PhaseShell>;
+}
+
 function PhoneGuess({ state, priv, selected, setSelected, act }) {
   if (!priv.canGuess) return <PhaseShell phase="guess-wait" className="phonepanel waitpanel"><span className="questionmark">?</span><h1>The Chameleon has one guess.</h1><p>The word is still hidden until they choose.</p></PhaseShell>;
   return <PhaseShell phase="guess" className="phonepanel guessphone"><span className="kicker">Last chance</span><h1>Find the secret word.</h1><p>You heard every clue. Choose one cell from the pattern.</p><WordGrid words={state.grid} interactive selected={selected} onSelect={setSelected} compact phaseKey={`phone-guess-${state.roundNo}`} /><button className="primary" disabled={!selected} onClick={() => act('submit_chameleon_guess', { word: selected })}>Guess {selected || 'a word'}</button></PhaseShell>;
 }
 
-function PhoneReveal({ state }) {
+function PhoneReveal({ state, priv, act }) {
   const copy = resultCopy(state);
   const chameleon = state.players.find((player) => player.revealedRole === 'chameleon');
-  return <PhaseShell phase="reveal" className="phonepanel revealphone"><span className="kicker">{copy.eyebrow}</span><h1>{copy.title}</h1><div className="targetcard"><small>The secret word was</small><strong>{state.targetWord}</strong><span>{state.category}</span></div><p><b>{chameleon?.name}</b> was the Chameleon.</p><div className="pointsaward">{copy.detail}</div><p className="waitnote">Next pattern incoming…</p></PhaseShell>;
+  return <PhaseShell phase="reveal" className="phonepanel revealphone"><span className="kicker">{copy.eyebrow}</span><h1>{copy.title}</h1><div className="targetcard"><small>The secret word was</small><strong>{state.targetWord}</strong><span>{state.category}</span></div><p><b>{chameleon?.name}</b> was the Chameleon.</p><div className="pointsaward">{copy.detail}</div>{priv.isHost ? <button className="primary continue-round" onClick={() => act('continue_round')}>Continue</button> : <p className="waitnote">Waiting for {state.hostName} to continue.</p>}</PhaseShell>;
 }
 
 function PhoneOver({ state, priv, act }) {

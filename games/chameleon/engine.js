@@ -6,6 +6,7 @@ const PHASES = Object.freeze({
   CLUE: 'clue',
   VOTING: 'voting',
   RUNOFF: 'runoff',
+  TALLY: 'tally',
   CHAMELEON_GUESS: 'chameleon_guess',
   REVEAL: 'reveal',
   GAME_OVER: 'game_over',
@@ -76,6 +77,7 @@ function createGameState(code) {
     votes: new Map(),
     ballots: [],
     runoffCandidates: [],
+    tallyNextPhase: null,
     accusedId: null,
     chameleonGuess: null,
     roundResult: null,
@@ -148,6 +150,7 @@ function startRound(room, decks, random = Math.random) {
   room.votes = new Map();
   room.ballots = [];
   room.runoffCandidates = [];
+  room.tallyNextPhase = null;
   room.accusedId = null;
   room.chameleonGuess = null;
   room.roundResult = null;

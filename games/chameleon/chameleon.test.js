@@ -201,7 +201,7 @@ test('full Socket.IO match keeps the secret private and reaches game over', { ti
   const port = await getFreePort();
   const child = spawn(process.execPath, ['server.js'], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), CHAMELEON_DEAL_MS: '40', CHAMELEON_REVEAL_MS: '60' },
+    env: { ...process.env, PORT: String(port), CHAMELEON_DEAL_MS: '40', CHAMELEON_TALLY_MS: '60' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let stderr = '';
@@ -264,7 +264,7 @@ test('full Socket.IO match keeps the secret private and reaches game over', { ti
   assert.deepEqual(tv.state.scores, { town: 2, chameleon: 3 });
   assert.equal(tv.state.tally.ballots.at(-1).counts[cham.privateState.playerId], 3);
 
-  await emitAck(players[0].socket, 'force_advance');
+  await emitAck(players[0].socket, 'continue_round');
   await waitUntil(() => tv.state.phase === 'deal', 'second deal did not start');
   await emitAck(players[0].socket, 'force_advance');
   await waitUntil(() => tv.state.phase === 'clue', 'second clue phase did not open');
@@ -280,7 +280,7 @@ test('full Socket.IO match keeps the secret private and reaches game over', { ti
   await emitAck(wrong.socket, 'cast_vote', { targetId: voters[0].privateState.playerId });
   await waitUntil(() => tv.state.phase === 'reveal', 'wrong accusation did not resolve');
   assert.deepEqual(tv.state.scores, { town: 2, chameleon: 5 });
-  await emitAck(players[0].socket, 'force_advance');
+  await emitAck(players[0].socket, 'continue_round');
   await waitUntil(() => tv.state.phase === 'game_over', 'target score did not end the match');
   assert.equal(tv.state.winner, 'chameleon');
   assert.equal((await emitAck(tv.socket, 'end_game')).ok, true);

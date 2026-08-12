@@ -56,7 +56,7 @@
  */
 
 window.LobbyMusic = (() => {
-  /** Shared across all five games and remembered between sessions. */
+  /** Shared across the game-night catalogue and remembered between sessions. */
   const STORE = 'arcade.lobbyMusic';
 
   /** See the note on the mix above before changing this. */
@@ -68,7 +68,7 @@ window.LobbyMusic = (() => {
   const semi = (root, steps) => root * Math.pow(2, steps / 12);
 
   // ---------------------------------------------------------------------------
-  // The five games
+  // The game-night catalogue
   //
   // Each key gets its own root, progression and timbre so the site does not
   // play one identical loop five times. The mood is taken from the game itself
@@ -97,6 +97,8 @@ window.LobbyMusic = (() => {
       pad: 'triangle',
       colour: 1500,
       level: 0.85,
+      pulseLevel: 0.7,
+      sparkleLevel: 0.62,
       chordMs: 12000,
       pulseMs: 3000,
       sparkleMs: 4200,
@@ -117,6 +119,8 @@ window.LobbyMusic = (() => {
       pad: 'sine',
       colour: 950,
       level: 1.15,                                   // sine is thin; give it back
+      pulseLevel: 0.68,
+      sparkleLevel: 0.5,
       chordMs: 14000,
       pulseMs: 4200,
       sparkleMs: 5600,
@@ -142,6 +146,8 @@ window.LobbyMusic = (() => {
       pad: 'sawtooth',
       colour: 520,
       level: 0.55,                                   // sawtooth is loud; pull it down
+      pulseLevel: 0.92,
+      sparkleLevel: 0.44,
       chordMs: 13000,
       pulseMs: 2600,
       sparkleMs: 6400,
@@ -161,6 +167,8 @@ window.LobbyMusic = (() => {
       pad: 'triangle',
       colour: 2200,
       level: 0.9,
+      pulseLevel: 0.76,
+      sparkleLevel: 1.08,
       chordMs: 10000,
       pulseMs: 2400,
       sparkleMs: 2800,
@@ -179,6 +187,8 @@ window.LobbyMusic = (() => {
       pad: 'triangle',
       colour: 1750,
       level: 0.82,
+      pulseLevel: 0.8,
+      sparkleLevel: 0.86,
       chordMs: 10800,
       pulseMs: 2250,
       sparkleMs: 3050,
@@ -198,13 +208,36 @@ window.LobbyMusic = (() => {
       pad: 'triangle',
       colour: 1400,
       level: 0.9,
+      pulseLevel: 0.94,
+      sparkleLevel: 0.74,
       chordMs: 9000,
       pulseMs: 1900,
       sparkleMs: 3400,
     },
+
+    /*
+     * WAVELENGTH — #43B8C4 against warm paper. A game about tuning in to the
+     * same idea should sound open and gently searching: B-flat major with
+     * suspended colours, a slow pulse, and the clearest little "signal" notes
+     * in the catalogue. It stays restrained because the lobby is still where
+     * the rules and phone roles get explained.
+     */
+    wavelength: {
+      root: 116.54,                                  // Bb2
+      chords: [[0, 5, 7, 14], [-3, 2, 5, 9], [5, 9, 12, 19], [7, 12, 14, 17]],
+      scale: [0, 2, 5, 7, 9],                        // Bb major pentatonic
+      pad: 'triangle',
+      colour: 1900,
+      level: 0.82,
+      pulseLevel: 0.72,
+      sparkleLevel: 1.05,
+      chordMs: 11200,
+      pulseMs: 2450,
+      sparkleMs: 3300,
+    },
   };
 
-  /** The five real characters, read off before any aliases are added. */
+  /** The real characters, read off before any aliases are added. */
   const CHARACTERS = Object.keys(ACCENTS);
 
   /*
@@ -424,8 +457,9 @@ window.LobbyMusic = (() => {
    */
   function pulse(r) {
     const a = r.accent;
-    voice(r, { freq: a.root, type: 'sine', peak: 0.15, attack: 0.035, hold: 0.03, release: 0.46 });
-    voice(r, { freq: a.root * 2, type: 'sine', peak: 0.07, attack: 0.03, hold: 0.02, release: 0.26 });
+    const level = a.pulseLevel ?? 1;
+    voice(r, { freq: a.root, type: 'sine', peak: 0.15 * level, attack: 0.035, hold: 0.03, release: 0.46 });
+    voice(r, { freq: a.root * 2, type: 'sine', peak: 0.07 * level, attack: 0.03, hold: 0.02, release: 0.26 });
     later(r, 'pulse', pulse, a.pulseMs + (Math.random() * 90 - 45));
   }
 
@@ -446,7 +480,7 @@ window.LobbyMusic = (() => {
     voice(r, {
       freq: semi(a.root * lift, degree),
       type: 'sine',
-      peak: 0.055,
+      peak: 0.055 * (a.sparkleLevel ?? 1),
       attack: 0.04,
       hold: 0.06,
       release: 2.0,
@@ -463,7 +497,7 @@ window.LobbyMusic = (() => {
   /**
    * A key nobody has written a character for still has to sound like something,
    * and it has to sound like the same something every time — so an unknown key
-   * is hashed onto one of the five rather than defaulting to a sixth generic
+   * is hashed onto an existing character rather than defaulting to a generic
    * one. Add a game to ACCENTS and it stops being a coin toss.
    */
   function accentFor(key) {

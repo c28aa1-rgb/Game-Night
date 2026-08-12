@@ -1321,12 +1321,14 @@
 
 .win__score { color: var(--accent-2); }
 
-/* A phone held sideways and smaller projectors have very little vertical
-   room. Let the winner card scroll rather than losing the score below the
-   viewport, and tighten its rhythm before that is needed. */
+/* The winner composition is fitted to the viewport as one poster-like frame.
+   There is intentionally no internal scroll region on the shared screen. */
 .overlay--win .overlay__inner {
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  width: min(94vw, 1100px);
+  height: min(100%, 100dvh);
+  max-height: 100dvh;
+  overflow: hidden;
+  padding: clamp(0.5rem, 2vh, 1.5rem) 0;
 }
 
 @media (max-height: 620px) {

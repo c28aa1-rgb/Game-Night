@@ -15,7 +15,7 @@ Engine.validateDecks(decks);
 const BASE = require('../registry').find((game) => game.id === 'chameleon')?.basePath || '/chameleon';
 const PORT = Number(process.env.PORT) || 3000;
 const DEAL_MS = Number(process.env.CHAMELEON_DEAL_MS) || 20000;
-const REVEAL_MS = Number(process.env.CHAMELEON_REVEAL_MS) || 9500;
+const TALLY_MS = Number(process.env.CHAMELEON_TALLY_MS) || 6200;
 
 const PALETTE = [
   { id: 'fuchsia', name: 'Fuchsia', hex: '#EF2F70', ink: '#070608' },
@@ -146,15 +146,17 @@ function publicPlayer(player, room) {
 }
 
 function voteTally(room) {
-  const visible = [Engine.PHASES.REVEAL, Engine.PHASES.GAME_OVER].includes(room.phase);
-  if (!visible || !room.roundResult) return null;
-  const final = room.history.at(-1);
-  return final ? {
-    accusedId: final.accusedId,
-    reason: final.reason,
-    caught: final.caught,
-    ballots: final.ballots || [],
-  } : null;
+  const visible = [Engine.PHASES.TALLY, Engine.PHASES.REVEAL, Engine.PHASES.GAME_OVER].includes(room.phase);
+  if (!visible || !room.ballots.length) return null;
+  return {
+    accusedId: room.accusedId,
+    reason: room.roundResult?.reason || null,
+    caught: room.roundResult?.caught ?? null,
+    ballots: room.ballots.map((ballot) => ({
+      kind: ballot.kind,
+      counts: { ...ballot.counts },
+    })),
+  };
 }
 
 function publicState(room) {
@@ -181,11 +183,12 @@ function publicState(room) {
     votedIds: [Engine.PHASES.VOTING, Engine.PHASES.RUNOFF].includes(room.phase)
       ? Array.from(room.votes.keys()) : [],
     runoffCandidates: room.runoffCandidates.slice(),
-    accusedId: reveal ? room.accusedId : null,
+    accusedId: (reveal || room.phase === Engine.PHASES.TALLY) ? room.accusedId : null,
     guessingPlayerId: room.phase === Engine.PHASES.CHAMELEON_GUESS ? room.chameleonId : null,
     chameleonGuess: reveal ? room.chameleonGuess : null,
-    roundResult: reveal ? room.roundResult : null,
+    roundResult: (reveal || room.phase === Engine.PHASES.TALLY) ? room.roundResult : null,
     tally: voteTally(room),
+    tallyNextPhase: room.phase === Engine.PHASES.TALLY ? room.tallyNextPhase : null,
     winner: room.winner,
     history: room.history.map((entry) => ({ ...entry, scores: { ...entry.scores } })),
     hostId: room.hostId,
@@ -235,6 +238,8 @@ function armForPhase(room) {
     startClock(room, room.config.clueSeconds * 1000, () => advanceClue(room, true));
   } else if ([Engine.PHASES.VOTING, Engine.PHASES.RUNOFF].includes(room.phase) && room.config.timers) {
     startClock(room, room.config.voteSeconds * 1000, () => closeBallot(room));
+  } else if (room.phase === Engine.PHASES.TALLY) {
+    startClock(room, TALLY_MS, () => finishTally(room));
   } else if (room.phase === Engine.PHASES.CHAMELEON_GUESS && room.config.timers) {
     startClock(room, room.config.guessSeconds * 1000, () => {
       Engine.closeGuessOnTimer(room);
@@ -242,14 +247,24 @@ function armForPhase(room) {
       armForPhase(room);
       broadcast(room);
     });
-  } else if (room.phase === Engine.PHASES.REVEAL) {
-    startClock(room, REVEAL_MS, () => {
-      Engine.finishReveal(room, decks);
-      setMoment(room, room.phase === Engine.PHASES.GAME_OVER ? 'game_over' : 'deal');
-      armForPhase(room);
-      broadcast(room);
-    });
   }
+}
+
+function beginTally(room) {
+  room.tallyNextPhase = room.phase;
+  room.phase = Engine.PHASES.TALLY;
+  setMoment(room, 'vote_tally');
+  armForPhase(room);
+}
+
+function finishTally(room) {
+  if (room.phase !== Engine.PHASES.TALLY || !room.tallyNextPhase) return;
+  room.phase = room.tallyNextPhase;
+  room.tallyNextPhase = null;
+  setMoment(room, room.phase === Engine.PHASES.RUNOFF ? 'runoff_open'
+    : room.phase === Engine.PHASES.CHAMELEON_GUESS ? 'chameleon_guess' : 'round_reveal');
+  armForPhase(room);
+  broadcast(room);
 }
 
 function advanceClue(room, forced = false, playerId = null) {
@@ -261,10 +276,7 @@ function advanceClue(room, forced = false, playerId = null) {
 
 function closeBallot(room) {
   Engine.closeVoteOnTimer(room);
-  setMoment(room, room.phase === Engine.PHASES.RUNOFF ? 'runoff_open'
-    : room.phase === Engine.PHASES.CHAMELEON_GUESS ? 'chameleon_guess'
-      : 'round_reveal');
-  armForPhase(room);
+  beginTally(room);
   broadcast(room);
 }
 
@@ -482,9 +494,7 @@ nsp.on('connection', (socket) => {
       const result = Engine.castVote(room, player.id, payload.targetId);
       ack?.({ ok: true });
       if (result.closed) {
-        setMoment(room, room.phase === Engine.PHASES.RUNOFF ? 'runoff_open'
-          : room.phase === Engine.PHASES.CHAMELEON_GUESS ? 'chameleon_guess' : 'round_reveal');
-        armForPhase(room);
+        beginTally(room);
       } else if (before === room.phase) {
         setMoment(room, 'vote_cast', { voterId: player.id });
       }
@@ -537,6 +547,10 @@ nsp.on('connection', (socket) => {
       } else if ([Engine.PHASES.VOTING, Engine.PHASES.RUNOFF].includes(room.phase)) {
         clearBallot(room);
         return ack?.({ ok: true });
+      } else if (room.phase === Engine.PHASES.TALLY) {
+        clearClock(room);
+        finishTally(room);
+        return ack?.({ ok: true });
       } else if (room.phase === Engine.PHASES.CHAMELEON_GUESS) {
         Engine.closeGuessOnTimer(room);
         setMoment(room, 'round_reveal');
@@ -563,6 +577,18 @@ nsp.on('connection', (socket) => {
     if (!room) return ack?.({ error: 'That room is gone.' });
     if (!canControl(room, ack)) return;
     resetRoom(room);
+    ack?.({ ok: true });
+  });
+
+  socket.on('continue_round', (payload, ack) => {
+    const room = currentRoom();
+    if (!room) return ack?.({ error: 'That room is gone.' });
+    if (!canControl(room, ack)) return;
+    if (room.phase !== Engine.PHASES.REVEAL) return ack?.({ error: 'There is no completed round to continue.' });
+    Engine.finishReveal(room, decks);
+    setMoment(room, room.phase === Engine.PHASES.GAME_OVER ? 'game_over' : 'deal');
+    armForPhase(room);
+    broadcast(room);
     ack?.({ ok: true });
   });
 

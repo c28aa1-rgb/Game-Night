@@ -5,6 +5,7 @@ export { React, AnimatePresence, motion, useEffect, useMemo, useRef, useState };
 
 export const POSITIONS = 61;
 export const MIDPOINT = 30;
+const SPECTRUM_SPAN = POSITIONS - 1;
 // This is the one mechanical truth of the board: every moving piece pivots
 // around the bottom-centre axle. Keeping all geometry derived from it avoids
 // the "floating needle" effect at the ends of the spectrum.
@@ -33,12 +34,31 @@ function sectorPath(start, end, outerRadius = RADIUS, innerRadius = 146) {
   return `M ${outerStart.x} ${outerStart.y} A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${outerEnd.x} ${outerEnd.y} L ${innerEnd.x} ${innerEnd.y} A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${innerStart.x} ${innerStart.y} Z`;
 }
 
+function wrappedIndex(index) {
+  if (index === SPECTRUM_SPAN) return SPECTRUM_SPAN;
+  return ((index % SPECTRUM_SPAN) + SPECTRUM_SPAN) % SPECTRUM_SPAN;
+}
+
+function wrappedSegments(start, end) {
+  if (start < 0 && end <= 0) return [[start + SPECTRUM_SPAN, end + SPECTRUM_SPAN]];
+  if (start < 0) return [[start + SPECTRUM_SPAN, SPECTRUM_SPAN], [0, end]];
+  if (start >= SPECTRUM_SPAN) return [[start - SPECTRUM_SPAN, end - SPECTRUM_SPAN]];
+  if (end > SPECTRUM_SPAN) return [[start, SPECTRUM_SPAN], [0, end - SPECTRUM_SPAN]];
+  return [[start, end]];
+}
+
+function WrappedBand({ start, end, className }) {
+  return wrappedSegments(start, end).map(([from, to], index) => (
+    <path key={`${className}-${from}-${to}-${index}`} className={className} d={sectorPath(from, to)} />
+  ));
+}
+
 function labelPoint(index) { return pointFor(index, 262); }
 function needleRotation(index) { return -90 + (180 * index) / (POSITIONS - 1); }
 function cleanLabel(value, fallback) { return String(value || fallback).slice(0, 28); }
 
 function ScoreNumber({ index, value }) {
-  const p = labelPoint(index);
+  const p = labelPoint(wrappedIndex(index));
   return <text className="wheel__score-number" x={p.x} y={p.y + 7}>{value}</text>;
 }
 
@@ -77,11 +97,11 @@ export function SpectrumArc({ markerIndex = MIDPOINT, targetIndex = null, classN
 
       <AnimatePresence initial={false}>
         {showTarget && <motion.g key={`target-${target}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: .2, ease: 'easeOut' }}>
-          <path className="wheel__band wheel__band--two" d={sectorPath(target - 8, target - 4.5)} />
-          <path className="wheel__band wheel__band--three" d={sectorPath(target - 4.5, target - 1.8)} />
-          <path className="wheel__band wheel__band--four" d={sectorPath(target - 1.8, target + 1.8)} />
-          <path className="wheel__band wheel__band--three" d={sectorPath(target + 1.8, target + 4.5)} />
-          <path className="wheel__band wheel__band--two" d={sectorPath(target + 4.5, target + 8)} />
+          <WrappedBand className="wheel__band wheel__band--two" start={target - 8} end={target - 4.5} />
+          <WrappedBand className="wheel__band wheel__band--three" start={target - 4.5} end={target - 1.8} />
+          <WrappedBand className="wheel__band wheel__band--four" start={target - 1.8} end={target + 1.8} />
+          <WrappedBand className="wheel__band wheel__band--three" start={target + 1.8} end={target + 4.5} />
+          <WrappedBand className="wheel__band wheel__band--two" start={target + 4.5} end={target + 8} />
           <ScoreNumber index={target - 6.25} value="2" /><ScoreNumber index={target - 3.15} value="3" />
           <ScoreNumber index={target} value="4" /><ScoreNumber index={target + 3.15} value="3" /><ScoreNumber index={target + 6.25} value="2" />
         </motion.g>}
@@ -109,7 +129,7 @@ export function SpectrumArc({ markerIndex = MIDPOINT, targetIndex = null, classN
         <text x="104" y="652">{left}</text><text x="104" y="676">LEFT END</text>
         <text x="896" y="652" textAnchor="end">{right}</text><text x="896" y="676" textAnchor="end">RIGHT END</text>
       </g>
-      {privateView && <text className="wheel__private" x="500" y="606">LOOK, CLUE, THEN PASS THE PHONE</text>}
+      {privateView && <text className="wheel__private" x="500" y="606">CLUE-GIVER PHONE · KEEP THIS SCREEN PRIVATE</text>}
     </svg>
   );
 }

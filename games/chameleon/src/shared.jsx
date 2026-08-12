@@ -13,6 +13,7 @@ export const PHASE_LABELS = {
   clue: 'Clues in the open',
   voting: 'Mark the mimic',
   runoff: 'The room is split',
+  tally: 'Counting the room',
   chameleon_guess: 'One last disguise',
   reveal: 'Pattern exposed',
   game_over: 'Final pattern',
@@ -155,7 +156,7 @@ export function PhaseShell({ phase, children, className = '' }) {
 export function useChameleonAudio(state, enabled, options = {}) {
   const music = options.music !== false;
   const cues = options.cues !== false;
-  const previous = useRef({ phase: null, moment: null });
+  const previous = useRef({ phase: null, moment: null, playerCount: null });
   useEffect(() => {
     const audio = window.ChameleonAudio;
     if (!audio) return;
@@ -163,9 +164,18 @@ export function useChameleonAudio(state, enabled, options = {}) {
     if (!enabled || !state) return;
     if (music && state.phase === 'lobby') audio.startLobby();
     else audio.stopLobby();
-    if (cues && state.moment?.id !== previous.current.moment) audio.cue(state.moment?.kind || state.phase);
-    previous.current = { phase: state.phase, moment: state.moment?.id };
-  }, [state?.phase, state?.moment?.id, enabled, music, cues]);
+    const playerCount = state.players?.length || 0;
+    if (cues && state.phase === 'lobby' && previous.current.playerCount !== null && playerCount > previous.current.playerCount) {
+      audio.cue('player_joined', { playerCount });
+    }
+    if (cues && state.moment?.id !== previous.current.moment) audio.cue(state.moment?.kind || state.phase, {
+      result: state.roundResult,
+      winner: state.winner,
+      playerCount: state.players?.length,
+      tally: state.tally,
+    });
+    previous.current = { phase: state.phase, moment: state.moment?.id, playerCount };
+  }, [state?.phase, state?.moment?.id, state?.players?.length, enabled, music, cues]);
 }
 
 export function resultCopy(state) {

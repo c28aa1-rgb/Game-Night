@@ -20,6 +20,7 @@ const POSITIONS = 61;
 const MIDPOINT = 30;
 const MIN_ROUNDS = 3;
 const MAX_ROUNDS = 10;
+const PHONE_ROLES = ['clue', 'guess'];
 const CODE_WORDS = [
   'WAVE', 'TONE', 'PULSE', 'ECHO', 'VIBE', 'SYNC', 'BAND', 'BEAM', 'HERTZ', 'LENS',
   'DIAL', 'NODE', 'SIGN', 'RING', 'GLOW', 'PHASE', 'METER', 'CHORD', 'AMPX', 'FREQ',
@@ -64,7 +65,10 @@ function newRoom() {
   const room = {
     code,
     phase: 'lobby',
-    teams: [null, null],
+    teams: [
+      { clue: null, guess: null },
+      { clue: null, guess: null },
+    ],
     tvSockets: new Set(),
     roundCount: 6,
     turn: 0,
@@ -85,7 +89,13 @@ function newRoom() {
 }
 
 function activeSession(room, socketId) {
-  return room.teams.find((team) => team?.socketId === socketId) || null;
+  for (let team = 0; team < room.teams.length; team += 1) {
+    for (const role of PHONE_ROLES) {
+      const session = room.teams[team][role];
+      if (session?.socketId === socketId) return session;
+    }
+  }
+  return null;
 }
 
 function publicState(room) {
@@ -93,9 +103,15 @@ function publicState(room) {
   return {
     code: room.code,
     phase: room.phase,
-    teams: room.teams.map((team, index) => ({ id: index, connected: !!team?.socketId })),
+    teams: room.teams.map((team, index) => ({
+      id: index,
+      connected: PHONE_ROLES.every((role) => !!team[role]?.socketId),
+      clueConnected: !!team.clue?.socketId,
+      guessConnected: !!team.guess?.socketId,
+    })),
     roundCount: room.roundCount,
     turn: room.turn,
+    roundsRemaining: room.tiebreaker ? null : Math.max(0, room.roundCount - room.turn),
     activeTeam: room.activeTeam,
     prompt: room.prompt ? { low: room.prompt[0], high: room.prompt[1] } : null,
     markerIndex: room.markerIndex,
@@ -114,24 +130,31 @@ function publicState(room) {
   };
 }
 
-function privateState(room, team) {
+function privateState(room, session) {
+  const { team, role } = session;
   const isActive = team === room.activeTeam;
   return {
     team,
+    role,
+    roleLabel: role === 'clue' ? 'CLUE GIVER' : 'GUESSING PHONE',
     isActive,
     canHost: true,
-    canShowTarget: room.phase === 'clue' && isActive,
-    targetIndex: room.phase === 'clue' && isActive ? room.targetIndex : null,
-    canMove: room.phase === 'guess' && isActive,
-    canLock: room.phase === 'guess' && isActive,
+    canShowTarget: room.phase === 'clue' && isActive && role === 'clue',
+    targetIndex: room.phase === 'clue' && isActive && role === 'clue' ? room.targetIndex : null,
+    canMove: room.phase === 'guess' && isActive && role === 'guess',
+    canLock: room.phase === 'guess' && isActive && role === 'guess',
+    canSkip: room.phase === 'clue' && isActive && role === 'clue',
   };
 }
 
 function broadcast(room) {
   room.lastTouched = Date.now();
   nsp.to(`room:${room.code}`).emit('state', publicState(room));
-  room.teams.forEach((team, index) => {
-    if (team?.socketId) nsp.to(team.socketId).emit('private_state', privateState(room, index));
+  room.teams.forEach((team) => {
+    PHONE_ROLES.forEach((role) => {
+      const session = team[role];
+      if (session?.socketId) nsp.to(session.socketId).emit('private_state', privateState(room, session));
+    });
   });
 }
 
@@ -141,9 +164,9 @@ function drawPrompt(room) {
   const picked = randomItem(choices);
   room.usedPrompts.add(picked.id);
   room.prompt = picked.prompt;
-  // The 2-point wedges are eight notches wide, so this reaches both ends of
-  // the 180° board without ever clipping a score zone.
-  room.targetIndex = 8 + Math.floor(Math.random() * (POSITIONS - 16));
+  // The physical board wraps across its two bottom corners: a target at the
+  // far left continues at the far right, and vice versa.
+  room.targetIndex = Math.floor(Math.random() * POSITIONS);
   room.markerIndex = MIDPOINT;
   room.lastScore = null;
 }
@@ -154,7 +177,8 @@ function beginTurn(room) {
 }
 
 function pointsFor(marker, target) {
-  const distance = Math.abs(marker - target);
+  const direct = Math.abs(marker - target);
+  const distance = Math.min(direct, (POSITIONS - 1) - direct);
   if (distance <= 1) return { points: 4, band: 'center' };
   if (distance <= 4) return { points: 3, band: 'inner' };
   if (distance <= 7) return { points: 2, band: 'outer' };
@@ -235,8 +259,8 @@ app.get(`${BASE}/api/join-info`, async (req, res) => {
   const url = joinCodes.joinUrl(req, code);
   const room = rooms.get(code);
   const teams = room ? room.teams.map((team) => ({
-    occupied: !!team,
-    connected: !!team?.socketId,
+    clue: { occupied: !!team.clue, connected: !!team.clue?.socketId },
+    guess: { occupied: !!team.guess, connected: !!team.guess?.socketId },
   })) : [];
   try {
     const qr = await QRCode.toDataURL(url, { margin: 1, width: 420, color: { dark: '#06111E', light: '#FFFFFF' } });
@@ -278,18 +302,20 @@ nsp.on('connection', (socket) => {
   socket.on('join_team', (payload = {}, ack) => {
     const target = rooms.get(normalCode(payload.code));
     const team = Number(payload.team);
+    const role = String(payload.role || '');
     if (!target) return ack?.({ error: 'That room has ended.' });
     if (!Number.isInteger(team) || team < 0 || team > 1) return ack?.({ error: 'Choose Team 1 or Team 2.' });
-    const existing = target.teams[team];
+    if (!PHONE_ROLES.includes(role)) return ack?.({ error: 'Choose a clue-giver or guessing phone.' });
+    const existing = target.teams[team][role];
     const token = String(payload.token || '');
-    if (existing && existing.token !== token && existing.socketId) return ack?.({ error: 'That team phone is already connected.' });
-    if (existing && existing.token !== token && !existing.socketId) return ack?.({ error: 'That team is reserved. Rejoin from its original phone.' });
-    const session = existing || { token: randomId() };
+    if (existing && existing.token !== token && existing.socketId) return ack?.({ error: `That ${role} phone is already connected.` });
+    if (existing && existing.token !== token && !existing.socketId) return ack?.({ error: `That ${role} phone is reserved. Rejoin from its original device.` });
+    const session = existing || { token: randomId(), team, role };
     session.socketId = socket.id;
-    target.teams[team] = session;
+    target.teams[team][role] = session;
     attach(target);
     broadcast(target);
-    ack?.({ ok: true, team, token: session.token });
+    ack?.({ ok: true, team, role, token: session.token });
   });
 
   socket.on('set_rounds', (payload = {}, ack) => {
@@ -304,19 +330,30 @@ nsp.on('connection', (socket) => {
   socket.on('start_game', (payload = {}, ack) => {
     const target = room(); const session = target && phone(target, ack);
     if (!session || target.phase !== 'lobby') return;
-    if (!target.teams[0]?.socketId || !target.teams[1]?.socketId) return ack?.({ error: 'Both team phones need to join.' });
+    const ready = target.teams.every((team) => PHONE_ROLES.every((role) => !!team[role]?.socketId));
+    if (!ready) return ack?.({ error: 'All four team phones need to join.' });
     startGame(target); broadcast(target); ack?.({ ok: true });
   });
 
   socket.on('clue_given', (payload = {}, ack) => {
     const target = room(); const session = target && phone(target, ack);
-    if (!session || target.phase !== 'clue' || activeSession(target, socket.id) !== target.teams[target.activeTeam]) return ack?.({ error: 'The clue phase has already moved on.' });
+    if (!session || target.phase !== 'clue' || session.team !== target.activeTeam || session.role !== 'clue') return ack?.({ error: 'Only the active clue-giver phone can finish the clue.' });
     target.phase = 'guess'; broadcast(target); ack?.({ ok: true });
+  });
+
+  socket.on('skip_prompt', (payload = {}, ack) => {
+    const target = room(); const session = target && phone(target, ack);
+    if (!session || target.phase !== 'clue' || session.team !== target.activeTeam || session.role !== 'clue') {
+      return ack?.({ error: 'Only the active clue-giver phone can skip this prompt.' });
+    }
+    drawPrompt(target);
+    broadcast(target);
+    ack?.({ ok: true });
   });
 
   socket.on('move_marker', (payload = {}, ack) => {
     const target = room(); const session = target && phone(target, ack);
-    if (!session || target.phase !== 'guess' || activeSession(target, socket.id) !== target.teams[target.activeTeam]) return ack?.({ error: 'The marker is locked.' });
+    if (!session || target.phase !== 'guess' || session.team !== target.activeTeam || session.role !== 'guess') return ack?.({ error: 'Only the active guessing phone can move the marker.' });
     const delta = Number(payload.delta);
     if (delta !== -1 && delta !== 1) return ack?.({ error: 'Move one notch at a time.' });
     target.markerIndex = Math.max(0, Math.min(POSITIONS - 1, target.markerIndex + delta));
@@ -325,7 +362,7 @@ nsp.on('connection', (socket) => {
 
   socket.on('lock_guess', (payload = {}, ack) => {
     const target = room(); const session = target && phone(target, ack);
-    if (!session || target.phase !== 'guess' || activeSession(target, socket.id) !== target.teams[target.activeTeam]) return ack?.({ error: 'The marker is already locked.' });
+    if (!session || target.phase !== 'guess' || session.team !== target.activeTeam || session.role !== 'guess') return ack?.({ error: 'Only the active guessing phone can lock the marker.' });
     const result = pointsFor(target.markerIndex, target.targetIndex);
     target.scores[target.activeTeam] += result.points;
     target.lastScore = { ...result, team: target.activeTeam };
@@ -351,7 +388,9 @@ nsp.on('connection', (socket) => {
     const target = room();
     if (!target) return;
     target.tvSockets.delete(socket.id);
-    target.teams.forEach((team) => { if (team?.socketId === socket.id) team.socketId = null; });
+    target.teams.forEach((team) => PHONE_ROLES.forEach((role) => {
+      if (team[role]?.socketId === socket.id) team[role].socketId = null;
+    }));
     broadcast(target);
   });
 });
@@ -359,10 +398,14 @@ nsp.on('connection', (socket) => {
 setInterval(() => {
   const cutoff = Date.now() - 1000 * 60 * 90;
   for (const room of rooms.values()) {
-    if (room.lastTouched < cutoff && !room.teams.some((team) => team?.socketId) && !room.tvSockets.size) {
+    const hasPhone = room.teams.some((team) => PHONE_ROLES.some((role) => team[role]?.socketId));
+    if (room.lastTouched < cutoff && !hasPhone && !room.tvSockets.size) {
       rooms.delete(room.code); joinCodes.release(room.code);
     }
   }
 }, 1000 * 60 * 15).unref();
 
-module.exports = { onListen() { console.log(`  \u00b7 Wavelength   ${BASE}`); } };
+module.exports = {
+  onListen() { console.log(`  \u00b7 Wavelength   ${BASE}`); },
+  _test: { activeSession, newRoom, pointsFor, privateState, publicState },
+};

@@ -336,6 +336,8 @@ function createRoom() {
     stealOutcome: null,
     /** When the steal window opens, and when the current answer is due. */
     stealOpensAt: 0,
+    /** True once the TV confirms the requested Spotify track is audibly playing. */
+    playbackStarted: false,
     stealDeadline: 0,
     createdAt: Date.now(),
   };
@@ -383,6 +385,7 @@ function publicState(room) {
     // Relative, not absolute: the phone's clock need not agree with the
     // server's, and each client just counts down locally from receipt.
     stealOpensInMs: Math.max(0, room.stealOpensAt - Date.now()),
+    stealClockStarted: room.playbackStarted,
     stealDeadlineInMs: Math.max(0, room.stealDeadline - Date.now()),
     spotifyReady: room.spotifyReady,
     hostId: room.hostId,
@@ -608,6 +611,7 @@ function returnToLobby(room) {
   room.stealBlocked = new Set();
   room.stealOutcome = null;
   room.stealOpensAt = 0;
+  room.playbackStarted = false;
   room.stealDeadline = 0;
   room.lastReveal = null;
   room.winner = null;
@@ -731,6 +735,7 @@ function startTurn(room) {
   room.lastReveal = null;
   room.playbackFailed = false;
   room.stealOpensAt = 0;
+  room.playbackStarted = false;
   room.stealDeadline = 0;
 
   // Announce who's up before any audio, so the room can look up and register
@@ -746,9 +751,9 @@ function beginPlayback(room) {
   if (room.phase !== PHASES.TURN_INTRO || !room.currentCard) return;
 
   room.phase = PHASES.PLAYING;
-  // The steal window opens partway in, so nobody can win on the first note.
-  room.stealOpensAt = Date.now() + STEAL_LOCK_MS;
-
+  // Spotify can take a few seconds to become audible after accepting the play
+  // request. The TV confirms the first live playback frame before this clock
+  // starts, keeping the room's steal countdown locked to what people hear.
   broadcast(room);
   toTv(room, 'song_started', { spotifyUri: room.currentCard.id });
 }
@@ -1191,6 +1196,16 @@ io.on('connection', (socket) => {
     broadcast(target);
   });
 
+  socket.on('playback_started', (payload = {}) => {
+    const target = room();
+    if (!target || !target.tvSockets.has(socket.id)) return;
+    if (target.phase !== PHASES.PLAYING || !target.currentCard) return;
+    if (payload.spotifyUri !== target.currentCard.id || target.playbackStarted) return;
+    target.playbackStarted = true;
+    target.stealOpensAt = Date.now() + STEAL_LOCK_MS;
+    broadcast(target);
+  });
+
   socket.on('rejoin', (payload = {}, ack) => {
     const target = rooms.get(String(payload.code || '').toUpperCase());
     if (!target) return ack?.({ error: 'That game has ended.' });
@@ -1323,6 +1338,10 @@ io.on('connection', (socket) => {
     if (player.id === target.placerId) return ack?.({ error: 'You cannot steal on your own turn.' });
     if (target.stealBlocked.has(player.id)) return ack?.({ error: 'You already used your steal this turn.' });
     if (target.stealClaim) return ack?.({ error: 'Someone beat you to it.' });
+
+    if (!target.playbackStarted) {
+      return ack?.({ error: 'Wait for the music to start.' });
+    }
 
     const waitMs = target.stealOpensAt - Date.now();
     if (waitMs > 0) {

@@ -88,6 +88,14 @@ body { min-height: 100svh; }
 .targetcard strong { color: var(--pollen); font: 900 clamp(2.6rem, 14vw, 5rem)/.9 var(--display); overflow-wrap: anywhere; }
 .targetcard span { color: var(--muted); }
 .pointsaward { padding: .8rem; color: var(--night); background: var(--chalk); font: 900 .72rem/1 var(--utility); text-align: center; text-transform: uppercase; }
+.continue-round { margin-top: 1rem; }
+.tallyphone { text-align: center; padding-top: 2rem; }
+.phone-tallypulse { display: flex; justify-content: center; align-items: end; gap: .45rem; height: 90px; margin: 1rem 0 1.6rem; }
+.phone-tallypulse span { width: 18px; height: 34px; background: var(--fuchsia); animation: phone-tally .7s var(--ease) infinite alternate; }
+.phone-tallypulse span:nth-child(2) { height: 58px; background: var(--mango); animation-delay: -.2s; }
+.phone-tallypulse span:nth-child(3) { height: 78px; background: var(--pollen); animation-delay: -.4s; }
+.phone-tallypulse span:nth-child(4) { height: 46px; background: var(--lagoon); animation-delay: -.1s; }
+@keyframes phone-tally { to { transform: scaleY(.46); opacity: .55; } }
 .overphone { text-align: center; padding-top: 2rem; }
 .overphone > .scorestrip { margin-block: 1rem; }
 .hostrail { position: fixed; z-index: 20; left: 50%; bottom: max(.65rem, env(safe-area-inset-bottom)); transform: translateX(-50%); display: grid; grid-template-columns: 1fr 1fr; width: min(360px, calc(100% - 1.5rem)); border: 1px solid #48404e; border-radius: 8px; overflow: hidden; box-shadow: 0 8px 30px #000; }
