@@ -79,13 +79,6 @@
 
 .start__foot .readout { margin: 0 0 0.6rem; }
 
-.start__rules {
-  margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.6;
-  color: var(--graphite);
-}
-
 .start__strip {
   height: 6px;
   margin: 1.6rem 0 0;
