@@ -54,9 +54,32 @@ test('sends anonymous answer IDs and parses a structured GPT suggestion', async 
   });
   assert.equal(request.model, 'gpt-5-nano');
   assert.match(request.input, /p1: Driving/);
+  assert.match(request.input, /The question supplies context.*never evidence/);
+  assert.match(request.input, /"listen to music".*"talk".*MUST NOT be merged/);
   assert.match(request.input, /"death" and "heights".*MUST NOT be merged/);
   assert.doesNotMatch(request.input, /Maya|Leo/);
   assert.deepEqual(suggestions, [{ answerIds: ['p1', 'p2'], reason: 'Same activity at different stages.', confidence: 'high' }]);
+});
+
+test('treats answers that merely fit the same question as separate responses', async () => {
+  let request;
+  const suggestions = await getSuggestions({
+    question: 'What is something you do in line?',
+    answers: [
+      { id: 'p1', text: 'Listen to music' },
+      { id: 'p2', text: 'Play music on their headphones' },
+      { id: 'p3', text: 'Think' },
+      { id: 'p4', text: 'Talk' },
+    ],
+  }, {
+    apiKey: 'test',
+    fetchImpl: async (_url, options) => {
+      request = JSON.parse(options.body);
+      return { ok: true, json: async () => ({ output_text: '{"suggestions":[]}' }) };
+    },
+  });
+  assert.match(request.input, /Suggest ONLY duplicate answers, never answers that merely fit the same question/);
+  assert.deepEqual(suggestions, []);
 });
 
 test('drops anything below high confidence so broad associations never become suggestions', () => {
