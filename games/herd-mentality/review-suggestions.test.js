@@ -2,6 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const Engine = require('./engine');
 const { MODEL, getMergeSets, groupingPrompt, validateMergeSets } = require('./review-suggestions');
 const evalCases = require('./answer-grouping-evals.json');
 
@@ -86,5 +87,29 @@ test('evaluation corpus covers representative positive and negative grouping cas
   for (const entry of evalCases) {
     assert.equal(entry.answers.length, 4);
     assert.deepEqual(entry.expectedGroups.flat().sort((a, b) => a - b), [0, 1, 2, 3]);
+  }
+});
+
+test('every labeled evaluation partition is compatible with local grouping and validated AI merges', () => {
+  for (const entry of evalCases) {
+    const room = Engine.createGameState('EVAL');
+    room.phase = Engine.PHASES.REVIEW;
+    room.submissions = new Map(entry.answers.map((answer, index) => [`a${index}`, answer]));
+    room.groups = Engine.buildGroups(room);
+
+    const proposed = entry.expectedGroups
+      .filter((indices) => indices.length > 1)
+      .map((indices) => ({ answerIds: indices.map((index) => `a${index}`), reason: 'Labeled equivalent answers.' }));
+    for (const mergeSet of validateMergeSets(proposed, room.groups)) {
+      Engine.mergeGroups(room, mergeSet.groupIds);
+    }
+
+    const actual = room.groups
+      .map((group) => group.answers.map((answer) => Number(answer.playerId.slice(1))).sort((a, b) => a - b))
+      .sort((a, b) => a[0] - b[0]);
+    const expected = entry.expectedGroups
+      .map((group) => group.slice().sort((a, b) => a - b))
+      .sort((a, b) => a[0] - b[0]);
+    assert.deepEqual(actual, expected, entry.id);
   }
 });
