@@ -980,7 +980,7 @@
   }
 
   /*
-   * New game, from the TV. Armed on the first click and fired on the second,
+   * Return to lobby, from the TV. Armed on the first click and fired on the second,
    * so a stray press cannot end a game that is halfway through. It disarms
    * itself after a few seconds rather than staying hot.
    */
@@ -991,7 +991,7 @@
     clearTimeout(armed);
     armed = null;
     newGame.classList.remove('is-armed');
-    newGame.textContent = 'New game';
+    newGame.textContent = 'Return to lobby';
   }
 
   newGame.addEventListener('click', () => {

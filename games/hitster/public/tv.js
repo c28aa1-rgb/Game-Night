@@ -333,7 +333,9 @@ function initPlayer() {
   watchForGesture();
   wireAudioGate();
   wireVolume();
+  wireGameMenu();
   wireNewRoom();
+  wireReturnToLobby();
   wireSetsPanel();
   startProgressLoop();
   startClockLoop();
@@ -831,6 +833,38 @@ function startProgressLoop() {
     el('progress-fill').style.width = `${pct}%`;
     el('np-elapsed').textContent = formatTime(playback.position);
   }, 100);
+}
+
+function wireGameMenu() {
+  const trigger = el('game-menu-btn');
+  const panel = el('game-menu');
+  trigger.addEventListener('click', () => {
+    panel.hidden = !panel.hidden;
+    trigger.setAttribute('aria-expanded', String(!panel.hidden));
+  });
+}
+
+function wireReturnToLobby() {
+  const button = el('return-lobby-btn');
+  let timer = null;
+  button.addEventListener('click', () => {
+    if (button.dataset.confirming !== 'true') {
+      button.dataset.confirming = 'true';
+      button.textContent = 'Tap again: return to lobby';
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        button.dataset.confirming = 'false';
+        button.textContent = 'Return to lobby';
+      }, 4200);
+      return;
+    }
+    clearTimeout(timer);
+    button.dataset.confirming = 'false';
+    button.textContent = 'Return to lobby';
+    socket.emit('return_to_lobby', {}, (res) => {
+      if (res?.error) toast(res.error);
+    });
+  });
 }
 
 /**

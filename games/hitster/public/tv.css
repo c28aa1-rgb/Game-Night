@@ -493,6 +493,11 @@
   outline: none;
 }
 
+.tv-menu { position: relative; margin-left: auto; }
+.tv-menu__panel { position: absolute; top: calc(100% + 0.55rem); right: 0; z-index: 30; display: grid; gap: 0.35rem; min-width: 13rem; padding: 0.45rem; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--bg); box-shadow: 0 12px 28px rgba(27, 42, 63, 0.2); }
+.tv-menu__panel button, .tv-menu__panel a { padding: 0.6rem 0.7rem; border: 1px solid var(--line); border-radius: calc(var(--radius) - 2px); background: transparent; color: var(--muted); font: 0.68rem var(--font-mono); letter-spacing: 0.08em; text-align: left; text-decoration: none; text-transform: uppercase; cursor: pointer; }
+.tv-menu__panel button:hover, .tv-menu__panel button:focus-visible, .tv-menu__panel a:hover, .tv-menu__panel a:focus-visible { border-color: var(--danger); color: var(--text); outline: none; }
+
 /* --------------------------------------------------------------------------
    Now playing
    -------------------------------------------------------------------------- */

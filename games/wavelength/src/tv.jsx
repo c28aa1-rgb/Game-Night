@@ -15,6 +15,8 @@ function App() {
   const [notice, setNotice] = useState('Creating a calibration room...');
   const [soundOn, setSoundOn] = useState(() => window.WavelengthSFX?.enabled ?? true);
   const [result, setResult] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirming, setConfirming] = useState(null);
   const last = useRef({ phase: null, marker: null, prompt: null, seats: null });
   const { connected, emit } = useRoomSocket(({ state: next }) => next && setState(next));
 
@@ -79,6 +81,18 @@ function App() {
     else { sound.setEnabled(false); setSoundOn(false); }
   }
 
+  function chooseMenuAction(action) {
+    if (confirming !== action) {
+      setConfirming(action);
+      window.setTimeout(() => setConfirming((current) => current === action ? null : current), 3000);
+      return;
+    }
+    setConfirming(null);
+    setMenuOpen(false);
+    if (action === 'home') return window.location.assign('/');
+    emit('return_to_lobby').then((response) => response.error && setNotice(response.error));
+  }
+
   if (!state) return <main className="tv tv--loading"><p className="readout">{notice}</p></main>;
   const reveal = state.reveal;
   const roundLabel = state.tiebreaker ? 'SUDDEN DEATH' : `ROUND ${Math.min(state.turn + (state.phase !== 'reveal' ? 1 : 0), state.roundCount)} OF ${state.roundCount}`;
@@ -87,7 +101,16 @@ function App() {
     <header className="tv__bar">
       <a className="wordmark" href="/wavelength">WAVELENGTH</a>
       <div className="tv__status"><span className={`lamp ${connected ? 'lamp--on' : ''}`} /><span className="readout">{state.code}</span></div>
-      <button className={`sound-toggle ${soundOn ? 'sound-toggle--on' : ''}`} onClick={toggleSound} aria-pressed={soundOn}>{soundOn ? 'Sound on' : 'Enable sound'}</button>
+      <div className="tv__actions">
+        <div className="tv-menu">
+          <button className="tv-menu__toggle" type="button" onClick={() => { setMenuOpen((open) => !open); setConfirming(null); }} aria-expanded={menuOpen}>Game menu</button>
+          <AnimatePresence>{menuOpen && <motion.div className="tv-menu__panel" initial={{ opacity: 0, y: -8, scale: .98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -5, scale: .985 }}>
+            <button type="button" onClick={() => chooseMenuAction('lobby')}>{confirming === 'lobby' ? 'Tap again: return to lobby' : 'Return to lobby'}</button>
+            <button type="button" onClick={() => chooseMenuAction('home')}>{confirming === 'home' ? 'Tap again: game night' : 'Return to game night'}</button>
+          </motion.div>}</AnimatePresence>
+        </div>
+        <button className={`sound-toggle ${soundOn ? 'sound-toggle--on' : ''}`} onClick={toggleSound} aria-pressed={soundOn}>{soundOn ? 'Sound on' : 'Enable sound'}</button>
+      </div>
     </header>
 
     <section className="tv__main">

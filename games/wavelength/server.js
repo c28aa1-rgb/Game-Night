@@ -378,11 +378,15 @@ nsp.on('connection', (socket) => {
     broadcast(target); ack?.({ ok: true });
   });
 
-  socket.on('reset_room', (payload = {}, ack) => {
-    const target = room(); const session = target && phone(target, ack);
-    if (!session) return;
+  function returnToLobby(payload = {}, ack) {
+    const target = room();
+    if (!target) return ack?.({ error: 'That Wavelength room has ended.' });
+    if (!target.tvSockets.has(socket.id) && !phone(target, ack)) return;
     resetRoom(target); broadcast(target); ack?.({ ok: true });
-  });
+  }
+
+  socket.on('reset_room', returnToLobby);
+  socket.on('return_to_lobby', returnToLobby);
 
   socket.on('disconnect', () => {
     const target = room();
@@ -407,5 +411,5 @@ setInterval(() => {
 
 module.exports = {
   onListen() { console.log(`  \u00b7 Wavelength   ${BASE}`); },
-  _test: { activeSession, newRoom, pointsFor, privateState, publicState },
+  _test: { activeSession, newRoom, pointsFor, privateState, publicState, resetRoom },
 };

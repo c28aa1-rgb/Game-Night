@@ -1300,9 +1300,9 @@ io.on('connection', (socket) => {
   socket.on('return_to_lobby', (payload, ack) => {
     const target = room();
     if (!target) return ack?.({ error: 'That game has ended.' });
+    const isTv = target.tvSockets.has(socket.id);
     const player = findPlayerBySocket(target, socket.id);
-    if (!player || player.id !== target.hostId) return ack?.({ error: 'Only the host can return everyone to the lobby.' });
-    if (target.phase !== PHASES.GAME_OVER) return ack?.({ error: 'Finish the current game first.' });
+    if (!isTv && (!player || player.id !== target.hostId)) return ack?.({ error: 'Only the host or TV can return everyone to the lobby.' });
     returnToLobby(target);
     ack?.({ ok: true });
   });

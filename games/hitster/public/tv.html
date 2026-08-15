@@ -120,7 +120,14 @@
         <span class="eyebrow">Vol</span>
         <input id="volume" type="range" min="0" max="100" value="60" aria-label="Playback volume" />
       </div>
-      <button id="new-room-btn" class="tv-reset" type="button" title="Abandon this game and open a fresh room">New room</button>
+      <div class="tv-menu">
+        <button id="game-menu-btn" class="tv-reset" type="button" aria-expanded="false" aria-controls="game-menu">Game menu</button>
+        <div id="game-menu" class="tv-menu__panel" hidden>
+          <button id="return-lobby-btn" type="button">Return to lobby</button>
+          <button id="new-room-btn" type="button">New room</button>
+          <a href="/">Return to game night</a>
+        </div>
+      </div>
     </header>
 
     <section class="nowplaying">

@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const wavelength = require('./server');
 
-const { activeSession, newRoom, pointsFor, privateState, publicState } = wavelength._test;
+const { activeSession, newRoom, pointsFor, privateState, publicState, resetRoom } = wavelength._test;
 
 test('score bands wrap across the two bottom corners', () => {
   assert.deepEqual(pointsFor(60, 0), { points: 4, band: 'center' });
@@ -29,4 +29,24 @@ test('four phone seats keep clue targets private from guessing phones', () => {
   assert.equal(privateState(room, clue).canSkip, true);
   assert.equal(privateState(room, guess).canSkip, false);
   assert.equal(publicState(room).teams[0].connected, true);
+});
+
+test('returning to the lobby clears the match but preserves team seats', () => {
+  const room = newRoom();
+  const clue = { token: 'clue-token', socketId: 'clue-socket', team: 0, role: 'clue' };
+  room.teams[0].clue = clue;
+  room.phase = 'guess';
+  room.turn = 3;
+  room.prompt = ['Low', 'High'];
+  room.targetIndex = 18;
+  room.scores = [5, 2];
+
+  resetRoom(room);
+
+  assert.equal(room.phase, 'lobby');
+  assert.equal(room.turn, 0);
+  assert.equal(room.prompt, null);
+  assert.equal(room.targetIndex, null);
+  assert.deepEqual(room.scores, [0, 0]);
+  assert.equal(room.teams[0].clue, clue);
 });
