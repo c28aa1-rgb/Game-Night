@@ -2,7 +2,7 @@
 
 const OPENAI_URL = 'https://api.openai.com/v1/responses';
 const TIMEOUT_MS = 4000;
-const CONFIDENCE = new Set(['high', 'medium', 'low']);
+const CONFIDENCE = new Set(['high']);
 
 const RESPONSE_SCHEMA = {
   type: 'object',
@@ -48,7 +48,7 @@ async function getSuggestions({ question, answers }, { apiKey = process.env.OPEN
       body: JSON.stringify({
         model: 'gpt-5-nano',
         reasoning: { effort: 'minimal' },
-        input: `You are assisting a party-game host. Suggest only answer groups that clearly mean the same thing in this question's context. Never group merely related ideas. Player names are unavailable.\n\nQuestion: ${question}\n\nAnswers:\n${answers.map((answer) => `${answer.id}: ${answer.text}`).join('\n')}`,
+        input: `You are an extremely conservative party-game answer matcher. Return suggestions ONLY when answers are interchangeable as the same direct answer to the question.\n\nAllowed merges: spelling mistakes, singular/plural forms, articles, exact synonyms, or a longer phrase that unambiguously states the same answer.\n\nNever merge answers because they share a category, cause, consequence, theme, emotional association, or are both plausible answers. If a reasonable host could disagree, return no suggestion. For example, "death" and "heights" are both fears but are different answers and MUST NOT be merged. "driving" and "learning to drive" may be merged only when the question asks for a skill or activity. Return only high-confidence suggestions; omit medium or low-confidence ideas. Player names are unavailable.\n\nQuestion: ${question}\n\nAnswers:\n${answers.map((answer) => `${answer.id}: ${answer.text}`).join('\n')}`,
         text: { format: { type: 'json_schema', name: 'herd_review_suggestions', strict: true, schema: RESPONSE_SCHEMA } },
       }),
     });

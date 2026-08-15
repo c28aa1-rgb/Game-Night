@@ -54,6 +54,14 @@ test('sends anonymous answer IDs and parses a structured GPT suggestion', async 
   });
   assert.equal(request.model, 'gpt-5-nano');
   assert.match(request.input, /p1: Driving/);
+  assert.match(request.input, /"death" and "heights".*MUST NOT be merged/);
   assert.doesNotMatch(request.input, /Maya|Leo/);
   assert.deepEqual(suggestions, [{ answerIds: ['p1', 'p2'], reason: 'Same activity at different stages.', confidence: 'high' }]);
+});
+
+test('drops anything below high confidence so broad associations never become suggestions', () => {
+  const suggestions = validateSuggestions([
+    { answerIds: ['p1', 'p2'], reason: 'Both describe fear of mortality.', confidence: 'medium' },
+  ], groups);
+  assert.deepEqual(suggestions, []);
 });
