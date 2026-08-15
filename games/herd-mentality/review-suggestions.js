@@ -46,12 +46,15 @@ Merge when ordinary players would clearly treat the responses as the same specif
 - spelling, punctuation, article, singular/plural, or inflection variants
 - standard abbreviations or exact synonyms
 - a short answer and a grammatical restatement that adds no new idea
+- a base food and its ordinary preparation or form when the question asks for a broad food category and does not distinguish preparation
 
-Keep separate when the answers are merely related, share a category or theme, name different examples, or differ by a meaningful action, object, condition, location, time, cause, or subtype. A broad answer and a narrower example stay separate. When reasonable people could disagree, keep them separate.
+Keep separate when the answers are merely related, share a category or theme, name different examples, or differ by a meaningful action, object, condition, location, time, cause, or subtype. A narrower answer stays separate when it changes the thing being named, rather than simply expressing the same answer more specifically. When reasonable people could disagree, keep them separate.
 
 Examples:
 - "apple" + "appple" => merge
 - "cell phone" + "phone" => merge
+- For "name a breakfast food": "eggs" + "scrambled eggs" => merge; the preparation is a direct form of the same food and the question does not ask how eggs are cooked.
+- For "name a breakfast food": "eggs" + "omelette" => separate; an omelette is a distinct dish, not merely eggs stated more specifically.
 - For "something people do while waiting in line": "listen to music" + "play music on headphones" may merge; "think" and "talk" stay separate.
 - For "something people learn": "driving" + "learning to drive" may merge because the question supplies the grammar.
 - "death" + "heights" => separate, even for a question about fears

@@ -79,6 +79,8 @@ test('prompt encodes measured broad-merge regressions', () => {
   assert.match(prompt, /"think" and "talk" stay separate/);
   assert.match(prompt, /"death" \+ "heights" => separate/);
   assert.match(prompt, /"dog" \+ "golden retriever" => separate/);
+  assert.match(prompt, /"eggs" \+ "scrambled eggs" => merge/);
+  assert.match(prompt, /"eggs" \+ "omelette" => separate/);
 });
 
 test('evaluation corpus covers representative positive and negative grouping cases', () => {
