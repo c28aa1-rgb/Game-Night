@@ -1,0 +1,10 @@
+# Dependency, secret, and generated-output directories.
+node_modules/
+graphify-out/
+.env
+.env.*
+*.log
+
+# Browser bundles are generated from the adjacent src/ trees.
+games/*/public/assets/
+hub/public/tutorial/tutorial.js

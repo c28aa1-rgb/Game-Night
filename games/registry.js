@@ -102,6 +102,18 @@ module.exports = [
     status: 'draft',
   },
   {
+    id: 'herd-mentality',
+    name: 'Herd Mentality',
+    tagline: 'Match the crowd. Build your herd. Avoid the Pink Cow.',
+    players: '4-12 players \u00b7 TV + phones',
+    age: '10+',
+    time: '20-30 min',
+    accent: '#D21F25',
+    art: '/hub/art/herd-mentality.webp',
+    basePath: '/herd-mentality',
+    type: 'node',
+  },
+  {
     id: 'draft',
     name: 'Draft Night',
     tagline: 'Spin the wheel, split the room into two, three or four teams.',

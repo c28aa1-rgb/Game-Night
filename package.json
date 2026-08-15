@@ -13,14 +13,18 @@
     "build:tutorial": "node scripts/build-tutorial.js",
     "build:wavelength": "node scripts/build-wavelength.js",
     "build:chameleon": "node scripts/build-chameleon.js",
+    "build:herd-mentality": "node scripts/build-herd-mentality.js",
     "test:wavelength": "node --test games/wavelength/*.test.js",
-    "test:chameleon": "node --test --test-concurrency=1 games/chameleon/*.test.js"
+    "test:chameleon": "node --test --test-concurrency=1 games/chameleon/*.test.js",
+    "test:herd-mentality": "node --test games/herd-mentality/*.test.js"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "qrcode": "^1.5.4",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "word-list-json": "^0.2.0",
+    "wordnet-db": "^3.1.14"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",

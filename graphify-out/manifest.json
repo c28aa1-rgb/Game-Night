@@ -1,0 +1,860 @@
+{
+  "games/chameleon/chameleon.test.js": {
+    "mtime": 1786541827.3539228,
+    "seen": 1786806964.1683712,
+    "ast_hash": "5abf401eb28c06ffd115f54c97f90117",
+    "semantic_hash": "5abf401eb28c06ffd115f54c97f90117"
+  },
+  "games/chameleon/engine.js": {
+    "mtime": 1786541674.4249175,
+    "seen": 1786806964.1683712,
+    "ast_hash": "815374e25e64bf9b13d0682786c4b961",
+    "semantic_hash": "815374e25e64bf9b13d0682786c4b961"
+  },
+  "games/chameleon/public/sfx.js": {
+    "mtime": 1786541845.1213737,
+    "seen": 1786806964.1683712,
+    "ast_hash": "f1ab8b4bd06ce4742ae65ebee68b21d8",
+    "semantic_hash": "f1ab8b4bd06ce4742ae65ebee68b21d8"
+  },
+  "games/chameleon/server.js": {
+    "mtime": 1786541676.8621993,
+    "seen": 1786806964.1683712,
+    "ast_hash": "a8ab1609dfe08c82bfa9f29d8ac977ad",
+    "semantic_hash": "a8ab1609dfe08c82bfa9f29d8ac977ad"
+  },
+  "games/chameleon/src/play.jsx": {
+    "mtime": 1786541748.744232,
+    "seen": 1786806964.1683712,
+    "ast_hash": "5e936071225ece81b200fd7d398a9395",
+    "semantic_hash": "5e936071225ece81b200fd7d398a9395"
+  },
+  "games/chameleon/src/shared.jsx": {
+    "mtime": 1786541851.701833,
+    "seen": 1786806964.1683712,
+    "ast_hash": "9b45363a224787285238e721297972dd",
+    "semantic_hash": "9b45363a224787285238e721297972dd"
+  },
+  "games/chameleon/src/tv.jsx": {
+    "mtime": 1786541752.895422,
+    "seen": 1786806964.1683712,
+    "ast_hash": "6b9b1215e13e9329792d459c9f14780d",
+    "semantic_hash": "6b9b1215e13e9329792d459c9f14780d"
+  },
+  "games/codenames/server.js": {
+    "mtime": 1786308085.0289786,
+    "seen": 1786806964.1683712,
+    "ast_hash": "fa7e4c88a0230cb8f8d164d04112ecab",
+    "semantic_hash": "fa7e4c88a0230cb8f8d164d04112ecab"
+  },
+  "games/codenames/static/app.js": {
+    "mtime": 1786308085.0330164,
+    "seen": 1786806964.1683712,
+    "ast_hash": "16f4c7482190fff4cc96d1ee13ef53a2",
+    "semantic_hash": "16f4c7482190fff4cc96d1ee13ef53a2"
+  },
+  "games/codenames/static/audio.js": {
+    "mtime": 1785805943.8118124,
+    "seen": 1786806964.1683712,
+    "ast_hash": "4b463c3605a3031975a3d001c3024513",
+    "semantic_hash": "4b463c3605a3031975a3d001c3024513"
+  },
+  "games/codenames/static/firebase-config.js": {
+    "mtime": 1785805944.5264206,
+    "seen": 1786806964.1683712,
+    "ast_hash": "1cba1c9ea9ee7a86fde4f6f47db66a94",
+    "semantic_hash": "1cba1c9ea9ee7a86fde4f6f47db66a94"
+  },
+  "games/codenames/static/words.js": {
+    "mtime": 1785805944.2611005,
+    "seen": 1786806964.1683712,
+    "ast_hash": "e3d6b1d85f2997bde0ca163808e4bdbc",
+    "semantic_hash": "e3d6b1d85f2997bde0ca163808e4bdbc"
+  },
+  "games/draft/static/app.js": {
+    "mtime": 1786308085.036165,
+    "seen": 1786806964.1683712,
+    "ast_hash": "5c9b9c920e1cd0590aa8438e49085e3e",
+    "semantic_hash": "5c9b9c920e1cd0590aa8438e49085e3e"
+  },
+  "games/draft/static/sfx.js": {
+    "mtime": 1785809769.7120464,
+    "seen": 1786806964.1683712,
+    "ast_hash": "56f1769a93ddccf7b7abf4f1ddc1e7c1",
+    "semantic_hash": "56f1769a93ddccf7b7abf4f1ddc1e7c1"
+  },
+  "games/hitster/pop-expansion.js": {
+    "mtime": 1786311432.9001179,
+    "seen": 1786806964.1683712,
+    "ast_hash": "da2b7ee6192b08cd9922b4c68b5c0a66",
+    "semantic_hash": "da2b7ee6192b08cd9922b4c68b5c0a66"
+  },
+  "games/hitster/public/confetti.js": {
+    "mtime": 1785805942.1155562,
+    "seen": 1786806964.1683712,
+    "ast_hash": "cbb1652c4876f387f39f8fe2104d8401",
+    "semantic_hash": "cbb1652c4876f387f39f8fe2104d8401"
+  },
+  "games/hitster/public/controller.js": {
+    "mtime": 1786505074.2481587,
+    "seen": 1786806964.1683712,
+    "ast_hash": "c9447d6ccdc926d3815b866670ee70ca",
+    "semantic_hash": "c9447d6ccdc926d3815b866670ee70ca"
+  },
+  "games/hitster/public/resolve.js": {
+    "mtime": 1785806552.390939,
+    "seen": 1786806964.1683712,
+    "ast_hash": "48a697f0912448c1be7eaa8727423973",
+    "semantic_hash": "48a697f0912448c1be7eaa8727423973"
+  },
+  "games/hitster/public/sfx.js": {
+    "mtime": 1786507169.216837,
+    "seen": 1786806964.1683712,
+    "ast_hash": "9c04ca9fe7afa615594b0c735047237d",
+    "semantic_hash": "9c04ca9fe7afa615594b0c735047237d"
+  },
+  "games/hitster/public/spotify-auth.js": {
+    "mtime": 1786308085.0522983,
+    "seen": 1786806964.1683712,
+    "ast_hash": "e3ea4e2c1e91882b97d6de40b48bc44e",
+    "semantic_hash": "e3ea4e2c1e91882b97d6de40b48bc44e"
+  },
+  "games/hitster/public/tv.js": {
+    "mtime": 1786505071.604401,
+    "seen": 1786806964.1683712,
+    "ast_hash": "89b32e346480715f057e887eaeb67af6",
+    "semantic_hash": "89b32e346480715f057e887eaeb67af6"
+  },
+  "games/hitster/server.js": {
+    "mtime": 1786505068.9514596,
+    "seen": 1786806964.1683712,
+    "ast_hash": "dba347bc12068f4428de1f17b690db41",
+    "semantic_hash": "dba347bc12068f4428de1f17b690db41"
+  },
+  "games/hues-cues/public/grid-data.js": {
+    "mtime": 1786037155.8333254,
+    "seen": 1786806964.1683712,
+    "ast_hash": "8be8705834df41cb14e0310112c135a4",
+    "semantic_hash": "8be8705834df41cb14e0310112c135a4"
+  },
+  "games/hues-cues/public/play.js": {
+    "mtime": 1786308085.0791574,
+    "seen": 1786806964.1683712,
+    "ast_hash": "7099eee2878f91b74b5199d4910552c7",
+    "semantic_hash": "7099eee2878f91b74b5199d4910552c7"
+  },
+  "games/hues-cues/public/sfx.js": {
+    "mtime": 1786507392.1891048,
+    "seen": 1786806964.1683712,
+    "ast_hash": "8fcc56ac961b9366caad11ae584472f4",
+    "semantic_hash": "8fcc56ac961b9366caad11ae584472f4"
+  },
+  "games/hues-cues/public/tv.js": {
+    "mtime": 1786308728.7120833,
+    "seen": 1786806964.1683712,
+    "ast_hash": "76744304860949a14e1cba01db5349a0",
+    "semantic_hash": "76744304860949a14e1cba01db5349a0"
+  },
+  "games/hues-cues/server.js": {
+    "mtime": 1786308085.0977929,
+    "seen": 1786806964.1683712,
+    "ast_hash": "0e0a4d99713ee0e145c7b7894873b2e7",
+    "semantic_hash": "0e0a4d99713ee0e145c7b7894873b2e7"
+  },
+  "games/mafia/public/avatar.js": {
+    "mtime": 1786308085.1042733,
+    "seen": 1786806964.1683712,
+    "ast_hash": "026feffabbf6a03c4b579e530241959b",
+    "semantic_hash": "026feffabbf6a03c4b579e530241959b"
+  },
+  "games/mafia/public/cinematics.js": {
+    "mtime": 1786308085.1062818,
+    "seen": 1786806964.1683712,
+    "ast_hash": "d62b30eab6f5bf562a9fa4d52cd6e304",
+    "semantic_hash": "d62b30eab6f5bf562a9fa4d52cd6e304"
+  },
+  "games/mafia/public/cutscene.js": {
+    "mtime": 1786308085.1085465,
+    "seen": 1786806964.1683712,
+    "ast_hash": "78c38687bacdf434906751a7fb0c5f4d",
+    "semantic_hash": "78c38687bacdf434906751a7fb0c5f4d"
+  },
+  "games/mafia/public/film.js": {
+    "mtime": 1786308085.1114316,
+    "seen": 1786806964.1683712,
+    "ast_hash": "626181bab66d163ffc7482528c067f85",
+    "semantic_hash": "626181bab66d163ffc7482528c067f85"
+  },
+  "games/mafia/public/narration.js": {
+    "mtime": 1786308085.1114316,
+    "seen": 1786806964.1683712,
+    "ast_hash": "36e5b119d85cc3f2fef6e84daa022f6c",
+    "semantic_hash": "36e5b119d85cc3f2fef6e84daa022f6c"
+  },
+  "games/mafia/public/play.js": {
+    "mtime": 1786308085.1151361,
+    "seen": 1786806964.1683712,
+    "ast_hash": "76ef0f7c298be2497b22276c7c44c27d",
+    "semantic_hash": "76ef0f7c298be2497b22276c7c44c27d"
+  },
+  "games/mafia/public/sfx.js": {
+    "mtime": 1786308085.1188116,
+    "seen": 1786806964.1683712,
+    "ast_hash": "0e2f30b98fec2c7bdb595f5cdd26d8bb",
+    "semantic_hash": "0e2f30b98fec2c7bdb595f5cdd26d8bb"
+  },
+  "games/mafia/public/tv.js": {
+    "mtime": 1786308085.1231558,
+    "seen": 1786806964.1683712,
+    "ast_hash": "bc2e2cc5b33da693a791f5e947d70835",
+    "semantic_hash": "bc2e2cc5b33da693a791f5e947d70835"
+  },
+  "games/mafia/server.js": {
+    "mtime": 1786465453.114643,
+    "seen": 1786806964.1683712,
+    "ast_hash": "ce4795139e1c9cd1d02fe2a40020d85a",
+    "semantic_hash": "ce4795139e1c9cd1d02fe2a40020d85a"
+  },
+  "games/registry.js": {
+    "mtime": 1786802176.2209342,
+    "seen": 1786806964.1683712,
+    "ast_hash": "43658876048e88b297ed3871970dbc20",
+    "semantic_hash": ""
+  },
+  "games/wavelength/public/sfx.js": {
+    "mtime": 1786507388.7646892,
+    "seen": 1786806964.1683712,
+    "ast_hash": "7886180c8ec14021e5d18759f4d2f353",
+    "semantic_hash": "7886180c8ec14021e5d18759f4d2f353"
+  },
+  "games/wavelength/server.js": {
+    "mtime": 1786506299.2936203,
+    "seen": 1786806964.1683712,
+    "ast_hash": "ca0279c00409413117cd8a3899b5c6e5",
+    "semantic_hash": "ca0279c00409413117cd8a3899b5c6e5"
+  },
+  "games/wavelength/src/play.jsx": {
+    "mtime": 1786505372.1828904,
+    "seen": 1786806964.1683712,
+    "ast_hash": "0fd3403d97122eb9dccc54a6d74b3807",
+    "semantic_hash": "0fd3403d97122eb9dccc54a6d74b3807"
+  },
+  "games/wavelength/src/shared.jsx": {
+    "mtime": 1786506294.3404894,
+    "seen": 1786806964.1683712,
+    "ast_hash": "36738b1ff91d4fb55c53d088f2abac4f",
+    "semantic_hash": "36738b1ff91d4fb55c53d088f2abac4f"
+  },
+  "games/wavelength/src/tv.jsx": {
+    "mtime": 1786507258.722592,
+    "seen": 1786806964.1683712,
+    "ast_hash": "eab60578a39562de7f84eacec2f1d3c6",
+    "semantic_hash": "eab60578a39562de7f84eacec2f1d3c6"
+  },
+  "games/wavelength/wavelength.test.js": {
+    "mtime": 1786506141.104691,
+    "seen": 1786806964.1683712,
+    "ast_hash": "614774d5f7b60a7b00c972a32b2f97e0",
+    "semantic_hash": "614774d5f7b60a7b00c972a32b2f97e0"
+  },
+  "hub/public/lobby-music.js": {
+    "mtime": 1786507194.9987013,
+    "seen": 1786806964.1683712,
+    "ast_hash": "9817870e6d97f525c8aa34d3dca8abda",
+    "semantic_hash": "9817870e6d97f525c8aa34d3dca8abda"
+  },
+  "lib/host.js": {
+    "mtime": 1786035107.665366,
+    "seen": 1786806964.1683712,
+    "ast_hash": "f0121896ba31bf88d258c6793873abd0",
+    "semantic_hash": "f0121896ba31bf88d258c6793873abd0"
+  },
+  "lib/join.js": {
+    "mtime": 1786308085.1733615,
+    "seen": 1786806964.1683712,
+    "ast_hash": "cbc5143b60188aabb0935679825502fc",
+    "semantic_hash": "cbc5143b60188aabb0935679825502fc"
+  },
+  "package.json": {
+    "mtime": 1786805326.392807,
+    "seen": 1786806964.1683712,
+    "ast_hash": "b7ecf6bc4d6a35edd6a63d9cf9f92262",
+    "semantic_hash": ""
+  },
+  "scripts/build-art.js": {
+    "mtime": 1786195648.035073,
+    "seen": 1786806964.1683712,
+    "ast_hash": "46a7c8c072955a7b7cbe74cf1cc096a6",
+    "semantic_hash": "46a7c8c072955a7b7cbe74cf1cc096a6"
+  },
+  "scripts/build-chameleon.js": {
+    "mtime": 1786465453.1243968,
+    "seen": 1786806964.1683712,
+    "ast_hash": "1e4c42c388b872cc17bf4e35c1a83a34",
+    "semantic_hash": "1e4c42c388b872cc17bf4e35c1a83a34"
+  },
+  "scripts/build-film.js": {
+    "mtime": 1786308085.1839328,
+    "seen": 1786806964.1683712,
+    "ast_hash": "17b2eb629a4b7260f3df7c1322877a36",
+    "semantic_hash": "17b2eb629a4b7260f3df7c1322877a36"
+  },
+  "scripts/build-tutorial.js": {
+    "mtime": 1786488158.2169206,
+    "seen": 1786806964.1683712,
+    "ast_hash": "0d66bc5fe5a4cd58ea95da72479f6241",
+    "semantic_hash": "0d66bc5fe5a4cd58ea95da72479f6241"
+  },
+  "scripts/build-voices.js": {
+    "mtime": 1786308085.1839328,
+    "seen": 1786806964.1683712,
+    "ast_hash": "cafad991f638eaf3b674f671e26bc160",
+    "semantic_hash": "cafad991f638eaf3b674f671e26bc160"
+  },
+  "scripts/build-wavelength.js": {
+    "mtime": 1786505942.9616604,
+    "seen": 1786806964.1683712,
+    "ast_hash": "1b1c1884124dd2500156f2966811e1c2",
+    "semantic_hash": "1b1c1884124dd2500156f2966811e1c2"
+  },
+  "server.js": {
+    "mtime": 1786465453.129895,
+    "seen": 1786806964.1683712,
+    "ast_hash": "117cf07908d67163b0cf76a96358af3b",
+    "semantic_hash": "117cf07908d67163b0cf76a96358af3b"
+  },
+  "tutorials/games.js": {
+    "mtime": 1786491332.7282455,
+    "seen": 1786806964.1683712,
+    "ast_hash": "27191668ec7e9f41164e60d15dcfb354",
+    "semantic_hash": "27191668ec7e9f41164e60d15dcfb354"
+  },
+  "tutorials/tutorial.jsx": {
+    "mtime": 1786491102.232719,
+    "seen": 1786806964.1683712,
+    "ast_hash": "4c1904ee0758e81e8330ce46c32a2e06",
+    "semantic_hash": "4c1904ee0758e81e8330ce46c32a2e06"
+  },
+  "README.md": {
+    "mtime": 1786465453.069066,
+    "seen": 1786806964.1683712,
+    "ast_hash": "cbefd24aeea3dd13e79a3c70f23972d3",
+    "semantic_hash": ""
+  },
+  "design/tutorials/HOUSE-LIGHTS-THEME.md": {
+    "mtime": 1786491739.1892867,
+    "seen": 1786806964.1683712,
+    "ast_hash": "a1a13e55ad34ab26677546bc39c13c6d",
+    "semantic_hash": ""
+  },
+  "design/tutorials/PHILOSOPHY.md": {
+    "mtime": 1786491722.2096274,
+    "seen": 1786806964.1683712,
+    "ast_hash": "e25ac7f1630fad09b950a9d9b1a72338",
+    "semantic_hash": ""
+  },
+  "games/chameleon/PHILOSOPHY.md": {
+    "mtime": 1786465453.0714436,
+    "seen": 1786806964.1683712,
+    "ast_hash": "bafa8c2bbb79e2c9c7bc55dbdd17c91e",
+    "semantic_hash": ""
+  },
+  "games/chameleon/THEME.md": {
+    "mtime": 1786465453.0738065,
+    "seen": 1786806964.1683712,
+    "ast_hash": "efeb7f3000f8083f6f9649daf16fbee7",
+    "semantic_hash": ""
+  },
+  "games/chameleon/public/play.html": {
+    "mtime": 1786465453.1012049,
+    "seen": 1786806964.1683712,
+    "ast_hash": "5f5f046da5397c466b13751d17dd30fb",
+    "semantic_hash": ""
+  },
+  "games/chameleon/public/start.html": {
+    "mtime": 1786799583.5392802,
+    "seen": 1786806964.1683712,
+    "ast_hash": "8272fd653856a70f4e296f6151b09e6b",
+    "semantic_hash": ""
+  },
+  "games/chameleon/public/tv.html": {
+    "mtime": 1786506946.7735467,
+    "seen": 1786806964.1683712,
+    "ast_hash": "eea506d922cefbfb769232197a741725",
+    "semantic_hash": ""
+  },
+  "games/codenames/static/index.html": {
+    "mtime": 1786799574.2567668,
+    "seen": 1786806964.1683712,
+    "ast_hash": "76da9cfed0da4726f74f70454b6ea6de",
+    "semantic_hash": ""
+  },
+  "games/draft/static/index.html": {
+    "mtime": 1786308085.0446792,
+    "seen": 1786806964.1683712,
+    "ast_hash": "037a8097b09611bd2dac08ec55b6a600",
+    "semantic_hash": ""
+  },
+  "games/draft/theme/draft-night.md": {
+    "mtime": 1785810720.8436272,
+    "seen": 1786806964.1683712,
+    "ast_hash": "7d4787b18a4450da8a39ded32df74f46",
+    "semantic_hash": ""
+  },
+  "games/hitster/public/callback.html": {
+    "mtime": 1785806410.1001382,
+    "seen": 1786806964.1683712,
+    "ast_hash": "cb239218843fbf75876ffb05a4bd04c1",
+    "semantic_hash": ""
+  },
+  "games/hitster/public/controller.html": {
+    "mtime": 1786308085.0494998,
+    "seen": 1786806964.1683712,
+    "ast_hash": "b38092201d540e389b002660f332ff43",
+    "semantic_hash": ""
+  },
+  "games/hitster/public/resolve.html": {
+    "mtime": 1785805942.2346895,
+    "seen": 1786806964.1683712,
+    "ast_hash": "58c329eb11d10940d40d5cb853f64db3",
+    "semantic_hash": ""
+  },
+  "games/hitster/public/start.html": {
+    "mtime": 1786799572.1387966,
+    "seen": 1786806964.1683712,
+    "ast_hash": "e5a26aeee0b81b71dac0d193bec72cdb",
+    "semantic_hash": ""
+  },
+  "games/hitster/public/tv.html": {
+    "mtime": 1786308085.0636227,
+    "seen": 1786806964.1683712,
+    "ast_hash": "0077b89280676b2b3e41c9feb73e57f2",
+    "semantic_hash": ""
+  },
+  "games/hues-cues/DESIGN.md": {
+    "mtime": 1786308085.0791574,
+    "seen": 1786806964.1683712,
+    "ast_hash": "9e9cc377ae12538fc91a6c6a4dc142f3",
+    "semantic_hash": ""
+  },
+  "games/hues-cues/PHILOSOPHY.md": {
+    "mtime": 1786037208.006891,
+    "seen": 1786806964.1683712,
+    "ast_hash": "10f835b4bdbbfe3c1d91899457ac1475",
+    "semantic_hash": ""
+  },
+  "games/hues-cues/public/play.html": {
+    "mtime": 1786308085.0791574,
+    "seen": 1786806964.1683712,
+    "ast_hash": "c6a92b3e576d57e2ec78a33e3271c63a",
+    "semantic_hash": ""
+  },
+  "games/hues-cues/public/start.html": {
+    "mtime": 1786799578.8897831,
+    "seen": 1786806964.1683712,
+    "ast_hash": "24e723d31cbb4272a1070e7d2c4067dc",
+    "semantic_hash": ""
+  },
+  "games/hues-cues/public/tv.html": {
+    "mtime": 1786506954.1652658,
+    "seen": 1786806964.1683712,
+    "ast_hash": "3dac0995a0526b68a3d8614416447bcb",
+    "semantic_hash": ""
+  },
+  "games/mafia/NOIR-ROSSO.md": {
+    "mtime": 1786308085.0977929,
+    "seen": 1786806964.1683712,
+    "ast_hash": "de21b7ae019ac48176fcce112b6abc0a",
+    "semantic_hash": ""
+  },
+  "games/mafia/public/play.html": {
+    "mtime": 1786308085.1151361,
+    "seen": 1786806964.1683712,
+    "ast_hash": "d7f400b04eb155a8add2f88607882fed",
+    "semantic_hash": ""
+  },
+  "games/mafia/public/start.html": {
+    "mtime": 1786799576.1284294,
+    "seen": 1786806964.1683712,
+    "ast_hash": "34da6538fa9239f18521694b207748b9",
+    "semantic_hash": ""
+  },
+  "games/mafia/public/tv.html": {
+    "mtime": 1786308085.12082,
+    "seen": 1786806964.1683712,
+    "ast_hash": "36a470c74ae88ca794b5106a4c583a55",
+    "semantic_hash": ""
+  },
+  "games/wavelength/PHILOSOPHY.md": {
+    "mtime": 1786308085.1304467,
+    "seen": 1786806964.1683712,
+    "ast_hash": "fb0218e61e214b84197a87596d0629d8",
+    "semantic_hash": ""
+  },
+  "games/wavelength/public/play.html": {
+    "mtime": 1786309862.725365,
+    "seen": 1786806964.1683712,
+    "ast_hash": "104437da1895c09334150fd93d4361f8",
+    "semantic_hash": ""
+  },
+  "games/wavelength/public/start.html": {
+    "mtime": 1786799581.3639586,
+    "seen": 1786806964.1683712,
+    "ast_hash": "62309123c5c8002e7e9328fd5534274c",
+    "semantic_hash": ""
+  },
+  "games/wavelength/public/tv.html": {
+    "mtime": 1786506950.327643,
+    "seen": 1786806964.1683712,
+    "ast_hash": "dc07ab8cbd239db90f163fb4f6aca342",
+    "semantic_hash": ""
+  },
+  "hub/public/404.html": {
+    "mtime": 1786308085.1448128,
+    "seen": 1786806964.1683712,
+    "ast_hash": "25a0ab244719d10ad514363f78c11b92",
+    "semantic_hash": ""
+  },
+  "hub/template.html": {
+    "mtime": 1786465453.1243968,
+    "seen": 1786806964.1683712,
+    "ast_hash": "88df3b3bf93c3cb8b304db2c401cc74a",
+    "semantic_hash": ""
+  },
+  "render.yaml": {
+    "mtime": 1786308085.1820562,
+    "seen": 1786806964.1683712,
+    "ast_hash": "4ae8047ffbba68cc9e02c0a395acb60d",
+    "semantic_hash": ""
+  },
+  "zz-harness-tmp.html": {
+    "mtime": 1786308085.1839328,
+    "seen": 1786806964.1683712,
+    "ast_hash": "57b6ae5f7593f49411f5d9608657fda2",
+    "semantic_hash": ""
+  },
+  "design/tutorials/house-lights-canvas.png": {
+    "mtime": 1786487967.123,
+    "seen": 1786806964.1683712,
+    "ast_hash": "7900727d5e90c7ad3d47a0429f19abc9",
+    "semantic_hash": ""
+  },
+  "games/chameleon/chameleon-canvas.png": {
+    "mtime": 1786465453.089789,
+    "seen": 1786806964.1683712,
+    "ast_hash": "2381204873f070fb1fbe72a17c5bdc14",
+    "semantic_hash": ""
+  },
+  "games/chameleon/public/favicon.svg": {
+    "mtime": 1786465453.1012049,
+    "seen": 1786806964.1683712,
+    "ast_hash": "d4c9063594be0ceae5fe8511c192f294",
+    "semantic_hash": ""
+  },
+  "games/codenames/static/favicon.svg": {
+    "mtime": 1785805944.3939877,
+    "seen": 1786806964.1683712,
+    "ast_hash": "90b187f3c5d2a8a906228ef72ad4499d",
+    "semantic_hash": ""
+  },
+  "games/hitster/public/favicon.svg": {
+    "mtime": 1786146410.3184235,
+    "seen": 1786806964.1683712,
+    "ast_hash": "c15704b98e9c30b78534f58eb5c4e37e",
+    "semantic_hash": ""
+  },
+  "games/hues-cues/public/favicon.svg": {
+    "mtime": 1786037528.171751,
+    "seen": 1786806964.1683712,
+    "ast_hash": "4cf8660b4e16c3d6777118e1ef98e0cc",
+    "semantic_hash": ""
+  },
+  "games/mafia/public/favicon.svg": {
+    "mtime": 1786308085.109423,
+    "seen": 1786806964.1683712,
+    "ast_hash": "ec9a0247c13fa9336f03585ada6f8067",
+    "semantic_hash": ""
+  },
+  "games/wavelength/public/favicon.svg": {
+    "mtime": 1786309311.6916168,
+    "seen": 1786806964.1683712,
+    "ast_hash": "34b8ca34d3a6e5ad182b77f02d1acca0",
+    "semantic_hash": ""
+  },
+  "hub/public/art/chameleon.webp": {
+    "mtime": 1786465453.119495,
+    "seen": 1786806964.1683712,
+    "ast_hash": "2d9e9817ab1749433f145433f5a7c75b",
+    "semantic_hash": ""
+  },
+  "hub/public/art/codenames.webp": {
+    "mtime": 1785807572.22,
+    "seen": 1786806964.1683712,
+    "ast_hash": "27504519cda7b57a7fe46f3d662e2a29",
+    "semantic_hash": ""
+  },
+  "hub/public/art/draft.webp": {
+    "mtime": 1785807573.165,
+    "seen": 1786806964.1683712,
+    "ast_hash": "d1b90f2965ca96aa2badca0f2bc935b0",
+    "semantic_hash": ""
+  },
+  "hub/public/art/hitster.webp": {
+    "mtime": 1785807572.915,
+    "seen": 1786806964.1683712,
+    "ast_hash": "bef5dc4c3c731c222e3fbf14d19a5a42",
+    "semantic_hash": ""
+  },
+  "hub/public/art/hues-cues.webp": {
+    "mtime": 1786051744.281,
+    "seen": 1786806964.1683712,
+    "ast_hash": "c0b5e449ab7debbd01799497d63c3d84",
+    "semantic_hash": ""
+  },
+  "hub/public/art/mafia.png": {
+    "mtime": 1786308085.1627052,
+    "seen": 1786806964.1683712,
+    "ast_hash": "88d9e9e4a69951ec21b7a77d948bce60",
+    "semantic_hash": ""
+  },
+  "hub/public/art/mafia.webp": {
+    "mtime": 1786308085.1683352,
+    "seen": 1786806964.1683712,
+    "ast_hash": "454ead82dc4707cdf39ea10092defb47",
+    "semantic_hash": ""
+  },
+  "hub/public/art/wavelength.webp": {
+    "mtime": 1786308085.1713552,
+    "seen": 1786806964.1683712,
+    "ast_hash": "ba5b7f403125b151488b71e6e5d28987",
+    "semantic_hash": ""
+  },
+  "hub/public/favicon.svg": {
+    "mtime": 1785806148.1457713,
+    "seen": 1786806964.1683712,
+    "ast_hash": "047db5e88d46bed2e776a7b225f16b15",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/chameleon-phone.webp": {
+    "mtime": 1786487257.705,
+    "seen": 1786806964.1683712,
+    "ast_hash": "4f8d99b91bd542bcfbd14836bceff14d",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/chameleon-tv.webp": {
+    "mtime": 1786487257.373,
+    "seen": 1786806964.1683712,
+    "ast_hash": "1bcd90a3a322df3459c2783b2d4051ce",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/codenames-board-phone.webp": {
+    "mtime": 1786490238.812,
+    "seen": 1786806964.1683712,
+    "ast_hash": "2d38fa24ee6c71df2a9481017d6f2d12",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/codenames-board-tv.webp": {
+    "mtime": 1786490030.444,
+    "seen": 1786806964.1683712,
+    "ast_hash": "93114886bb538bfc2bdbfc8b1d48edb2",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/codenames-key-phone.webp": {
+    "mtime": 1786490030.246,
+    "seen": 1786806964.1683712,
+    "ast_hash": "fb4dc1f48f393289abc2c5d571235bc6",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/codenames-list-phone.webp": {
+    "mtime": 1786490239.279,
+    "seen": 1786806964.1683712,
+    "ast_hash": "5f35d98314ac9e82dea86708dc90d994",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/codenames-phone.webp": {
+    "mtime": 1786487642.086,
+    "seen": 1786806964.1683712,
+    "ast_hash": "82ef54116ea009c073a5f1e39200da3f",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/codenames-reveal-phone.webp": {
+    "mtime": 1786490197.552,
+    "seen": 1786806964.1683712,
+    "ast_hash": "6948dc4036fbdadaa364f0b2f1350503",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/codenames-revealed-tv.webp": {
+    "mtime": 1786490215.064,
+    "seen": 1786806964.1683712,
+    "ast_hash": "d8ad0be548660ddc4e7fcf569e2741b1",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/codenames-tv.webp": {
+    "mtime": 1786487641.216,
+    "seen": 1786806964.1683712,
+    "ast_hash": "1763dc4556815d46bd504c18fdb51d3b",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/hitster-phone.webp": {
+    "mtime": 1786487556.495,
+    "seen": 1786806964.1683712,
+    "ast_hash": "3d1d16df67fe36b186e6475b67320c56",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/hitster-tv.webp": {
+    "mtime": 1786487905.271,
+    "seen": 1786806964.1683712,
+    "ast_hash": "c35335e3c924b12ef9040776819f8a84",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/hues-cues-phone.webp": {
+    "mtime": 1786487499.026,
+    "seen": 1786806964.1683712,
+    "ast_hash": "cd44b09aa6a5c7e89a4f23bc9b82c58a",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/hues-cues-tv.webp": {
+    "mtime": 1786487498.708,
+    "seen": 1786806964.1683712,
+    "ast_hash": "5762cab12e38cb20a7cde3168ba9528f",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/mafia-phone.webp": {
+    "mtime": 1786487433.025,
+    "seen": 1786806964.1683712,
+    "ast_hash": "6631a276fec0176f35c5f5e7b18d294d",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/mafia-tv.webp": {
+    "mtime": 1786487434.987,
+    "seen": 1786806964.1683712,
+    "ast_hash": "ec6d2d001c51f4d6f39eaf55f402975f",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/wavelength-phone.webp": {
+    "mtime": 1786487217.442,
+    "seen": 1786806964.1683712,
+    "ast_hash": "373b307c78329639fd89445d6b833b22",
+    "semantic_hash": ""
+  },
+  "hub/public/tutorial/screens/wavelength-tv.webp": {
+    "mtime": 1786487217.161,
+    "seen": 1786806964.1683712,
+    "ast_hash": "d35c8ce3ad56eaf18e3f46f5ce235d78",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/engine.js": {
+    "mtime": 1786805390.02068,
+    "seen": 1786806964.1683712,
+    "ast_hash": "590b76a539e3be5ccd71c3897cf5602d",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/herd-mentality.test.js": {
+    "mtime": 1786805708.0008652,
+    "seen": 1786806964.1683712,
+    "ast_hash": "73cca2ce134b27e19ac965958e472214",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/public/sfx.js": {
+    "mtime": 1786803252.9102626,
+    "seen": 1786806964.1683712,
+    "ast_hash": "5229afe99e2bdfaf840381916d1dd2de",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/server-state.test.js": {
+    "mtime": 1786802824.196729,
+    "seen": 1786806964.1683712,
+    "ast_hash": "e121e5a4cb6f6ee5bdba18bd27330b31",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/server.js": {
+    "mtime": 1786805397.0456605,
+    "seen": 1786806964.1683712,
+    "ast_hash": "f817a1f153e67af44ab65b3c6352a871",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/src/play.jsx": {
+    "mtime": 1786806904.7290902,
+    "seen": 1786806964.1683712,
+    "ast_hash": "12ce1157c741d1546441d88f71ad9700",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/src/shared.jsx": {
+    "mtime": 1786805403.640873,
+    "seen": 1786806964.1683712,
+    "ast_hash": "03076098d8eb426861da3aa49e79f575",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/src/tv.jsx": {
+    "mtime": 1786804749.9480844,
+    "seen": 1786806964.1683712,
+    "ast_hash": "79e7c8b2db67a06d2850e13b61f81b13",
+    "semantic_hash": ""
+  },
+  "scripts/build-herd-mentality.js": {
+    "mtime": 1786802172.8098474,
+    "seen": 1786806964.1683712,
+    "ast_hash": "8fc4aa82c54135b11b791908f69ebf3a",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/AUDIO.md": {
+    "mtime": 1786803269.2906625,
+    "seen": 1786806964.1683712,
+    "ast_hash": "ec5bae40f17ce16f58a9e6c32955372a",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/PHILOSOPHY.md": {
+    "mtime": 1786801396.356784,
+    "seen": 1786806964.1683712,
+    "ast_hash": "8fe522c3597beef64658ff544c15e1bb",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/THEME.md": {
+    "mtime": 1786802960.9867065,
+    "seen": 1786806964.1683712,
+    "ast_hash": "2db7b79f3a106fe5080a32bd06645af7",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/public/play.html": {
+    "mtime": 1786803262.4233453,
+    "seen": 1786806964.1683712,
+    "ast_hash": "1bdcb456f8c31f261004fc528a91dd88",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/public/start.html": {
+    "mtime": 1786806906.7884743,
+    "seen": 1786806964.1683712,
+    "ast_hash": "63f2106a7d1cc9a07421399d6e611e3b",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/public/tv.html": {
+    "mtime": 1786803264.605855,
+    "seen": 1786806964.1683712,
+    "ast_hash": "6fe3f1e94ed66216fccd949945772ffa",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/herd-mentality-canvas.png": {
+    "mtime": 1786801427.03,
+    "seen": 1786806964.1683712,
+    "ast_hash": "bef9b4538dc65963d4f12d96b0a83fca",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/public/favicon.svg": {
+    "mtime": 1786802170.7163393,
+    "seen": 1786806964.1683712,
+    "ast_hash": "b9b73f2f2bd52660d089ccae899bbed8",
+    "semantic_hash": ""
+  },
+  "hub/public/art/herd-mentality.webp": {
+    "mtime": 1786801427.418,
+    "seen": 1786806964.1683712,
+    "ast_hash": "05d244764416fa5abf3bafa1a3c1d8f3",
+    "semantic_hash": ""
+  },
+  "games/herd-mentality/word-confidence.js": {
+    "mtime": 1786805383.0301352,
+    "seen": 1786806964.1683712,
+    "ast_hash": "e1baff280301f98d8d6c3d385bb5520d",
+    "semantic_hash": ""
+  }
+}
