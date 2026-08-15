@@ -19,6 +19,7 @@ services:
       # Hitster. Set it in the Render dashboard rather than here.
       - key: SPOTIFY_CLIENT_ID
         sync: false
-      # Herd Mentality's optional, host-approved answer-group suggestions.
+      # Herd Mentality uses this server-side to group answers automatically.
+      # Without it, conservative local grouping still reveals every round.
       - key: OPENAI_API_KEY
         sync: false

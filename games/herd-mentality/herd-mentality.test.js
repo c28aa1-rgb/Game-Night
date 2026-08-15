@@ -4,7 +4,6 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const Engine = require('./engine');
 const questions = require('./questions.json');
-const { isKnownAnswer } = require('./word-confidence');
 
 function roomWithPlayers(count = 4) {
   const room = Engine.createGameState('HERD');
@@ -45,27 +44,25 @@ test('safe normalization handles presentation variants without semantic guessing
   assert.notEqual(Engine.normalizeAnswer('couch'), Engine.normalizeAnswer('sofa'));
 });
 
-test('clean dictionary words can skip host review', () => {
+test('local grouping keeps distinct clean words separate without host review metadata', () => {
   const room = roomWithPlayers();
   Engine.startMatch(room, questions, () => 0);
   Engine.openAnswering(room);
   ['Apples', 'orange', 'Pear', 'pizza'].forEach((answer, index) => Engine.submitAnswer(room, `p${index + 1}`, answer));
-  Engine.beginReview(room, isKnownAnswer);
+  Engine.beginReview(room);
   assert.equal(Engine.needsHostReview(room), false);
   assert.deepEqual(room.reviewIssues, []);
+  assert.equal(room.groups.length, 4);
 });
 
-test('known compounds pass while ambiguous phrases and typos pause for review', () => {
+test('local grouping automatically handles safe presentation variants only', () => {
   const room = roomWithPlayers();
   Engine.startMatch(room, questions, () => 0);
   Engine.openAnswering(room);
-  ['Apple', 'appple', 'Ice cream', 'Snowy winter'].forEach((answer, index) => Engine.submitAnswer(room, `p${index + 1}`, answer));
-  Engine.beginReview(room, isKnownAnswer);
-  assert.equal(Engine.needsHostReview(room), true);
-  assert.deepEqual(room.reviewIssues, [
-    { playerId: 'p2', reason: 'unknown_word' },
-    { playerId: 'p4', reason: 'ambiguous_phrase' },
-  ]);
+  ['Apple', 'apples', 'The apple', 'appple'].forEach((answer, index) => Engine.submitAnswer(room, `p${index + 1}`, answer));
+  Engine.beginReview(room);
+  assert.equal(room.groups.length, 2);
+  assert.equal(room.groups.find((group) => group.canonical === 'apple').answers.length, 3);
 });
 
 test('match requires 4 players and supports a full 12-player room', () => {
@@ -119,7 +116,7 @@ test('when everyone agrees, everyone earns a cow and nobody takes the Pink Cow',
   assert.equal(room.pinkCowHolderId, null);
 });
 
-test('host review can merge synonyms and split an over-grouped answer', () => {
+test('revealed groups can be merged and split after automatic scoring', () => {
   const room = roomWithPlayers();
   Engine.startMatch(room, questions, () => 0);
   Engine.openAnswering(room);
@@ -131,6 +128,7 @@ test('host review can merge synonyms and split an over-grouped answer', () => {
   Engine.mergeGroups(room, [couch.id, sofa.id]);
   assert.equal(room.groups.length, 2);
   assert.equal(room.groups.find((group) => group.id === couch.id).answers.length, 3);
+  Engine.scoreRound(room);
   Engine.splitAnswer(room, 'p3');
   assert.equal(room.groups.length, 3);
   assert.equal(room.groups.find((group) => group.answers[0].playerId === 'p3').answers.length, 1);
@@ -164,7 +162,7 @@ test('a Pink Cow holder can earn cows but cannot win', () => {
   answerRound(room, ['Apple', 'Apple', 'Apple', 'Pear']);
   assert.equal(room.pinkCowHolderId, 'p4');
   assert.deepEqual(room.winnerIds, ['p1']);
-  assert.equal(room.phase, Engine.PHASES.GAME_OVER);
+  assert.equal(room.phase, Engine.PHASES.REVEAL);
 });
 
 test('players tied at the winning score push the target up until one leads', () => {
@@ -180,7 +178,7 @@ test('players tied at the winning score push the target up until one leads', () 
   answerRound(room, ['Apple', 'Pear', 'Apple', 'Orange']);
   assert.deepEqual(room.winnerIds, ['p1']);
   assert.equal(room.scores.p1, 9);
-  assert.equal(room.phase, Engine.PHASES.GAME_OVER);
+  assert.equal(room.phase, Engine.PHASES.REVEAL);
 });
 
 test('high-player-count scoring handles 12 answers and a single odd player', () => {

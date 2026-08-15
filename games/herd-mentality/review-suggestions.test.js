@@ -2,7 +2,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { getSuggestions, validateSuggestions } = require('./review-suggestions');
+const { MODEL, getMergeSets, groupingPrompt, validateMergeSets } = require('./review-suggestions');
+const evalCases = require('./answer-grouping-evals.json');
 
 const groups = [
   { id: 'herd-1', answers: [{ playerId: 'p1' }, { playerId: 'p3' }] },
@@ -10,81 +11,80 @@ const groups = [
   { id: 'herd-3', answers: [{ playerId: 'p4' }] },
 ];
 
-test('accepts only disjoint suggestions that merge distinct existing groups', () => {
-  const suggestions = validateSuggestions([
-    { answerIds: ['p1', 'p2'], reason: 'Both refer to driving.', confidence: 'high' },
-    { answerIds: ['p2', 'p4'], reason: 'Overlaps the first suggestion.', confidence: 'medium' },
-    { answerIds: ['p3', 'p4'], reason: 'Shares a local group with the first suggestion.', confidence: 'medium' },
-    { answerIds: ['p1', 'p3'], reason: 'Already one local group.', confidence: 'high' },
-    { answerIds: ['p4', 'missing'], reason: 'Unknown answer.', confidence: 'high' },
+test('accepts only disjoint merge sets that join distinct existing groups', () => {
+  const mergeSets = validateMergeSets([
+    { answerIds: ['p1', 'p2'], reason: 'Exact synonym.' },
+    { answerIds: ['p2', 'p4'], reason: 'Overlaps the first set.' },
+    { answerIds: ['p3', 'p4'], reason: 'Uses an already merged local group.' },
+    { answerIds: ['p1', 'p3'], reason: 'Already one local group.' },
+    { answerIds: ['p4', 'missing'], reason: 'Unknown answer.' },
   ], groups);
-  assert.deepEqual(suggestions, [{
-    id: 'ai-1', groupIds: ['herd-1', 'herd-2'], reason: 'Both refer to driving.', confidence: 'high',
+  assert.deepEqual(mergeSets, [{
+    id: 'ai-1', answerIds: ['p1', 'p2'], groupIds: ['herd-1', 'herd-2'], reason: 'Exact synonym.',
   }]);
 });
 
-test('returns no suggestions for missing keys, failures, or malformed model output', async () => {
+test('reports missing keys, API failures, malformed output, and timeout without blocking', async () => {
   const input = { question: 'Name a fruit.', answers: [{ id: 'p1', text: 'Apple' }, { id: 'p2', text: 'appple' }] };
-  assert.deepEqual(await getSuggestions(input, { apiKey: '' }), []);
-  assert.deepEqual(await getSuggestions(input, {
+  assert.deepEqual(await getMergeSets(input, { apiKey: '' }), { status: 'unavailable', mergeSets: [] });
+  assert.deepEqual(await getMergeSets(input, {
     apiKey: 'test', fetchImpl: async () => ({ ok: false }),
-  }), []);
-  assert.deepEqual(await getSuggestions(input, {
+  }), { status: 'api_error', mergeSets: [] });
+  assert.deepEqual(await getMergeSets(input, {
     apiKey: 'test', fetchImpl: async () => ({ ok: true, json: async () => ({ output_text: '{bad json' }) }),
-  }), []);
-  assert.deepEqual(await getSuggestions(input, {
+  }), { status: 'invalid_response', mergeSets: [] });
+  assert.deepEqual(await getMergeSets(input, {
     apiKey: 'test', timeoutMs: 1,
-    fetchImpl: (_url, { signal }) => new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new Error('aborted')))),
-  }), []);
+    fetchImpl: (_url, { signal }) => new Promise((_resolve, reject) => signal.addEventListener('abort', () => {
+      const error = new Error('aborted');
+      error.name = 'AbortError';
+      reject(error);
+    })),
+  }), { status: 'timeout', mergeSets: [] });
 });
 
-test('sends anonymous answer IDs and parses a structured GPT suggestion', async () => {
+test('sends anonymous answers and parses a structured grouping response', async () => {
   let request;
-  const suggestions = await getSuggestions({
+  const result = await getMergeSets({
     question: 'Name something you learn to do.',
     answers: [{ id: 'p1', text: 'Driving' }, { id: 'p2', text: 'Learning to drive' }],
   }, {
     apiKey: 'test',
     fetchImpl: async (_url, options) => {
       request = JSON.parse(options.body);
-      return { ok: true, json: async () => ({ output_text: JSON.stringify({ suggestions: [
-        { answerIds: ['p1', 'p2'], reason: 'Same activity at different stages.', confidence: 'high' },
+      return { ok: true, json: async () => ({ output_text: JSON.stringify({ mergeSets: [
+        { answerIds: ['p1', 'p2'], reason: 'Question supplies the grammar.' },
       ] }) }) };
     },
   });
-  assert.equal(request.model, 'gpt-5-nano');
+  assert.equal(request.model, MODEL);
+  assert.equal(request.reasoning.effort, 'low');
   assert.match(request.input, /p1: Driving/);
-  assert.match(request.input, /The question supplies context.*never evidence/);
-  assert.match(request.input, /"listen to music".*"talk".*MUST NOT be merged/);
-  assert.match(request.input, /"death" and "heights".*MUST NOT be merged/);
+  assert.match(request.input, /both answer the question is NEVER evidence/);
   assert.doesNotMatch(request.input, /Maya|Leo/);
-  assert.deepEqual(suggestions, [{ answerIds: ['p1', 'p2'], reason: 'Same activity at different stages.', confidence: 'high' }]);
+  assert.deepEqual(result, { status: 'ok', mergeSets: [
+    { answerIds: ['p1', 'p2'], reason: 'Question supplies the grammar.' },
+  ] });
 });
 
-test('treats answers that merely fit the same question as separate responses', async () => {
-  let request;
-  const suggestions = await getSuggestions({
-    question: 'What is something you do in line?',
-    answers: [
-      { id: 'p1', text: 'Listen to music' },
-      { id: 'p2', text: 'Play music on their headphones' },
-      { id: 'p3', text: 'Think' },
-      { id: 'p4', text: 'Talk' },
-    ],
-  }, {
-    apiKey: 'test',
-    fetchImpl: async (_url, options) => {
-      request = JSON.parse(options.body);
-      return { ok: true, json: async () => ({ output_text: '{"suggestions":[]}' }) };
-    },
-  });
-  assert.match(request.input, /Suggest ONLY duplicate answers, never answers that merely fit the same question/);
-  assert.deepEqual(suggestions, []);
+test('prompt encodes measured broad-merge regressions', () => {
+  const prompt = groupingPrompt('Name something people do while waiting in line.', [
+    { id: 'p1', text: 'Listen to music' },
+    { id: 'p2', text: 'Play music on headphones' },
+    { id: 'p3', text: 'Think' },
+    { id: 'p4', text: 'Talk' },
+  ]);
+  assert.match(prompt, /"listen to music" \+ "play music on headphones" may merge/);
+  assert.match(prompt, /"think" and "talk" stay separate/);
+  assert.match(prompt, /"death" \+ "heights" => separate/);
+  assert.match(prompt, /"dog" \+ "golden retriever" => separate/);
 });
 
-test('drops anything below high confidence so broad associations never become suggestions', () => {
-  const suggestions = validateSuggestions([
-    { answerIds: ['p1', 'p2'], reason: 'Both describe fear of mortality.', confidence: 'medium' },
-  ], groups);
-  assert.deepEqual(suggestions, []);
+test('evaluation corpus covers representative positive and negative grouping cases', () => {
+  assert.equal(evalCases.length >= 12, true);
+  assert.equal(new Set(evalCases.map((entry) => entry.id)).size, evalCases.length);
+  for (const entry of evalCases) {
+    assert.equal(entry.answers.length, 4);
+    assert.deepEqual(entry.expectedGroups.flat().sort((a, b) => a - b), [0, 1, 2, 3]);
+  }
 });

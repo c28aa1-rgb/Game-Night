@@ -153,12 +153,12 @@ function Answering({ state }) {
 
 function Review({ state }) {
   return <Phase phaseKey={`tv-review-${state.roundNo}`} className="tvreview">
-    <div className="reviewseal"><CowToken pulse /><span>Wrangler at work</span></div>
-    <span className="kicker">One quick confidence check</span>
-    <h1>Checking a phrase or spelling.</h1>
-    <p>{state.hostName} only steps in when automatic grouping is unsure.</p>
+    <div className="reviewseal"><CowToken pulse /><span>Herd helper at work</span></div>
+    <span className="kicker">Automatic answer check</span>
+    <h1>Matching the herd.</h1>
+    <p>Spelling, synonyms, and phrasing are being sorted before the reveal.</p>
     <div className="closedgates" aria-hidden="true"><i /><i /><i /><i /><i /></div>
-    <b>{state.reviewIssueCount} {state.reviewIssueCount === 1 ? 'answer needs' : 'answers need'} a call</b>
+    <b>No Wrangler decision needed</b>
   </Phase>;
 }
 
@@ -169,7 +169,7 @@ function Reveal({ state }) {
   const groups = state.groups.slice().sort((a, b) => b.answers.length - a.answers.length);
   const oddPlayer = playerById(state, state.roundResult?.oddPlayerId);
   return <Phase phaseKey={`tv-reveal-${state.roundNo}`} className="tvreveal">
-    <div className="tvreveal__headline"><div><span className="kicker">{headline.eyebrow}</span><h1>{headline.title}</h1></div><small>Next round {Math.ceil(clock / 1000)}s</small></div>
+    <div className="tvreveal__headline"><div><span className="kicker">{headline.eyebrow}</span><h1>{headline.title}</h1></div><small>{state.winnerIds.length ? 'Final result' : 'Next round'} {Math.ceil(clock / 1000)}s</small></div>
     <motion.div className={`revealherds revealherds--${Math.min(groups.length, 6)}`} initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: reduceMotion ? 0 : .09, delayChildren: .12 } } }}>
       {groups.map((group) => {
         const majority = state.roundResult.majorityGroupId === group.id;

@@ -118,6 +118,21 @@ than a bare 404 in somebody's hand.
 Player names are remembered site-wide under the `arcade.name` localStorage key,
 so you type your name once per evening rather than once per game.
 
+## Herd Mentality answer grouping
+
+Herd Mentality groups exact spelling, punctuation, article, and plural variants
+locally. When more than one group remains, the server asks GPT-5 nano for a
+strict list of duplicate-answer merges, validates the returned IDs, applies the
+merges, and reveals automatically. The API key never reaches a browser. If the
+model is unavailable or times out, the conservative local groups reveal instead.
+
+The host can merge or split groups after the reveal; either correction restores
+the pre-round score and recalculates cows, the Pink Cow, and any winner. A
+winning round therefore keeps its reveal window before the final result appears.
+
+Set `OPENAI_API_KEY` in Render. To run the labeled model evaluation corpus on a
+machine that has the key, use `npm run eval:herd-ai`.
+
 ## Chameleon
 
 Social deduction for 4-12 players. The TV shows a 5x5 word grid while every

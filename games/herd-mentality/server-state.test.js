@@ -32,8 +32,7 @@ test('public state never exposes answer text before reveal', () => {
 
   const hostPrivate = Server.privateState(room, room.players[0]);
   const guestPrivate = Server.privateState(room, room.players[1]);
-  assert.equal(hostPrivate.reviewGroups.length, 2);
-  assert.equal(hostPrivate.reviewGroups[0].answers[0].rawAnswer, 'Apple');
+  assert.deepEqual(hostPrivate.reviewGroups, []);
   assert.deepEqual(guestPrivate.reviewGroups, []);
   assert.equal(guestPrivate.myAnswer, 'Pear');
   Server.dropRoom(room.code);
@@ -65,21 +64,66 @@ test('answers stay open for sixty seconds before the server skips to review', ()
   assert.equal(Server.ANSWER_MS, 60000);
 });
 
-test('AI suggestions stay private to the host and do not change groups automatically', () => {
+test('validated AI grouping is applied automatically before reveal and scoring', async () => {
   const room = Server.createRoom();
-  room.players = [player('p1', 'Host'), player('p2', 'Maya')];
+  room.players = [player('p1', 'Host'), player('p2', 'Maya'), player('p3', 'Leo'), player('p4', 'Nora')];
   room.hostId = 'p1';
-  room.phase = Engine.PHASES.REVIEW;
-  room.groups = [
-    { id: 'herd-1', answers: [{ playerId: 'p1', rawAnswer: 'Apple' }] },
-    { id: 'herd-2', answers: [{ playerId: 'p2', rawAnswer: 'appple' }] },
-  ];
-  room.reviewSuggestions = [{ id: 'ai-1', groupIds: ['herd-1', 'herd-2'], reason: 'Likely spelling variant.', confidence: 'high' }];
+  room.scores = { p1: 0, p2: 0, p3: 0, p4: 0 };
+  room.phase = Engine.PHASES.ANSWERING;
+  room.roundNo = 1;
+  room.currentQuestion = { id: 'q-test', text: 'Name a fruit.' };
+  ['Apple', 'appple', 'Pear', 'Orange'].forEach((answer, index) => Engine.submitAnswer(room, `p${index + 1}`, answer));
+  Engine.beginReview(room);
+  room.reviewPending = true;
 
-  const host = Server.privateState(room, room.players[0]);
-  const guest = Server.privateState(room, room.players[1]);
-  assert.equal(host.reviewSuggestions.length, 1);
-  assert.deepEqual(guest.reviewSuggestions, []);
-  assert.equal(room.groups.length, 2);
+  await Server.requestAutomaticGrouping(room, {
+    getMergeSetsImpl: async () => ({ status: 'ok', mergeSets: [
+      { answerIds: ['p1', 'p2'], reason: 'Spelling variant.' },
+    ] }),
+  });
+
+  assert.equal(room.phase, Engine.PHASES.REVEAL);
+  assert.equal(room.groups.length, 3);
+  assert.deepEqual(room.roundResult.awardedPlayerIds, ['p1', 'p2']);
+  assert.equal(room.reviewPending, false);
+  Server.dropRoom(room.code);
+});
+
+test('AI failure falls back to conservative local groups and still reveals', async () => {
+  const room = Server.createRoom();
+  room.players = [player('p1', 'Host'), player('p2', 'Maya'), player('p3', 'Leo'), player('p4', 'Nora')];
+  room.hostId = 'p1';
+  room.scores = { p1: 0, p2: 0, p3: 0, p4: 0 };
+  room.phase = Engine.PHASES.ANSWERING;
+  room.roundNo = 1;
+  room.currentQuestion = { id: 'q-test', text: 'Name a fruit.' };
+  ['Apple', 'appple', 'Pear', 'Orange'].forEach((answer, index) => Engine.submitAnswer(room, `p${index + 1}`, answer));
+  Engine.beginReview(room);
+
+  await Server.requestAutomaticGrouping(room, {
+    getMergeSetsImpl: async () => ({ status: 'timeout', mergeSets: [] }),
+  });
+
+  assert.equal(room.phase, Engine.PHASES.REVEAL);
+  assert.equal(room.groups.length, 4);
+  assert.equal(room.roundResult.tied, true);
+  Server.dropRoom(room.code);
+});
+
+test('winning rounds remain revealed until the correction window closes', () => {
+  const room = Server.createRoom();
+  room.players = [player('p1', 'Host'), player('p2', 'Maya'), player('p3', 'Leo'), player('p4', 'Nora')];
+  room.hostId = 'p1';
+  room.scores = { p1: 7, p2: 0, p3: 0, p4: 0 };
+  room.phase = Engine.PHASES.ANSWERING;
+  room.roundNo = 1;
+  room.currentQuestion = { id: 'q-test', text: 'Name a fruit.' };
+  ['Apple', 'Apple', 'Pear', 'Orange'].forEach((answer, index) => Engine.submitAnswer(room, `p${index + 1}`, answer));
+  Engine.beginReview(room);
+  Engine.scoreRound(room);
+  assert.equal(room.phase, Engine.PHASES.REVEAL);
+  assert.deepEqual(room.winnerIds, ['p1']);
+  Server.advanceAfterReveal(room);
+  assert.equal(room.phase, Engine.PHASES.GAME_OVER);
   Server.dropRoom(room.code);
 });

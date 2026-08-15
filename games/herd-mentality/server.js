@@ -9,8 +9,7 @@ const { app, io } = require('../../lib/host');
 const joinCodes = require('../../lib/join');
 const questions = require('./questions.json');
 const Engine = require('./engine');
-const { isKnownAnswer } = require('./word-confidence');
-const { getSuggestions, validateSuggestions } = require('./review-suggestions');
+const { getMergeSets, validateMergeSets } = require('./review-suggestions');
 
 Engine.validateQuestions(questions);
 
@@ -144,7 +143,7 @@ function publicState(room) {
     submissionsIn: room.submissions.size,
     answeredPlayerIds: Array.from(room.submissions.keys()),
     answerGroupCount: room.groups.length,
-    reviewIssueCount: room.reviewIssues.length,
+    reviewPending: room.phase === Engine.PHASES.REVIEW && room.reviewPending,
     groups: visibleGroups(room),
     roundResult: [Engine.PHASES.REVEAL, Engine.PHASES.GAME_OVER].includes(room.phase)
       ? room.roundResult : null,
@@ -174,22 +173,24 @@ function reviewGroups(room) {
   }));
 }
 
-function clearReviewSuggestions(room) {
+function clearAutomaticReview(room) {
   room.reviewPending = false;
   room.reviewSuggestions = [];
 }
 
-async function requestReviewSuggestions(room) {
+async function requestAutomaticGrouping(room, { getMergeSetsImpl = getMergeSets } = {}) {
   const roundNo = room.roundNo;
-  const suggestions = await getSuggestions({
+  const result = await getMergeSetsImpl({
     question: room.currentQuestion?.text || '',
     answers: Array.from(room.submissions, ([id, text]) => ({ id, text })),
   });
   if (rooms.get(room.code) !== room || room.phase !== Engine.PHASES.REVIEW || room.roundNo !== roundNo) return;
-  room.reviewSuggestions = validateSuggestions(suggestions, room.groups);
+  const mergeSets = validateMergeSets(result.mergeSets, room.groups);
+  for (const mergeSet of mergeSets) Engine.mergeGroups(room, mergeSet.groupIds);
   room.reviewPending = false;
-  setMoment(room, 'review_suggestions_ready');
-  broadcast(room);
+  room.reviewSuggestions = [];
+  setMoment(room, 'automatic_grouping_complete', { mergeCount: mergeSets.length, aiStatus: result.status });
+  revealRound(room);
 }
 
 function privateState(room, player) {
@@ -198,11 +199,10 @@ function privateState(room, player) {
     isHost: player.id === room.hostId,
     myAnswer: room.submissions.get(player.id) || null,
     canAnswer: room.phase === Engine.PHASES.ANSWERING,
-    reviewGroups: player.id === room.hostId && [Engine.PHASES.REVIEW, Engine.PHASES.REVEAL].includes(room.phase)
+    reviewGroups: player.id === room.hostId && room.phase === Engine.PHASES.REVEAL
       ? reviewGroups(room) : [],
-    reviewPending: player.id === room.hostId && room.phase === Engine.PHASES.REVIEW && room.reviewPending,
-    reviewSuggestions: player.id === room.hostId && room.phase === Engine.PHASES.REVIEW
-      ? room.reviewSuggestions.map((suggestion) => ({ ...suggestion, groupIds: suggestion.groupIds.slice() })) : [],
+    reviewPending: room.phase === Engine.PHASES.REVIEW && room.reviewPending,
+    reviewSuggestions: [],
   };
 }
 
@@ -245,26 +245,36 @@ function beginRound(room) {
 
 function beginReview(room) {
   clearClock(room);
-  Engine.beginReview(room, isKnownAnswer);
-  if (!Engine.needsHostReview(room)) {
+  Engine.beginReview(room);
+  if (room.groups.length <= 1) {
     revealRound(room);
     return false;
   }
   room.reviewPending = true;
   room.reviewSuggestions = [];
-  setMoment(room, 'review_open');
+  setMoment(room, 'automatic_grouping_started');
   broadcast(room);
-  void requestReviewSuggestions(room);
+  void requestAutomaticGrouping(room);
   return true;
+}
+
+function advanceAfterReveal(room) {
+  clearClock(room);
+  if (room.phase !== Engine.PHASES.REVEAL) return;
+  if (room.winnerIds.length) {
+    room.phase = Engine.PHASES.GAME_OVER;
+    setMoment(room, 'game_over');
+    broadcast(room);
+    return;
+  }
+  beginRound(room);
 }
 
 function revealRound(room) {
   clearClock(room);
   Engine.scoreRound(room);
-  setMoment(room, room.phase === Engine.PHASES.GAME_OVER ? 'game_over' : 'round_reveal');
-  if (room.phase === Engine.PHASES.REVEAL) {
-    startClock(room, REVEAL_MS, () => beginRound(room));
-  }
+  setMoment(room, 'round_reveal');
+  startClock(room, REVEAL_MS, () => advanceAfterReveal(room));
   broadcast(room);
 }
 
@@ -470,16 +480,14 @@ nsp.on('connection', (socket) => {
     const room = currentRoom();
     if (!room) return ack?.({ error: 'That room is gone.' });
     if (!canControl(room, ack)) return;
-    if (room.phase === Engine.PHASES.REVIEW && room.reviewPending) return ack?.({ error: 'Smart suggestions are still checking the answers.' });
+    if (room.phase !== Engine.PHASES.REVEAL) return ack?.({ error: 'Answers can be corrected after they are revealed.' });
     try {
-      clearReviewSuggestions(room);
+      clearAutomaticReview(room);
       Engine.mergeGroups(room, payload.groupIds);
-      if (room.phase === Engine.PHASES.REVEAL) {
-        clearClock(room);
-        Engine.rescoreRevealedRound(room);
-        if (room.phase === Engine.PHASES.REVEAL) startClock(room, REVEAL_MS, () => beginRound(room));
-      }
-      setMoment(room, room.phase === Engine.PHASES.GAME_OVER ? 'game_over' : 'groups_changed');
+      clearClock(room);
+      Engine.rescoreRevealedRound(room);
+      startClock(room, REVEAL_MS, () => advanceAfterReveal(room));
+      setMoment(room, 'groups_changed');
       ack?.({ ok: true });
       broadcast(room);
     } catch (error) {
@@ -491,44 +499,16 @@ nsp.on('connection', (socket) => {
     const room = currentRoom();
     if (!room) return ack?.({ error: 'That room is gone.' });
     if (!canControl(room, ack)) return;
-    if (room.reviewPending) return ack?.({ error: 'Smart suggestions are still checking the answers.' });
+    if (room.phase !== Engine.PHASES.REVEAL) return ack?.({ error: 'Answers can be corrected after they are revealed.' });
     try {
-      clearReviewSuggestions(room);
+      clearAutomaticReview(room);
       Engine.splitAnswer(room, payload.playerId);
+      clearClock(room);
+      Engine.rescoreRevealedRound(room);
+      startClock(room, REVEAL_MS, () => advanceAfterReveal(room));
       setMoment(room, 'groups_changed');
       ack?.({ ok: true });
       broadcast(room);
-    } catch (error) {
-      ack?.({ error: error.message });
-    }
-  });
-
-  socket.on('review_apply_suggestion', (payload = {}, ack) => {
-    const room = currentRoom();
-    if (!room) return ack?.({ error: 'That room is gone.' });
-    if (!canControl(room, ack)) return;
-    if (room.phase !== Engine.PHASES.REVIEW || room.reviewPending) return ack?.({ error: 'Suggestions are not ready.' });
-    const suggestion = room.reviewSuggestions.find((entry) => entry.id === payload.suggestionId);
-    if (!suggestion) return ack?.({ error: 'That suggestion is no longer available.' });
-    try {
-      Engine.mergeGroups(room, suggestion.groupIds);
-      clearReviewSuggestions(room);
-      setMoment(room, 'groups_changed');
-      ack?.({ ok: true });
-      broadcast(room);
-    } catch (error) {
-      ack?.({ error: error.message });
-    }
-  });
-
-  socket.on('review_confirm_groups', (payload, ack) => {
-    const room = currentRoom();
-    if (!room) return ack?.({ error: 'That room is gone.' });
-    if (!canControl(room, ack)) return;
-    if (room.reviewPending) return ack?.({ error: 'Smart suggestions are still checking the answers.' });
-    try {
-      revealRound(room);
-      ack?.({ ok: true });
     } catch (error) {
       ack?.({ error: error.message });
     }
@@ -540,7 +520,7 @@ nsp.on('connection', (socket) => {
     if (!canControl(room, ack)) return;
     if (room.phase !== Engine.PHASES.REVEAL) return ack?.({ error: 'The reveal is not running.' });
     try {
-      beginRound(room);
+      advanceAfterReveal(room);
       ack?.({ ok: true });
     } catch (error) {
       ack?.({ error: error.message });
@@ -595,5 +575,6 @@ module.exports = {
   privateState,
   resetToLobby,
   ANSWER_MS,
-  requestReviewSuggestions,
+  requestAutomaticGrouping,
+  advanceAfterReveal,
 };

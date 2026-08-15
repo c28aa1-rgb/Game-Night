@@ -103,6 +103,8 @@ function startRound(room, questions, random = Math.random) {
   room.submissions = new Map();
   room.groups = [];
   room.reviewIssues = [];
+  room.reviewPending = false;
+  room.reviewSuggestions = [];
   room.roundResult = null;
   return room;
 }
@@ -171,11 +173,11 @@ function needsHostReview(room) {
   return room.reviewIssues.length > 0;
 }
 
-function beginReview(room, isKnownWord) {
+function beginReview(room) {
   if (room.phase !== PHASES.ANSWERING) throw new Error('Answers are not open.');
   if (room.submissions.size < 2) throw new Error('At least two answers are needed to review the round.');
   room.groups = buildGroups(room);
-  room.reviewIssues = findReviewIssues(room, isKnownWord);
+  room.reviewIssues = [];
   room.phase = PHASES.REVIEW;
   return room.groups;
 }
@@ -199,7 +201,7 @@ function mergeGroups(room, groupIds) {
 }
 
 function splitAnswer(room, playerId) {
-  if (room.phase !== PHASES.REVIEW) throw new Error('The round is not in review.');
+  if (![PHASES.REVIEW, PHASES.REVEAL].includes(room.phase)) throw new Error('Answer groups can only change during review or reveal.');
   const groupIndex = room.groups.findIndex((group) => group.answers.some((entry) => entry.playerId === playerId));
   if (groupIndex < 0) throw new Error('That answer is gone.');
   const group = room.groups[groupIndex];
@@ -275,7 +277,9 @@ function scoreRound(room) {
     scores: { ...room.scores },
     targetScore: room.targetScore,
   });
-  room.phase = room.winnerIds.length ? PHASES.GAME_OVER : PHASES.REVEAL;
+  // Keep even a winning round visible long enough for the host to correct an
+  // automatic merge or split before the final result becomes permanent.
+  room.phase = PHASES.REVEAL;
   return room.roundResult;
 }
 

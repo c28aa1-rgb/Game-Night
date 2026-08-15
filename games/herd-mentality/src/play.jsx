@@ -212,68 +212,17 @@ function Answering({ state, priv, act }) {
       <button className="primary" disabled={!answer.trim() || busy}>{busy ? 'Locking...' : priv.myAnswer ? 'Update answer' : 'Lock answer'}</button>
       {priv.myAnswer && <button className="textbutton" type="button" onClick={() => setEditing(false)}>Keep previous answer</button>}
     </form>
-    <p className="privacy"><i />Only the Question Wrangler can see answers before reveal.</p>
+    <p className="privacy"><i />Answers stay sealed until the computer reveals the herd.</p>
   </Phase>;
 }
 
-function Review({ state, priv, act }) {
-  if (!priv.isHost) return <Phase phaseKey={`wait-review-${state.roundNo}`} className="phonephase reviewwait">
+function Review({ state }) {
+  return <Phase phaseKey={`wait-review-${state.roundNo}`} className="phonephase reviewwait">
     <CowToken pulse />
-    <span className="kicker">Answers are with the Wrangler</span>
-    <h1>Hold your horses. Or cows.</h1>
-    <p>{state.reviewIssueCount} {state.reviewIssueCount === 1 ? 'answer needs' : 'answers need'} a quick phrase or spelling check before the reveal.</p>
-  </Phase>;
-  return <HostReview groups={priv.reviewGroups} state={state} act={act} pending={priv.reviewPending} suggestions={priv.reviewSuggestions} />;
-}
-
-function HostReview({ groups, state, act, pending, suggestions }) {
-  const [selected, setSelected] = useState([]);
-  const [busy, setBusy] = useState(false);
-  const groupSignature = groups.map((group) => group.id).join('|');
-  useEffect(() => setSelected([]), [groupSignature]);
-
-  function toggle(id) {
-    setSelected((current) => current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id]);
-  }
-
-  async function merge() {
-    if (selected.length < 2) return;
-    setBusy(true);
-    await act('review_merge_answers', { groupIds: selected });
-    setBusy(false);
-  }
-
-  async function split(playerId) {
-    setBusy(true);
-    await act('review_split_answer', { playerId });
-    setBusy(false);
-  }
-
-  async function applySuggestion(suggestionId) {
-    setBusy(true);
-    await act('review_apply_suggestion', { suggestionId });
-    setBusy(false);
-  }
-
-  return <Phase phaseKey={`host-review-${state.roundNo}`} className="phonephase hostreview">
-    <span className="kicker">Question Wrangler review</span>
-    <h1>{pending ? 'Checking the herd...' : 'A few answers need your call.'}</h1>
-    <p>{pending ? 'Finding only the clearest possible matches. You stay in control.' : 'Highlighted answers may be phrases or typos. Merge only when they mean the same thing; everything else is already grouped.'}</p>
-    {pending && <div className="reviewthinking"><i /><i /><i />Smart suggestions are on the way.</div>}
-    {!pending && suggestions.length > 0 && <section className="reviewsuggestions"><span className="kicker">Suggested by the herd helper</span>{suggestions.map((suggestion) => {
-      const labels = suggestion.groupIds.map((id) => groups.find((group) => group.id === id)?.answers.map((answer) => answer.rawAnswer).join(' / ')).filter(Boolean);
-      return <article key={suggestion.id}><div><b>{labels.join(' + ')}</b><p>{suggestion.reason}</p><small>{suggestion.confidence} confidence</small></div><button className="secondary" type="button" disabled={busy} onClick={() => applySuggestion(suggestion.id)}>Merge</button></article>;
-    })}</section>}
-    <div className="reviewgroups">
-      {groups.map((group) => <motion.article layout key={group.id} className={`reviewgroup ${group.answers.some((answer) => answer.reviewIssue) ? 'needs-review' : ''} ${selected.includes(group.id) ? 'is-selected' : ''}`}>
-        <button className="reviewgroup__select" type="button" disabled={pending || busy} onClick={() => toggle(group.id)} aria-pressed={selected.includes(group.id)}><span>{selected.includes(group.id) ? 'Selected' : 'Select group'}</span><b>{group.answers.length}</b></button>
-        {group.answers.map((answer) => <PlayerAnswer key={answer.playerId} answer={answer} player={playerById(state, answer.playerId)} canSplit={group.answers.length > 1} onSplit={split} />)}
-      </motion.article>)}
-    </div>
-    <div className="reviewactions">
-      <button className="secondary" disabled={pending || selected.length < 2 || busy} onClick={merge}>Merge selected ({selected.length})</button>
-      <button className="primary" disabled={pending || busy} onClick={() => act('review_confirm_groups')}>Confirm and reveal</button>
-    </div>
+    <span className="kicker">The herd helper is sorting</span>
+    <h1>Matching the answers.</h1>
+    <p>Spelling, synonyms, and phrasing are being checked before everyone sees the result.</p>
+    <div className="reviewthinking"><i /><i /><i />No Wrangler decision needed.</div>
   </Phase>;
 }
 
@@ -294,12 +243,12 @@ function Reveal({ state, priv, act }) {
     {state.roundResult.tied && <p className="verdict">The top answers tied. Nobody scores and the Pink Cow stays put.</p>}
     {!state.roundResult.tied && oddPlayer && <div className="pinkverdict"><CowToken /><p><b>{oddPlayer.name}</b> was the sole odd one out and takes the Pink Cow.</p></div>}
     {!state.roundResult.tied && !oddPlayer && <p className="verdict">{state.roundResult.awardedPlayerIds.length} players add one cow. The Pink Cow does not move.</p>}
-    {priv.isHost && <RevealMerge groups={groups} act={act} />}
-    {priv.isHost ? <button className="secondary" onClick={() => act('next_round')}>Next question now <small>{Math.ceil(clock / 1000)}s</small></button> : <p className="waitnote">Next question in {Math.ceil(clock / 1000)} seconds.</p>}
+    {priv.isHost && <RevealCorrections groups={groups} act={act} />}
+    {priv.isHost ? <button className="secondary" onClick={() => act('next_round')}>{state.winnerIds.length ? 'Show winner now' : 'Next question now'} <small>{Math.ceil(clock / 1000)}s</small></button> : <p className="waitnote">{state.winnerIds.length ? 'Final result' : 'Next question'} in {Math.ceil(clock / 1000)} seconds.</p>}
   </Phase>;
 }
 
-function RevealMerge({ groups, act }) {
+function RevealCorrections({ groups, act }) {
   const [selected, setSelected] = useState([]);
   const [busy, setBusy] = useState(false);
 
@@ -313,10 +262,20 @@ function RevealMerge({ groups, act }) {
     setBusy(false);
   }
 
+  async function split(playerId) {
+    if (busy) return;
+    setBusy(true);
+    await act('review_split_answer', { playerId });
+    setBusy(false);
+  }
+
   return <section className="revealmerge">
-    <span className="kicker">Room sees it differently?</span>
-    <p>Merge answer groups to recalculate this round's cows and Pink Cow.</p>
-    <div>{groups.map((group) => <button key={group.id} type="button" className={selected.includes(group.id) ? 'is-selected' : ''} onClick={() => setSelected((current) => current.includes(group.id) ? current.filter((id) => id !== group.id) : [...current, group.id])}>{Array.from(new Set(group.answers.map((answer) => answer.rawAnswer))).join(' / ')} <b>{group.answers.length}</b></button>)}</div>
+    <span className="kicker">Computer got one wrong?</span>
+    <p>Select groups to merge, or tap an individual answer to split it out. Scores recalculate immediately.</p>
+    <div className="revealmerge__groups">{groups.map((group) => <article key={group.id}>
+      <button type="button" className={selected.includes(group.id) ? 'is-selected' : ''} onClick={() => setSelected((current) => current.includes(group.id) ? current.filter((id) => id !== group.id) : [...current, group.id])}><span>{Array.from(new Set(group.answers.map((answer) => answer.rawAnswer))).join(' / ')}</span><b>{group.answers.length}</b></button>
+      {group.answers.length > 1 && <div className="revealmerge__splits"><small>Split one:</small>{group.answers.map((answer) => <button key={answer.playerId} type="button" disabled={busy} onClick={() => split(answer.playerId)}>{answer.rawAnswer}</button>)}</div>}
+    </article>)}</div>
     <button className="secondary" type="button" disabled={selected.length < 2 || busy} onClick={merge}>{busy ? 'Recounting...' : `Merge selected (${selected.length})`}</button>
   </section>;
 }

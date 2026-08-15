@@ -16,7 +16,9 @@
     "build:herd-mentality": "node scripts/build-herd-mentality.js",
     "test:wavelength": "node --test games/wavelength/*.test.js",
     "test:chameleon": "node --test --test-concurrency=1 games/chameleon/*.test.js",
-    "test:herd-mentality": "node --test games/herd-mentality/*.test.js"
+    "test:herd-mentality": "node --test games/herd-mentality/*.test.js",
+    "eval:herd-ai": "node scripts/eval-herd-ai.js",
+    "smoke:herd": "node scripts/smoke-herd-game.js"
   },
   "dependencies": {
     "dotenv": "^16.4.7",

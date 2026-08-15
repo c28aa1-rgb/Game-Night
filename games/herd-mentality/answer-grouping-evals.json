@@ -1,0 +1,74 @@
+[
+  {
+    "id": "fruit-typo",
+    "question": "Name a fruit that belongs in a lunchbox.",
+    "answers": ["apple", "appple", "pear", "orange"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "phone-synonym",
+    "question": "Name something people check twice before leaving home.",
+    "answers": ["phone", "cell phone", "keys", "wallet"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "line-actions",
+    "question": "Name something people do while waiting in line.",
+    "answers": ["listen to music", "play music on headphones", "think", "talk"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "fear-category-trap",
+    "question": "Name something people pretend not to be afraid of.",
+    "answers": ["death", "heights", "spiders", "dying"],
+    "expectedGroups": [[0, 3], [1], [2]]
+  },
+  {
+    "id": "subtype-trap",
+    "question": "Name an animal you would trust with a secret.",
+    "answers": ["dog", "golden retriever", "cat", "dogs"],
+    "expectedGroups": [[0, 3], [1], [2]]
+  },
+  {
+    "id": "question-grammar",
+    "question": "Name something people should learn before turning eighteen.",
+    "answers": ["driving", "learning to drive", "cooking", "saving money"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "food-compound",
+    "question": "Name the best flavor of ice cream.",
+    "answers": ["cookies and cream", "cookie dough", "cookies & cream", "vanilla"],
+    "expectedGroups": [[0, 2], [1], [3]]
+  },
+  {
+    "id": "related-places",
+    "question": "Name the best place to watch a sunset.",
+    "answers": ["beach", "ocean", "mountain", "the beach"],
+    "expectedGroups": [[0, 3], [1], [2]]
+  },
+  {
+    "id": "chore-grammar",
+    "question": "Name the worst household chore.",
+    "answers": ["dishes", "washing dishes", "laundry", "cleaning"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "weather-specificity",
+    "question": "Name the best weather for a day off.",
+    "answers": ["sunny", "warm and sunny", "snow", "sunshine"],
+    "expectedGroups": [[0, 3], [1], [2]]
+  },
+  {
+    "id": "activity-grammar",
+    "question": "Name a normal activity that should be an Olympic sport.",
+    "answers": ["napping", "taking a nap", "sleeping", "shopping"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "friend-qualities",
+    "question": "Name a quality that makes someone a good friend.",
+    "answers": ["honesty", "being honest", "kindness", "loyalty"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  }
+]
