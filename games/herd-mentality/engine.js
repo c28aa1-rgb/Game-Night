@@ -55,6 +55,8 @@ function createGameState(code) {
     submissions: new Map(),
     groups: [],
     reviewIssues: [],
+    reviewPending: false,
+    reviewSuggestions: [],
     roundResult: null,
     winnerIds: [],
     history: [],
@@ -179,7 +181,7 @@ function beginReview(room, isKnownWord) {
 }
 
 function mergeGroups(room, groupIds) {
-  if (room.phase !== PHASES.REVIEW) throw new Error('The round is not in review.');
+  if (![PHASES.REVIEW, PHASES.REVEAL].includes(room.phase)) throw new Error('Answer groups can only change during review or reveal.');
   const ids = Array.from(new Set(groupIds || []));
   if (ids.length < 2) throw new Error('Choose at least two answer groups to merge.');
   const selected = room.groups.filter((group) => ids.includes(group.id));
@@ -216,6 +218,12 @@ function scoreRound(room) {
   if (room.phase !== PHASES.REVIEW) throw new Error('Review the answer groups first.');
   if (!room.groups.length) throw new Error('There are no answers to score.');
 
+  const scoreBefore = {
+    scores: { ...room.scores },
+    pinkCowHolderId: room.pinkCowHolderId,
+    targetScore: room.targetScore,
+    winnerIds: room.winnerIds.slice(),
+  };
   const sizes = room.groups.map((group) => group.answers.length);
   const largest = Math.max(...sizes);
   const leaders = room.groups.filter((group) => group.answers.length === largest);
@@ -253,6 +261,7 @@ function scoreRound(room) {
     pinkCowHolderId: room.pinkCowHolderId,
     tied: !hasMajority,
     answeredPlayerIds: Array.from(room.submissions.keys()),
+    scoreBefore,
   };
   room.history.push({
     round: room.roundNo,
@@ -268,6 +277,20 @@ function scoreRound(room) {
   });
   room.phase = room.winnerIds.length ? PHASES.GAME_OVER : PHASES.REVEAL;
   return room.roundResult;
+}
+
+function rescoreRevealedRound(room) {
+  if (room.phase !== PHASES.REVEAL) throw new Error('Only a revealed round can be recalculated.');
+  const scoreBefore = room.roundResult?.scoreBefore;
+  if (!scoreBefore) throw new Error('This round cannot be recalculated.');
+
+  room.scores = { ...scoreBefore.scores };
+  room.pinkCowHolderId = scoreBefore.pinkCowHolderId;
+  room.targetScore = scoreBefore.targetScore;
+  room.winnerIds = scoreBefore.winnerIds.slice();
+  room.phase = PHASES.REVIEW;
+  if (room.history.at(-1)?.round === room.roundNo) room.history.pop();
+  return scoreRound(room);
 }
 
 module.exports = {
@@ -291,5 +314,6 @@ module.exports = {
   mergeGroups,
   splitAnswer,
   scoreRound,
+  rescoreRevealedRound,
   shuffled,
 };

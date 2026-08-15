@@ -79,12 +79,17 @@ body { overflow: hidden; }
 .revealherd header { display: flex; align-items: center; justify-content: space-between; font: 700 .55rem/1 var(--utility); text-transform: uppercase; }
 .revealherd header b { display: grid; place-items: center; width: 29px; aspect-ratio: 1; background: var(--hay); color: var(--ink); }
 .revealherd h2 { margin: .55rem 0; overflow-wrap: anywhere; font: 400 clamp(1.25rem, 2.2vw, 2.4rem)/1 var(--display); }
+.revealherd h2 span { display: block; }
+.revealherd h2 span + span { margin-top: .22rem; color: color-mix(in srgb, currentColor 72%, var(--red)); font-size: .72em; }
 .revealherd > div { display: flex; flex-wrap: wrap; gap: .3rem; }
 .revealherd > div span { padding: .25rem .4rem; border-left: 3px solid var(--player); background: rgba(16,27,42,.16); font-size: .65rem; font-weight: 900; }
 .revealherd > .cowtoken { position: absolute; right: .8rem; bottom: .6rem; }
 .tvverdict { display: flex; align-items: center; justify-content: center; gap: .8rem; min-height: 52px; padding: .6rem 1rem; border: 1px solid var(--line); background: rgba(9,17,29,.72); text-align: center; }
 .tvverdict b { color: var(--hay); }
 .tvverdict span { color: var(--muted); }
+.questioncard span b { margin-left: .45rem; color: var(--hay); font-size: 1.15em; }
+.questioncard span b.is-urgent { color: var(--pink); animation: answerclock .8s steps(2, end) infinite; }
+@keyframes answerclock { 50% { opacity: .3; } }
 .tvverdict.has-pink { border-color: var(--pink); }
 
 .tvgameover { display: grid; place-content: center; justify-items: center; gap: .8rem; height: 100%; padding: 1.5rem 3rem; text-align: center; }

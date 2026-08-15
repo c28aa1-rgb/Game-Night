@@ -180,6 +180,7 @@ function Answering({ state, priv, act }) {
   const [answer, setAnswer] = useState(priv.myAnswer || '');
   const [editing, setEditing] = useState(!priv.myAnswer);
   const [busy, setBusy] = useState(false);
+  const seconds = Math.ceil(useClock(state) / 1000);
 
   useEffect(() => {
     if (priv.myAnswer && !editing) setAnswer(priv.myAnswer);
@@ -204,7 +205,7 @@ function Answering({ state, priv, act }) {
   </Phase>;
 
   return <Phase phaseKey={`write-${state.roundNo}`} className="phonephase answerphone">
-    <span className="kicker">Round {state.roundNo} - answer secretly</span>
+    <span className="kicker">Round {state.roundNo} - answer secretly <b className={seconds <= 10 ? 'is-urgent' : ''}>{seconds}s</b></span>
     <h1>{state.currentQuestion.text}</h1>
     <form onSubmit={submit}>
       <label className="answerfield"><span>Your answer</span><textarea autoFocus rows="2" maxLength={state.maxAnswerLength} value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="What will everyone else say?" /><small>{answer.length}/{state.maxAnswerLength}</small></label>
@@ -222,10 +223,10 @@ function Review({ state, priv, act }) {
     <h1>Hold your horses. Or cows.</h1>
     <p>{state.reviewIssueCount} {state.reviewIssueCount === 1 ? 'answer needs' : 'answers need'} a quick phrase or spelling check before the reveal.</p>
   </Phase>;
-  return <HostReview groups={priv.reviewGroups} state={state} act={act} />;
+  return <HostReview groups={priv.reviewGroups} state={state} act={act} pending={priv.reviewPending} suggestions={priv.reviewSuggestions} />;
 }
 
-function HostReview({ groups, state, act }) {
+function HostReview({ groups, state, act, pending, suggestions }) {
   const [selected, setSelected] = useState([]);
   const [busy, setBusy] = useState(false);
   const groupSignature = groups.map((group) => group.id).join('|');
@@ -248,19 +249,30 @@ function HostReview({ groups, state, act }) {
     setBusy(false);
   }
 
+  async function applySuggestion(suggestionId) {
+    setBusy(true);
+    await act('review_apply_suggestion', { suggestionId });
+    setBusy(false);
+  }
+
   return <Phase phaseKey={`host-review-${state.roundNo}`} className="phonephase hostreview">
     <span className="kicker">Question Wrangler review</span>
-    <h1>A few answers need your call.</h1>
-    <p>Highlighted answers may be phrases or typos. Merge only when they mean the same thing; everything else is already grouped.</p>
+    <h1>{pending ? 'Checking the herd...' : 'A few answers need your call.'}</h1>
+    <p>{pending ? 'Finding only the clearest possible matches. You stay in control.' : 'Highlighted answers may be phrases or typos. Merge only when they mean the same thing; everything else is already grouped.'}</p>
+    {pending && <div className="reviewthinking"><i /><i /><i />Smart suggestions are on the way.</div>}
+    {!pending && suggestions.length > 0 && <section className="reviewsuggestions"><span className="kicker">Suggested by the herd helper</span>{suggestions.map((suggestion) => {
+      const labels = suggestion.groupIds.map((id) => groups.find((group) => group.id === id)?.answers.map((answer) => answer.rawAnswer).join(' / ')).filter(Boolean);
+      return <article key={suggestion.id}><div><b>{labels.join(' + ')}</b><p>{suggestion.reason}</p><small>{suggestion.confidence} confidence</small></div><button className="secondary" type="button" disabled={busy} onClick={() => applySuggestion(suggestion.id)}>Merge</button></article>;
+    })}</section>}
     <div className="reviewgroups">
       {groups.map((group) => <motion.article layout key={group.id} className={`reviewgroup ${group.answers.some((answer) => answer.reviewIssue) ? 'needs-review' : ''} ${selected.includes(group.id) ? 'is-selected' : ''}`}>
-        <button className="reviewgroup__select" type="button" onClick={() => toggle(group.id)} aria-pressed={selected.includes(group.id)}><span>{selected.includes(group.id) ? 'Selected' : 'Select group'}</span><b>{group.answers.length}</b></button>
+        <button className="reviewgroup__select" type="button" disabled={pending || busy} onClick={() => toggle(group.id)} aria-pressed={selected.includes(group.id)}><span>{selected.includes(group.id) ? 'Selected' : 'Select group'}</span><b>{group.answers.length}</b></button>
         {group.answers.map((answer) => <PlayerAnswer key={answer.playerId} answer={answer} player={playerById(state, answer.playerId)} canSplit={group.answers.length > 1} onSplit={split} />)}
       </motion.article>)}
     </div>
     <div className="reviewactions">
-      <button className="secondary" disabled={selected.length < 2 || busy} onClick={merge}>Merge selected ({selected.length})</button>
-      <button className="primary" disabled={busy} onClick={() => act('review_confirm_groups')}>Confirm and reveal</button>
+      <button className="secondary" disabled={pending || selected.length < 2 || busy} onClick={merge}>Merge selected ({selected.length})</button>
+      <button className="primary" disabled={pending || busy} onClick={() => act('review_confirm_groups')}>Confirm and reveal</button>
     </div>
   </Phase>;
 }
@@ -275,15 +287,38 @@ function Reveal({ state, priv, act }) {
     <h1>{headline.title}</h1>
     <div className="answerherds">
       {groups.map((group) => <article key={group.id} className={`answerherd ${state.roundResult.majorityGroupId === group.id ? 'is-majority' : ''} ${group.answers.some((answer) => answer.playerId === state.roundResult.oddPlayerId) ? 'is-odd' : ''}`}>
-        <header><b>{group.answers[0]?.rawAnswer}</b><span>{group.answers.length}</span></header>
+        <header><b>{Array.from(new Set(group.answers.map((answer) => answer.rawAnswer))).join(' / ')}</b><span>{group.answers.length}</span></header>
         <p>{group.answers.map((answer) => answer.playerName).join(', ')}</p>
       </article>)}
     </div>
     {state.roundResult.tied && <p className="verdict">The top answers tied. Nobody scores and the Pink Cow stays put.</p>}
     {!state.roundResult.tied && oddPlayer && <div className="pinkverdict"><CowToken /><p><b>{oddPlayer.name}</b> was the sole odd one out and takes the Pink Cow.</p></div>}
     {!state.roundResult.tied && !oddPlayer && <p className="verdict">{state.roundResult.awardedPlayerIds.length} players add one cow. The Pink Cow does not move.</p>}
+    {priv.isHost && <RevealMerge groups={groups} act={act} />}
     {priv.isHost ? <button className="secondary" onClick={() => act('next_round')}>Next question now <small>{Math.ceil(clock / 1000)}s</small></button> : <p className="waitnote">Next question in {Math.ceil(clock / 1000)} seconds.</p>}
   </Phase>;
+}
+
+function RevealMerge({ groups, act }) {
+  const [selected, setSelected] = useState([]);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => setSelected((current) => current.filter((id) => groups.some((group) => group.id === id))), [groups]);
+
+  async function merge() {
+    if (selected.length < 2 || busy) return;
+    setBusy(true);
+    await act('review_merge_answers', { groupIds: selected });
+    setSelected([]);
+    setBusy(false);
+  }
+
+  return <section className="revealmerge">
+    <span className="kicker">Room sees it differently?</span>
+    <p>Merge answer groups to recalculate this round's cows and Pink Cow.</p>
+    <div>{groups.map((group) => <button key={group.id} type="button" className={selected.includes(group.id) ? 'is-selected' : ''} onClick={() => setSelected((current) => current.includes(group.id) ? current.filter((id) => id !== group.id) : [...current, group.id])}>{Array.from(new Set(group.answers.map((answer) => answer.rawAnswer))).join(' / ')} <b>{group.answers.length}</b></button>)}</div>
+    <button className="secondary" type="button" disabled={selected.length < 2 || busy} onClick={merge}>{busy ? 'Recounting...' : `Merge selected (${selected.length})`}</button>
+  </section>;
 }
 
 function GameOver({ state, priv, act }) {

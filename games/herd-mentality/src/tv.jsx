@@ -139,9 +139,11 @@ function HerdRail({ state }) {
 }
 
 function Answering({ state }) {
+  const clock = useClock(state);
+  const seconds = Math.ceil(clock / 1000);
   return <Phase phaseKey={`tv-answering-${state.roundNo}`} className="tvquestion">
     <div className="questioncard questioncard--live">
-      <span>Answer on your phone</span>
+      <span>Answer on your phone <b className={seconds <= 10 ? 'is-urgent' : ''}>{seconds}s</b></span>
       <h1>{state.currentQuestion.text}</h1>
     </div>
     <HerdRail state={state} />
@@ -174,7 +176,7 @@ function Reveal({ state }) {
         const odd = group.answers.some((answer) => answer.playerId === state.roundResult.oddPlayerId);
         return <motion.article layout key={group.id} className={`revealherd ${majority ? 'is-majority' : ''} ${odd ? 'is-odd' : ''}`} variants={{ hidden: { opacity: 0, y: 28, scale: .95 }, show: { opacity: 1, y: 0, scale: 1 } }} transition={{ duration: .45, ease: [0.2, .8, .2, 1] }}>
           <header><span>{majority ? '+1 cow each' : odd ? 'Sole odd one out' : 'Answer group'}</span><b>{group.answers.length}</b></header>
-          <h2>{group.answers[0]?.rawAnswer}</h2>
+          <h2>{Array.from(new Set(group.answers.map((answer) => answer.rawAnswer))).map((answer) => <span key={answer}>{answer}</span>)}</h2>
           <div>{group.answers.map((answer) => <span key={answer.playerId} style={{ '--player': playerById(state, answer.playerId)?.colour }}>{answer.playerName}</span>)}</div>
           {odd && <CowToken />}
         </motion.article>;

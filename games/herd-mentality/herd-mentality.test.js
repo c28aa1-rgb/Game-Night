@@ -136,6 +136,20 @@ test('host review can merge synonyms and split an over-grouped answer', () => {
   assert.equal(room.groups.find((group) => group.answers[0].playerId === 'p3').answers.length, 1);
 });
 
+test('a reveal merge recalculates scores while preserving every submitted answer', () => {
+  const room = roomWithPlayers();
+  Engine.startMatch(room, questions, () => 0);
+  const result = answerRound(room, ['Driving', 'Learning to drive', 'Driving', 'Pizza']);
+  assert.deepEqual(result.awardedPlayerIds, ['p1', 'p3']);
+  const driving = room.groups.find((group) => group.answers.some((answer) => answer.rawAnswer === 'Driving'));
+  const learning = room.groups.find((group) => group.answers.some((answer) => answer.rawAnswer === 'Learning to drive'));
+  Engine.mergeGroups(room, [driving.id, learning.id]);
+  const rescored = Engine.rescoreRevealedRound(room);
+  assert.deepEqual(rescored.awardedPlayerIds.slice().sort(), ['p1', 'p2', 'p3']);
+  assert.equal(room.groups.find((group) => group.id === driving.id).answers.map((answer) => answer.rawAnswer).join(', '), 'Driving, Driving, Learning to drive');
+  assert.deepEqual(room.scores, { p1: 1, p2: 1, p3: 1, p4: 0 });
+});
+
 test('a Pink Cow holder can earn cows but cannot win', () => {
   const room = roomWithPlayers();
   Engine.startMatch(room, questions, () => 0);

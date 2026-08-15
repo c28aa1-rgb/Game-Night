@@ -60,3 +60,26 @@ test('answer groups and player names become public only after scoring', () => {
   assert.equal(revealed.roundResult.oddPlayerId, 'p4');
   Server.dropRoom(room.code);
 });
+
+test('answers stay open for sixty seconds before the server skips to review', () => {
+  assert.equal(Server.ANSWER_MS, 60000);
+});
+
+test('AI suggestions stay private to the host and do not change groups automatically', () => {
+  const room = Server.createRoom();
+  room.players = [player('p1', 'Host'), player('p2', 'Maya')];
+  room.hostId = 'p1';
+  room.phase = Engine.PHASES.REVIEW;
+  room.groups = [
+    { id: 'herd-1', answers: [{ playerId: 'p1', rawAnswer: 'Apple' }] },
+    { id: 'herd-2', answers: [{ playerId: 'p2', rawAnswer: 'appple' }] },
+  ];
+  room.reviewSuggestions = [{ id: 'ai-1', groupIds: ['herd-1', 'herd-2'], reason: 'Likely spelling variant.', confidence: 'high' }];
+
+  const host = Server.privateState(room, room.players[0]);
+  const guest = Server.privateState(room, room.players[1]);
+  assert.equal(host.reviewSuggestions.length, 1);
+  assert.deepEqual(guest.reviewSuggestions, []);
+  assert.equal(room.groups.length, 2);
+  Server.dropRoom(room.code);
+});

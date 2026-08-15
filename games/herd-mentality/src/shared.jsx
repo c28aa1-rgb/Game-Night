@@ -61,6 +61,7 @@ export function useClock(state) {
 
 export function useHerdAudio(state, enabled, { music = false, cues = false } = {}) {
   const lastMoment = useRef(null);
+  const lastTick = useRef(null);
 
   useEffect(() => {
     window.HerdAudio?.setEnabled(enabled);
@@ -89,6 +90,22 @@ export function useHerdAudio(state, enabled, { music = false, cues = false } = {
       tied: Boolean(state.roundResult?.tied),
     });
   }, [cues, state?.moment?.id]);
+
+  useEffect(() => {
+    if (!cues || !enabled || state?.phase !== 'answering' || !state.msLeft) return undefined;
+    const started = Date.now();
+    const tick = () => {
+      const seconds = Math.ceil(Math.max(0, state.msLeft - (Date.now() - started)) / 1000);
+      const tickKey = `${state.roundNo}:${seconds}`;
+      if (seconds > 0 && seconds <= 10 && lastTick.current !== tickKey) {
+        lastTick.current = tickKey;
+        window.HerdAudio?.cue('answer_tick');
+      }
+    };
+    tick();
+    const interval = window.setInterval(tick, 80);
+    return () => window.clearInterval(interval);
+  }, [cues, enabled, state?.phase, state?.msLeft, state?.roundNo]);
 }
 
 export function Brand({ compact = false }) {

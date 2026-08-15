@@ -19,3 +19,6 @@ services:
       # Hitster. Set it in the Render dashboard rather than here.
       - key: SPOTIFY_CLIENT_ID
         sync: false
+      # Herd Mentality's optional, host-approved answer-group suggestions.
+      - key: OPENAI_API_KEY
+        sync: false

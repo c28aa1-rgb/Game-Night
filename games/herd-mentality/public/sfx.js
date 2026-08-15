@@ -95,6 +95,8 @@
       const step = Math.min(7, Math.max(0, Number(detail.submissionsIn || 1) - 1));
       noise(at, .055, { level: .038, filter: 720 + step * 35 });
       tone(semitone(220, step), at, .16, { level: .034, filter: 1300 });
+    } else if (kind === 'answer_tick') {
+      tone(880, at, .055, { type: 'square', level: .022, filter: 2200 });
     } else if (kind === 'question_open') {
       tone(98, at, .28, { type: 'sine', to: 123.47, level: .11, filter: 520 });
       noise(at + .04, .14, { level: .1, filter: 540, q: 1.2 });
