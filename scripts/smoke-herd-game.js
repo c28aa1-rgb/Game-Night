@@ -7,6 +7,9 @@ const holdArgument = process.argv.find((argument) => argument.startsWith('--hold
 const holdMs = Math.max(0, Number(holdArgument?.slice('--hold='.length)) || 0);
 const scenarioArgument = process.argv.find((argument) => argument.startsWith('--scenario='));
 const scenario = scenarioArgument?.slice('--scenario='.length) || 'typo';
+const questionArgument = process.argv.find((argument) => argument.startsWith('--question='));
+const targetQuestionId = questionArgument?.slice('--question='.length) || '';
+const verifyCorrections = process.argv.includes('--verify-corrections');
 let answers = process.argv.slice(3).filter((argument) => !argument.startsWith('--'));
 
 function domainFor(question) {
@@ -23,6 +26,9 @@ function domainFor(question) {
 }
 
 function answersFor(question, kind) {
+  if (kind === 'line-trap') {
+    return ['Listen to music', 'Play music on their headphones', 'Think', 'Talk'];
+  }
   const domain = domainFor(question);
   const sets = {
     food: { typo: ['Pizza', 'piza', 'Burger', 'Tacos'], synonym: ['French fries', 'Fries', 'Pizza', 'Tacos'], distinct: ['Pizza', 'Burger', 'Tacos', 'Salad'] },
@@ -109,9 +115,18 @@ async function main() {
       players.push(socket);
     }
 
-    const answering = waitForState(tv, (state) => state.phase === 'answering');
+    let answering = waitForState(tv, (state) => state.phase === 'answering');
     await emitAck(players[0], 'start_game');
-    const openState = await answering;
+    let openState = await answering;
+    while (targetQuestionId && openState.currentQuestion.id !== targetQuestionId) {
+      const skippedRound = openState.roundNo;
+      const skippedReveal = waitForState(tv, (state) => state.phase === 'reveal' && state.roundNo === skippedRound);
+      await Promise.all(players.map((socket) => emitAck(socket, 'submit_answer', { answer: 'Skip' })));
+      await skippedReveal;
+      answering = waitForState(tv, (state) => state.phase === 'answering' && state.roundNo > skippedRound);
+      await emitAck(players[0], 'next_round');
+      openState = await answering;
+    }
     if (answers.length !== 4) answers = answersFor(openState.currentQuestion.text, scenario);
     const revealed = waitForState(tv, (state) => state.phase === 'reveal');
     const legacyReview = waitForPrivateState(players[0], (state) => (
@@ -132,15 +147,45 @@ async function main() {
     }
     const result = firstOutcome.kind === 'automatic' ? firstOutcome.state : await revealed;
 
+    const correctionAudit = {};
+    if (verifyCorrections) {
+      const beforeGroups = result.groups.length;
+      const mergeIds = result.groups.slice(0, 2).map((group) => group.id);
+      const mergedStatePromise = waitForState(tv, (state) => (
+        state.moment.id > result.moment.id && state.moment.kind === 'groups_changed'
+      ));
+      await emitAck(players[0], 'review_merge_answers', { groupIds: mergeIds });
+      const mergedState = await mergedStatePromise;
+      if (mergedState.groups.length !== beforeGroups - 1) throw new Error('Post-reveal merge did not reduce the group count.');
+      const mergedGroup = mergedState.groups.find((group) => (
+        group.answers.some((answer) => result.groups[0].answers.some((original) => original.playerId === answer.playerId))
+        && group.answers.some((answer) => result.groups[1].answers.some((original) => original.playerId === answer.playerId))
+      ));
+      if (!mergedGroup) throw new Error('Post-reveal merge did not combine the selected answers.');
+      const splitPlayerId = mergedGroup.answers[0].playerId;
+      const splitStatePromise = waitForState(tv, (state) => (
+        state.moment.id > mergedState.moment.id && state.moment.kind === 'groups_changed'
+      ));
+      await emitAck(players[0], 'review_split_answer', { playerId: splitPlayerId });
+      const splitState = await splitStatePromise;
+      if (splitState.groups.length !== beforeGroups) throw new Error('Post-reveal split did not restore the group count.');
+      correctionAudit.mergedGroupCount = mergedState.groups.length;
+      correctionAudit.splitGroupCount = splitState.groups.length;
+      correctionAudit.scoreRecalculated = JSON.stringify(result.players) !== JSON.stringify(splitState.players)
+        || JSON.stringify(result.roundResult) !== JSON.stringify(mergedState.roundResult);
+    }
+
     console.log(JSON.stringify({
       origin,
       code,
+      questionId: result.currentQuestion.id,
       question: result.currentQuestion.text,
       answers,
       groups: result.groups.map((group) => group.answers.map((answer) => answer.rawAnswer)),
       legacySuggestions,
       result: result.roundResult,
       moment: result.moment,
+      correctionAudit,
     }, null, 2));
 
     if (holdMs) await new Promise((resolve) => setTimeout(resolve, holdMs));
