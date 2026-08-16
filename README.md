@@ -123,15 +123,19 @@ so you type your name once per evening rather than once per game.
 Herd Mentality groups exact spelling, punctuation, article, and plural variants
 locally. When more than one group remains, the server asks GPT-5 nano for a
 strict list of duplicate-answer merges, validates the returned IDs, applies the
-merges, and reveals automatically. The API key never reaches a browser. If the
-model is unavailable or times out, the conservative local groups reveal instead.
+merges, and reveals automatically. The request uses medium reasoning and a
+10-second ceiling. The API key never reaches a browser. If the model is
+unavailable or times out, the conservative local groups reveal instead.
 
 The host can merge or split groups after the reveal; either correction restores
 the pre-round score and recalculates cows, the Pink Cow, and any winner. A
 winning round therefore keeps its reveal window before the final result appears.
 
 Set `OPENAI_API_KEY` in Render. To run the labeled model evaluation corpus on a
-machine that has the key, use `npm run eval:herd-ai`.
+machine that has the key, use `npm run eval:herd-ai`. To test the exact deployed
+game without copying its key locally, use `npm run eval:herd-deployed`; set
+`HERD_BASE_URL` only when testing a deployment other than the default Render
+service. Both evaluators report exact cases plus pair precision and recall.
 
 ## Chameleon
 

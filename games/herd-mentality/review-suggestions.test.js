@@ -3,8 +3,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const Engine = require('./engine');
-const { MODEL, getMergeSets, groupingPrompt, validateMergeSets } = require('./review-suggestions');
+const {
+  MODEL, REASONING_EFFORT, TIMEOUT_MS, getMergeSets, groupingPrompt, validateMergeSets,
+} = require('./review-suggestions');
 const evalCases = require('./answer-grouping-evals.json');
+const deployedEvalCases = require('./deployed-answer-grouping-evals.json');
 
 const groups = [
   { id: 'herd-1', answers: [{ playerId: 'p1' }, { playerId: 'p3' }] },
@@ -59,34 +62,56 @@ test('sends anonymous answers and parses a structured grouping response', async 
     },
   });
   assert.equal(request.model, MODEL);
-  assert.equal(request.reasoning.effort, 'low');
+  assert.equal(REASONING_EFFORT, 'medium');
+  assert.equal(request.reasoning.effort, REASONING_EFFORT);
+  assert.equal(TIMEOUT_MS, 10000);
   assert.match(request.input, /p1: Driving/);
-  assert.match(request.input, /both answer the question is NEVER evidence/);
+  assert.match(request.input, /answers both fit the question is never evidence/);
   assert.doesNotMatch(request.input, /Maya|Leo/);
   assert.deepEqual(result, { status: 'ok', mergeSets: [
     { answerIds: ['p1', 'p2'], reason: 'Question supplies the grammar.' },
   ] });
 });
 
-test('prompt encodes measured broad-merge regressions', () => {
+test('prompt encodes measured pairwise grouping regressions', () => {
   const prompt = groupingPrompt('Name something people do while waiting in line.', [
     { id: 'p1', text: 'Listen to music' },
     { id: 'p2', text: 'Play music on headphones' },
     { id: 'p3', text: 'Think' },
     { id: 'p4', text: 'Talk' },
   ]);
-  assert.match(prompt, /"listen to music" \+ "play music on headphones" may merge/);
-  assert.match(prompt, /"think" and "talk" stay separate/);
-  assert.match(prompt, /"death" \+ "heights" => separate/);
+  assert.match(prompt, /verify every pair in that group/);
+  assert.match(prompt, /Never add a related answer through a chain/);
+  assert.match(prompt, /"honesty" \+ "being honest" => merge/);
+  assert.match(prompt, /"bed" \+ "my bed" => merge/);
+  assert.match(prompt, /"the DMV" \+ "going to the DMV" => merge/);
+  assert.match(prompt, /"napping" \+ "taking a nap" => merge/);
+  assert.match(prompt, /"sleeping" stays separate/);
+  assert.match(prompt, /Do not group all weather answers/);
   assert.match(prompt, /"dog" \+ "golden retriever" => separate/);
   assert.match(prompt, /"eggs" \+ "scrambled eggs" => merge/);
-  assert.match(prompt, /"eggs" \+ "omelette" => separate/);
+  assert.match(prompt, /"omelette" stays separate/);
+  assert.match(prompt, /"a beach day" \+ "going to the beach" => merge/);
+  assert.match(prompt, /"summer vacation" stays separate/);
 });
 
 test('evaluation corpus covers representative positive and negative grouping cases', () => {
-  assert.equal(evalCases.length >= 12, true);
+  assert.equal(evalCases.length >= 30, true);
   assert.equal(new Set(evalCases.map((entry) => entry.id)).size, evalCases.length);
   for (const entry of evalCases) {
+    assert.match(entry.category, /^[a-z-]+$/);
+    assert.equal(entry.answers.length, 4);
+    assert.deepEqual(entry.expectedGroups.flat().sort((a, b) => a - b), [0, 1, 2, 3]);
+  }
+});
+
+test('deployed evaluation corpus targets distinct questions in the real deck', () => {
+  const questions = require('./questions.json');
+  const questionIds = new Set(questions.map((question) => question.id));
+  assert.equal(deployedEvalCases.length >= 20, true);
+  assert.equal(new Set(deployedEvalCases.map((entry) => entry.questionId)).size, deployedEvalCases.length);
+  for (const entry of deployedEvalCases) {
+    assert.equal(questionIds.has(entry.questionId), true, entry.id);
     assert.equal(entry.answers.length, 4);
     assert.deepEqual(entry.expectedGroups.flat().sort((a, b) => a - b), [0, 1, 2, 3]);
   }

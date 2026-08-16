@@ -2,7 +2,8 @@
 
 const OPENAI_URL = 'https://api.openai.com/v1/responses';
 const MODEL = 'gpt-5-nano';
-const TIMEOUT_MS = 6000;
+const REASONING_EFFORT = 'medium';
+const TIMEOUT_MS = 10000;
 
 const RESPONSE_SCHEMA = {
   type: 'object',
@@ -36,29 +37,30 @@ function responseText(body) {
 }
 
 function groupingPrompt(question, answers) {
-  return `Group duplicate answers for Herd Mentality, a party game where players score when their answers match.
+  return `Find duplicate answers for Herd Mentality, a party game where only matching answers score.
 
 Return only mergeSets. Each mergeSet contains answer IDs that should count as one answer. Omit every answer that should remain separate.
 
-Use the question only to interpret shorthand or grammar. The fact that two answers both answer the question is NEVER evidence that they match.
+Judge answer identity, not similarity. The fact that answers both fit the question is never evidence that they match.
 
-Merge when ordinary players would clearly treat the responses as the same specific answer:
-- spelling, punctuation, article, singular/plural, or inflection variants
-- standard abbreviations or exact synonyms
-- a short answer and a grammatical restatement that adds no new idea
-- a base food and its ordinary preparation or form when the question asks for a broad food category and does not distinguish preparation
+Use this procedure:
+1. Check obvious typos and harmless surface changes first: spelling, punctuation, articles, possessives, singular/plural, and inflection.
+2. For each possible pair, remove only grammar or framing supplied by the question. Merge only if the remaining core referent, action, event, or quality is the same.
+3. Before returning a group, verify every pair in that group passes step 2. Never add a related answer through a chain or because it shares the question's category.
+4. If one answer adds a meaningful subtype, object, action, condition, location, time, cause, or modifier, keep it separate. This rule wins when uncertain.
 
-Keep separate when the answers are merely related, share a category or theme, name different examples, or differ by a meaningful action, object, condition, location, time, cause, or subtype. A narrower answer stays separate when it changes the thing being named, rather than simply expressing the same answer more specifically. When reasonable people could disagree, keep them separate.
+Exact synonyms, standard abbreviations, harmless grammatical restatements, and a place/object used as shorthand for the same visit or experience may merge. A base food and its ordinary preparation may merge only for a broad food question that does not distinguish preparation.
 
 Examples:
 - "apple" + "appple" => merge
-- "cell phone" + "phone" => merge
-- For "name a breakfast food": "eggs" + "scrambled eggs" => merge; the preparation is a direct form of the same food and the question does not ask how eggs are cooked.
-- For "name a breakfast food": "eggs" + "omelette" => separate; an omelette is a distinct dish, not merely eggs stated more specifically.
-- For "something people do while waiting in line": "listen to music" + "play music on headphones" may merge; "think" and "talk" stay separate.
-- For "something people learn": "driving" + "learning to drive" may merge because the question supplies the grammar.
-- "death" + "heights" => separate, even for a question about fears
-- "dog" + "golden retriever" => separate because one is a subtype
+- For a good-friend quality: "honesty" + "being honest" => merge.
+- For the best nap place: "bed" + "my bed" => merge; "couch" stays separate.
+- For something that takes too long: "the DMV" + "going to the DMV" => merge; "traffic" stays separate.
+- For an Olympic activity: "napping" + "taking a nap" => merge; "sleeping" stays separate because it is a broader, different activity.
+- For day-off weather: "sunny" + "sunshine" => merge; "warm and sunny" and "snow" each stay separate. Do not group all weather answers.
+- For something worth waiting for: "a beach day" + "going to the beach" => merge; "summer vacation" stays separate.
+- For a breakfast food: "eggs" + "scrambled eggs" => merge; "omelette" stays separate as a distinct dish.
+- "dog" + "golden retriever" => separate because one is a subtype.
 
 Player identities are unavailable. Never merge based on popularity. Merge sets must be disjoint.
 
@@ -82,7 +84,7 @@ async function getMergeSets(
       signal: controller.signal,
       body: JSON.stringify({
         model: MODEL,
-        reasoning: { effort: 'low' },
+        reasoning: { effort: REASONING_EFFORT },
         input: groupingPrompt(question, answers),
         text: { format: { type: 'json_schema', name: 'herd_answer_groups', strict: true, schema: RESPONSE_SCHEMA } },
       }),
@@ -125,4 +127,4 @@ function validateMergeSets(mergeSets, groups) {
   }).slice(0, 6) : [];
 }
 
-module.exports = { MODEL, TIMEOUT_MS, getMergeSets, groupingPrompt, validateMergeSets };
+module.exports = { MODEL, REASONING_EFFORT, TIMEOUT_MS, getMergeSets, groupingPrompt, validateMergeSets };

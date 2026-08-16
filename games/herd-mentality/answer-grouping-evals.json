@@ -1,80 +1,240 @@
 [
   {
     "id": "fruit-typo",
+    "category": "surface-variant",
     "question": "Name a fruit that belongs in a lunchbox.",
     "answers": ["apple", "appple", "pear", "orange"],
     "expectedGroups": [[0, 1], [2], [3]]
   },
   {
     "id": "phone-synonym",
+    "category": "synonym",
     "question": "Name something people check twice before leaving home.",
     "answers": ["phone", "cell phone", "keys", "wallet"],
     "expectedGroups": [[0, 1], [2], [3]]
   },
   {
+    "id": "television-abbreviation",
+    "category": "surface-variant",
+    "question": "Name something found in most living rooms.",
+    "answers": ["TV", "television", "sofa", "lamp"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "regional-drink-synonym",
+    "category": "synonym",
+    "question": "Name a fizzy drink.",
+    "answers": ["soda", "pop", "lemonade", "sparkling water"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "couch-synonym",
+    "category": "synonym",
+    "question": "Name somewhere to sit at home.",
+    "answers": ["couch", "sofa", "recliner", "bed"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "cinema-synonym",
+    "category": "synonym",
+    "question": "Name a good place for a first date.",
+    "answers": ["movie theater", "cinema", "restaurant", "park"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
     "id": "line-actions",
+    "category": "restatement",
     "question": "Name something people do while waiting in line.",
     "answers": ["listen to music", "play music on headphones", "think", "talk"],
     "expectedGroups": [[0, 1], [2], [3]]
   },
   {
     "id": "fear-category-trap",
+    "category": "theme-trap",
     "question": "Name something people pretend not to be afraid of.",
     "answers": ["death", "heights", "spiders", "dying"],
     "expectedGroups": [[0, 3], [1], [2]]
   },
   {
-    "id": "subtype-trap",
+    "id": "animal-subtype-trap",
+    "category": "subtype-trap",
     "question": "Name an animal you would trust with a secret.",
     "answers": ["dog", "golden retriever", "cat", "dogs"],
     "expectedGroups": [[0, 3], [1], [2]]
   },
   {
+    "id": "vehicle-subtype-trap",
+    "category": "subtype-trap",
+    "question": "Name a vehicle you would love to own.",
+    "answers": ["car", "sports car", "motorcycle", "automobile"],
+    "expectedGroups": [[0, 3], [1], [2]]
+  },
+  {
     "id": "question-grammar",
+    "category": "question-grammar",
     "question": "Name something people should learn before turning eighteen.",
     "answers": ["driving", "learning to drive", "cooking", "saving money"],
     "expectedGroups": [[0, 1], [2], [3]]
   },
   {
     "id": "food-compound",
+    "category": "surface-variant",
     "question": "Name the best flavor of ice cream.",
     "answers": ["cookies and cream", "cookie dough", "cookies & cream", "vanilla"],
     "expectedGroups": [[0, 2], [1], [3]]
   },
   {
     "id": "breakfast-preparation",
+    "category": "ordinary-form",
     "question": "Name a breakfast food.",
     "answers": ["eggs", "scrambled eggs", "omelette", "pancakes"],
     "expectedGroups": [[0, 1], [2], [3]]
   },
   {
+    "id": "coffee-container",
+    "category": "ordinary-form",
+    "question": "Name a drink that helps people wake up.",
+    "answers": ["coffee", "a cup of coffee", "tea", "orange juice"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "burger-short-form",
+    "category": "synonym",
+    "question": "Name a food served at a cookout.",
+    "answers": ["burger", "hamburger", "hot dog", "steak"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "anticipated-beach-experience",
+    "category": "event-restatement",
+    "question": "Name something worth waiting for.",
+    "answers": ["a beach day", "going to the beach", "summer vacation", "a concert"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "anticipated-concert-experience",
+    "category": "event-restatement",
+    "question": "Name something worth saving money for.",
+    "answers": ["a concert", "going to a concert", "a vacation", "a new phone"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "anticipated-vacation-experience",
+    "category": "event-restatement",
+    "question": "Name something people look forward to all year.",
+    "answers": ["vacation", "going on vacation", "the weekend", "Christmas"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "anticipated-payday-event",
+    "category": "event-restatement",
+    "question": "Name something worth waiting for.",
+    "answers": ["payday", "getting paid", "the weekend", "retirement"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "anticipated-baby-event",
+    "category": "event-restatement",
+    "question": "Name something worth waiting for.",
+    "answers": ["a baby", "having a baby", "pregnancy", "a wedding"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
     "id": "related-places",
+    "category": "related-trap",
     "question": "Name the best place to watch a sunset.",
     "answers": ["beach", "ocean", "mountain", "the beach"],
     "expectedGroups": [[0, 3], [1], [2]]
   },
   {
+    "id": "related-weather-gear",
+    "category": "related-trap",
+    "question": "Name something useful on a rainy day.",
+    "answers": ["umbrella", "raincoat", "boots", "an umbrella"],
+    "expectedGroups": [[0, 3], [1], [2]]
+  },
+  {
     "id": "chore-grammar",
+    "category": "question-grammar",
     "question": "Name the worst household chore.",
     "answers": ["dishes", "washing dishes", "laundry", "cleaning"],
     "expectedGroups": [[0, 1], [2], [3]]
   },
   {
     "id": "weather-specificity",
+    "category": "modifier-trap",
     "question": "Name the best weather for a day off.",
     "answers": ["sunny", "warm and sunny", "snow", "sunshine"],
     "expectedGroups": [[0, 3], [1], [2]]
   },
   {
+    "id": "season-event-specificity",
+    "category": "modifier-trap",
+    "question": "Name something that makes winter memorable.",
+    "answers": ["snow", "a snowy winter", "Christmas", "cold weather"],
+    "expectedGroups": [[0], [1], [2], [3]]
+  },
+  {
     "id": "activity-grammar",
+    "category": "restatement",
     "question": "Name a normal activity that should be an Olympic sport.",
     "answers": ["napping", "taking a nap", "sleeping", "shopping"],
     "expectedGroups": [[0, 1], [2], [3]]
   },
   {
     "id": "friend-qualities",
+    "category": "restatement",
     "question": "Name a quality that makes someone a good friend.",
     "answers": ["honesty", "being honest", "kindness", "loyalty"],
     "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "movie-action-restatement",
+    "category": "event-restatement",
+    "question": "Name something fun to do on a rainy day.",
+    "answers": ["a movie", "watching a movie", "Netflix", "reading"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "exercise-restatement",
+    "category": "restatement",
+    "question": "Name something people do to stay healthy.",
+    "answers": ["exercise", "working out", "eat vegetables", "sleep"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "school-action-restatement",
+    "category": "event-restatement",
+    "question": "Name something children sometimes dread.",
+    "answers": ["school", "going to school", "homework", "the dentist"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "dentist-action-restatement",
+    "category": "event-restatement",
+    "question": "Name something people put off doing.",
+    "answers": ["the dentist", "going to the dentist", "the doctor", "taxes"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "same-question-different-events",
+    "category": "theme-trap",
+    "question": "Name something worth waiting for.",
+    "answers": ["the weekend", "Friday", "Christmas", "summer vacation"],
+    "expectedGroups": [[0], [1], [2], [3]]
+  },
+  {
+    "id": "same-question-different-comforts",
+    "category": "theme-trap",
+    "question": "Name something that helps after a hard day.",
+    "answers": ["sleep", "going to bed", "a shower", "quiet"],
+    "expectedGroups": [[0], [1], [2], [3]]
+  },
+  {
+    "id": "same-category-different-foods",
+    "category": "subtype-trap",
+    "question": "Name a food almost everyone likes.",
+    "answers": ["pizza", "pepperoni pizza", "pasta", "ice cream"],
+    "expectedGroups": [[0], [1], [2], [3]]
   }
 ]

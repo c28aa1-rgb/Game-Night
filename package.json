@@ -18,6 +18,7 @@
     "test:chameleon": "node --test --test-concurrency=1 games/chameleon/*.test.js",
     "test:herd-mentality": "node --test games/herd-mentality/*.test.js",
     "eval:herd-ai": "node scripts/eval-herd-ai.js",
+    "eval:herd-deployed": "node scripts/eval-herd-deployed.js",
     "smoke:herd": "node scripts/smoke-herd-game.js"
   },
   "dependencies": {

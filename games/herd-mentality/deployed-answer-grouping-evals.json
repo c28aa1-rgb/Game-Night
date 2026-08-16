@@ -1,0 +1,146 @@
+[
+  {
+    "id": "q001-question-property",
+    "questionId": "q001",
+    "answers": ["bacon", "crispy bacon", "fried chicken", "potatoes"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q003-fruit-typo",
+    "questionId": "q003",
+    "answers": ["apple", "appple", "pear", "orange"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q005-question-grammar",
+    "questionId": "q005",
+    "answers": ["pepperoni", "pepperoni pizza", "mushrooms", "olives"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q008-compound-surface",
+    "questionId": "q008",
+    "answers": ["cookies and cream", "cookies & cream", "cookie dough", "vanilla"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q010-food-form",
+    "questionId": "q010",
+    "answers": ["eggs", "scrambled eggs", "omelette", "pancakes"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q011-subtype-control",
+    "questionId": "q011",
+    "answers": ["dog", "dogs", "poodle", "cat"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q021-object-synonym",
+    "questionId": "q021",
+    "answers": ["spatula", "flipper", "knife", "scissors"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q023-chore-grammar",
+    "questionId": "q023",
+    "answers": ["dishes", "washing dishes", "laundry", "cleaning"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q031-day-specificity",
+    "questionId": "q031",
+    "answers": ["Saturday", "Saturdays", "the weekend", "Friday"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q032-line-actions",
+    "questionId": "q032",
+    "answers": ["listen to music", "play music on headphones", "think", "talk"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q033-alarm-short-form",
+    "questionId": "q033",
+    "answers": ["alarm", "alarm clock", "birds", "traffic"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q034-event-restatement",
+    "questionId": "q034",
+    "answers": ["the DMV", "going to the DMV", "traffic", "cooking"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q036-phone-synonym",
+    "questionId": "q036",
+    "answers": ["phone", "cell phone", "keys", "wallet"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q041-possessive-restatement",
+    "questionId": "q041",
+    "answers": ["bed", "my bed", "couch", "hammock"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q045-related-place-control",
+    "questionId": "q045",
+    "answers": ["beach", "the beach", "ocean", "mountain"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q048-location-subtype-control",
+    "questionId": "q048",
+    "answers": ["Italy", "Rome", "Japan", "the moon"],
+    "expectedGroups": [[0], [1], [2], [3]]
+  },
+  {
+    "id": "q059-activity-restatement",
+    "questionId": "q059",
+    "answers": ["napping", "taking a nap", "sleeping", "shopping"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q068-road-trip-music",
+    "questionId": "q068",
+    "answers": ["music", "listening to music", "snacks", "friends"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q071-fear-restatement",
+    "questionId": "q071",
+    "answers": ["death", "dying", "heights", "spiders"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q072-quality-restatement",
+    "questionId": "q072",
+    "answers": ["honesty", "being honest", "kindness", "loyalty"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q079-question-grammar",
+    "questionId": "q079",
+    "answers": ["driving", "learning to drive", "cooking", "saving money"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q081-weather-modifier-control",
+    "questionId": "q081",
+    "answers": ["sunny", "sunshine", "warm and sunny", "snow"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q087-regional-synonym",
+    "questionId": "q087",
+    "answers": ["fall", "autumn", "spring", "winter"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q093-beach-event-restatement",
+    "questionId": "q093",
+    "answers": ["a beach day", "going to the beach", "summer vacation", "a concert"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  }
+]
