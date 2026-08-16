@@ -6,7 +6,7 @@ const evalCases = require('../games/herd-mentality/deployed-answer-grouping-eval
 const BASE_URL = process.env.HERD_BASE_URL || 'https://game-night-qnpb.onrender.com';
 const NAMESPACE = '/herd-mentality';
 const ACK_TIMEOUT_MS = 10000;
-const STATE_TIMEOUT_MS = 15000;
+const STATE_TIMEOUT_MS = 30000;
 const FILLER_ANSWERS = ['aardvark', 'microwave', 'jazz', 'Tuesday'];
 
 function emit(socket, event, payload = {}) {
@@ -112,14 +112,23 @@ async function main() {
       await answering;
 
       const reveal = waitForState(players[0], (next) => next.phase === 'reveal' && next.roundNo === state.roundNo);
+      const submittedAt = Date.now();
       await Promise.all(players.map((socket, index) => emit(socket, 'submit_answer', { answer: answers[index] })));
       state = await reveal;
+      const reviewMs = Date.now() - submittedAt;
 
       if (entry && remaining.delete(questionId)) {
         const actual = actualPartition(state, playerIds);
         const passed = samePartition(actual, entry.expectedGroups);
-        results.push({ id: entry.id, question: state.currentQuestion.text, answers, expected: entry.expectedGroups, actual });
-        console.log(`${passed ? 'PASS' : 'FAIL'} ${entry.id} (${results.length}/${evalCases.length})`);
+        results.push({
+          id: entry.id,
+          question: state.currentQuestion.text,
+          answers,
+          expected: entry.expectedGroups,
+          actual,
+          reviewMs,
+        });
+        console.log(`${passed ? 'PASS' : 'FAIL'} ${entry.id} (${results.length}/${evalCases.length}, ${reviewMs}ms)`);
       }
 
       await splitMergedGroups(players[0], state);

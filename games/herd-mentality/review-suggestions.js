@@ -2,8 +2,8 @@
 
 const OPENAI_URL = 'https://api.openai.com/v1/responses';
 const MODEL = 'gpt-5-nano';
-const REASONING_EFFORT = 'medium';
-const TIMEOUT_MS = 10000;
+const REASONING_EFFORT = 'low';
+const TIMEOUT_MS = 6000;
 
 const RESPONSE_SCHEMA = {
   type: 'object',

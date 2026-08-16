@@ -123,9 +123,10 @@ so you type your name once per evening rather than once per game.
 Herd Mentality groups exact spelling, punctuation, article, and plural variants
 locally. When more than one group remains, the server asks GPT-5 nano for a
 strict list of duplicate-answer merges, validates the returned IDs, applies the
-merges, and reveals automatically. The request uses medium reasoning and a
-10-second ceiling. The API key never reaches a browser. If the model is
-unavailable or times out, the conservative local groups reveal instead.
+merges, and reveals automatically. The request uses low reasoning and a
+6-second ceiling so review cannot stall the game. The API key never reaches a
+browser. If the model is unavailable or times out, the conservative local
+groups reveal instead.
 
 The host can merge or split groups after the reveal; either correction restores
 the pre-round score and recalculates cows, the Pink Cow, and any winner. A
