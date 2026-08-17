@@ -57,9 +57,9 @@ test('sends anonymous answers and parses a structured grouping response', async 
     apiKey: 'test',
     fetchImpl: async (_url, options) => {
       request = JSON.parse(options.body);
-      return { ok: true, json: async () => ({ output_text: JSON.stringify({ pairDecisions: [
-        { pairId: 'pair-1', same: true },
-      ] }) }) };
+      return { ok: true, json: async () => ({ output_text: JSON.stringify({
+        samePairIds: ['pair-1'],
+      }) }) };
     },
   });
   assert.equal(request.model, MODEL);
@@ -115,7 +115,7 @@ test('prompt encodes measured pairwise grouping regressions', () => {
   assert.match(prompt, /shortest question-relative cores/);
   assert.match(prompt, /Candidate pairs to judge independently/);
   assert.match(prompt, /pair-1 \[p1 \+ p2\]: "Listen to music" <> "Play music on headphones"/);
-  assert.match(prompt, /one pairDecision per line/);
+  assert.match(prompt, /return only the pairIds judged SAME/);
   assert.match(prompt, /"honesty" \+ "being honest" => merge/);
   assert.match(prompt, /"bed" \+ "my bed" => merge/);
   assert.match(prompt, /"the DMV" \+ "going to the DMV" => merge/);
