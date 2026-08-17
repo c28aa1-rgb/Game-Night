@@ -82,6 +82,10 @@ test('prompt encodes measured pairwise grouping regressions', () => {
   ]);
   assert.match(prompt, /verify every pair in that group/);
   assert.match(prompt, /Never add a related answer through a chain/);
+  assert.match(prompt, /shortest question-relative cores/);
+  assert.match(prompt, /Candidate pairs to judge independently/);
+  assert.match(prompt, /p1 \+ p2: "Listen to music" <> "Play music on headphones"/);
+  assert.match(prompt, /first decide SAME or DIFFERENT for every candidate pair/);
   assert.match(prompt, /"honesty" \+ "being honest" => merge/);
   assert.match(prompt, /"bed" \+ "my bed" => merge/);
   assert.match(prompt, /"the DMV" \+ "going to the DMV" => merge/);
@@ -93,6 +97,9 @@ test('prompt encodes measured pairwise grouping regressions', () => {
   assert.match(prompt, /"omelette" stays separate/);
   assert.match(prompt, /"a beach day" \+ "going to the beach" => merge/);
   assert.match(prompt, /"summer vacation" stays separate/);
+  assert.match(prompt, /"death" \+ "dying" => merge/);
+  assert.match(prompt, /"alarm" \+ "alarm clock" => merge/);
+  assert.match(prompt, /"listen to music" \+ "play music on headphones" => merge/);
 });
 
 test('evaluation corpus covers representative positive and negative grouping cases', () => {

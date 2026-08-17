@@ -37,6 +37,13 @@ function responseText(body) {
 }
 
 function groupingPrompt(question, answers) {
+  const candidatePairs = [];
+  for (let left = 0; left < answers.length; left += 1) {
+    for (let right = left + 1; right < answers.length; right += 1) {
+      candidatePairs.push(`- ${answers[left].id} + ${answers[right].id}: "${answers[left].text}" <> "${answers[right].text}"`);
+    }
+  }
+
   return `Find duplicate answers for Herd Mentality, a party game where only matching answers score.
 
 Return only mergeSets. Each mergeSet contains answer IDs that should count as one answer. Omit every answer that should remain separate.
@@ -45,11 +52,12 @@ Judge answer identity, not similarity. The fact that answers both fit the questi
 
 Use this procedure:
 1. Check obvious typos and harmless surface changes first: spelling, punctuation, articles, possessives, singular/plural, and inflection.
-2. For each possible pair, remove only grammar or framing supplied by the question. Merge only if the remaining core referent, action, event, or quality is the same.
-3. Before returning a group, verify every pair in that group passes step 2. Never add a related answer through a chain or because it shares the question's category.
-4. If one answer adds a meaningful subtype, object, action, condition, location, time, cause, or modifier, keep it separate. This rule wins when uncertain.
+2. Rewrite each answer as its shortest core answer to this specific question. Remove grammar copied from the question, redundant question properties, and ordinary framing such as "being", "learning to", "going to", "a day of", or an obvious delivery mechanism.
+3. Compare every candidate pair independently. Merge when those shortest question-relative cores name the same referent, action, event, or quality. A grammatical wrapper is not a different answer.
+4. Keep answers separate when a genuinely different core remains: a subtype, different object, different action, extra condition, location, time, cause, or meaningful modifier.
+5. Before returning a group, verify every pair in that group passes step 3. Never add a related answer through a chain or because it shares the question's category.
 
-Exact synonyms, standard abbreviations, harmless grammatical restatements, and a place/object used as shorthand for the same visit or experience may merge. A base food and its ordinary preparation may merge only for a broad food question that does not distinguish preparation.
+Exact synonyms, standard abbreviations, harmless grammatical restatements, and a place/object used as shorthand for the same visit or experience may merge. Words already required by the question do not create a meaningful distinction: for a question asking what is better crispy, "bacon" and "crispy bacon" have the same core. A base food and its ordinary preparation may merge only for a broad food question that does not distinguish preparation.
 
 Examples:
 - "apple" + "appple" => merge
@@ -60,6 +68,9 @@ Examples:
 - For day-off weather: "sunny" + "sunshine" => merge; "warm and sunny" and "snow" each stay separate. Do not group all weather answers.
 - For something worth waiting for: "a beach day" + "going to the beach" => merge; "summer vacation" stays separate.
 - For a breakfast food: "eggs" + "scrambled eggs" => merge; "omelette" stays separate as a distinct dish.
+- "death" + "dying" => merge as noun/gerund forms of the same core answer.
+- "alarm" + "alarm clock" => merge when both mean the morning alarm sound.
+- "listen to music" + "play music on headphones" => merge when the activity being answered is listening to music; "think" and "talk" stay separate.
 - "dog" + "golden retriever" => separate because one is a subtype.
 
 Player identities are unavailable. Never merge based on popularity. Merge sets must be disjoint.
@@ -67,7 +78,12 @@ Player identities are unavailable. Never merge based on popularity. Merge sets m
 Question: ${question}
 
 Answers:
-${answers.map((answer) => `${answer.id}: ${answer.text}`).join('\n')}`;
+${answers.map((answer) => `${answer.id}: ${answer.text}`).join('\n')}
+
+Candidate pairs to judge independently:
+${candidatePairs.join('\n')}
+
+Final check: first decide SAME or DIFFERENT for every candidate pair. Return a mergeSet only from SAME pairs, using the exact IDs on that pair. For a mergeSet larger than two, every pair inside it must be SAME.`;
 }
 
 async function getMergeSets(
