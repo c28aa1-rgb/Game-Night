@@ -122,10 +122,8 @@ so you type your name once per evening rather than once per game.
 
 Herd Mentality groups exact spelling, punctuation, article, and plural variants
 locally. When more than one group remains, the server asks GPT-5 nano for a
-strict list of labeled answer pairs judged the SAME. The server rejects unknown
-or duplicate pair IDs, prevents incomplete transitive chains from becoming broad
-groups, applies only validated merges, and reveals automatically.
-The request uses low reasoning and a
+strict list of duplicate-answer merges, validates the returned IDs, applies the
+merges, and reveals automatically. The request uses low reasoning and a
 7-second ceiling so review cannot stall the game. The API key never reaches a
 browser. If the model is unavailable or times out, the conservative local
 groups reveal instead.
