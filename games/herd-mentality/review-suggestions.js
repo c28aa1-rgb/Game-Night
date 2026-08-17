@@ -52,12 +52,14 @@ Judge answer identity, not similarity. The fact that answers both fit the questi
 
 Use this procedure:
 1. Check obvious typos and harmless surface changes first: spelling, punctuation, articles, possessives, singular/plural, and inflection.
-2. Rewrite each answer as its shortest core answer to this specific question. Remove grammar copied from the question, redundant question properties, and ordinary framing such as "being", "learning to", "going to", "a day of", or an obvious delivery mechanism.
-3. Compare every candidate pair independently. Merge when those shortest question-relative cores name the same referent, action, event, or quality. A grammatical wrapper is not a different answer.
-4. Keep answers separate when a genuinely different core remains: a subtype, different object, different action, extra condition, location, time, cause, or meaningful modifier.
+2. Rewrite each answer as its shortest core answer to this specific question. Remove words or meaning explicitly supplied by the question, plus ordinary grammatical framing such as "being", "learning to", "going to", "a day of", or an obvious delivery mechanism. Do not remove context merely because it is related or plausible.
+3. Compare every candidate pair independently. Merge when those shortest question-relative cores name the same referent, action, event, or quality. A grammatical wrapper is not a different answer. If a pair passes this rule, merging it is required, not optional.
+4. Keep answers separate when a genuinely different core remains: a subtype, different object, different action, extra condition, location, time, cause, or meaningful modifier. A modifier is removable only when its meaning is explicitly present in the question; otherwise it is additional meaning and must remain.
 5. Before returning a group, verify every pair in that group passes step 3. Never add a related answer through a chain or because it shares the question's category.
 
-Exact synonyms, standard abbreviations, harmless grammatical restatements, and a place/object used as shorthand for the same visit or experience may merge. Words already required by the question do not create a meaningful distinction: for a question asking what is better crispy, "bacon" and "crispy bacon" have the same core. A base food and its ordinary preparation may merge only for a broad food question that does not distinguish preparation.
+Mandatory matches include exact synonyms, standard abbreviations, harmless grammatical restatements, and a bare place or object used as conventional shorthand for the same visit, chore, activity, or experience. Words already supplied by the question do not create a meaningful distinction: a pizza question makes "pepperoni pizza" reduce to "pepperoni", and a beach-packing question makes "beach towel" reduce to "towel". A base food and its ordinary preparation match only for a broad food question that does not distinguish preparation.
+
+Apply the rules in both directions. For an activity, event, job, chore, ability, or experience question, a concise noun may be the natural shorthand for a longer action phrase: "dishes" means "washing dishes", "the DMV" means "going to the DMV", and "teleportation" means "being able to teleport". Do not demand identical parts of speech when the question makes their intended answer identical.
 
 Examples:
 - "apple" + "appple" => merge

@@ -83,6 +83,11 @@ test('prompt encodes measured pairwise grouping regressions', () => {
   assert.match(prompt, /verify every pair in that group/);
   assert.match(prompt, /Never add a related answer through a chain/);
   assert.match(prompt, /shortest question-relative cores/);
+  assert.match(prompt, /merging it is required, not optional/);
+  assert.match(prompt, /modifier is removable only when its meaning is explicitly present in the question/);
+  assert.match(prompt, /pizza question makes "pepperoni pizza" reduce to "pepperoni"/);
+  assert.match(prompt, /beach-packing question makes "beach towel" reduce to "towel"/);
+  assert.match(prompt, /"dishes" means "washing dishes"/);
   assert.match(prompt, /Candidate pairs to judge independently/);
   assert.match(prompt, /p1 \+ p2: "Listen to music" <> "Play music on headphones"/);
   assert.match(prompt, /first decide SAME or DIFFERENT for every candidate pair/);
