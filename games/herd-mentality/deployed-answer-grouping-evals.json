@@ -142,5 +142,77 @@
     "questionId": "q093",
     "answers": ["a beach day", "going to the beach", "summer vacation", "a concert"],
     "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q002-standard-abbreviation",
+    "questionId": "q002",
+    "answers": ["peanut butter", "PB", "jam", "avocado"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q012-possessive-animal",
+    "questionId": "q012",
+    "answers": ["cat", "my cat", "parrot", "raccoon"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q024-object-shorthand",
+    "questionId": "q024",
+    "answers": ["remote", "TV remote", "keys", "phone"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q035-situation-restatement",
+    "questionId": "q035",
+    "answers": ["traffic", "stuck in traffic", "overslept", "my alarm failed"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q051-ability-restatement",
+    "questionId": "q051",
+    "answers": ["teleportation", "being able to teleport", "invisibility", "flight"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q061-title-attribution",
+    "questionId": "q061",
+    "answers": ["Dancing Queen", "Dancing Queen by ABBA", "YMCA", "Happy"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q062-question-context",
+    "questionId": "q062",
+    "answers": ["popcorn", "movie popcorn", "candy", "nachos"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q063-game-framing",
+    "questionId": "q063",
+    "answers": ["charades", "a game of charades", "chess", "Uno"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q080-action-restatement",
+    "questionId": "q080",
+    "answers": ["hug them", "give them a hug", "tell a joke", "buy them food"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q083-natural-sound-shorthand",
+    "questionId": "q083",
+    "answers": ["waves", "ocean waves", "birds", "rain"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q085-question-supplied-modifier",
+    "questionId": "q085",
+    "answers": ["towel", "beach towel", "sunscreen", "water"],
+    "expectedGroups": [[0, 1], [2], [3]]
+  },
+  {
+    "id": "q090-noun-gerund-weather",
+    "questionId": "q090",
+    "answers": ["rain", "raining", "dog poop", "a blister"],
+    "expectedGroups": [[0, 1], [2], [3]]
   }
 ]
