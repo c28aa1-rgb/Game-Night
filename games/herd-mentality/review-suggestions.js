@@ -3,7 +3,7 @@
 const OPENAI_URL = 'https://api.openai.com/v1/responses';
 const MODEL = 'gpt-5-nano';
 const REASONING_EFFORT = 'low';
-const TIMEOUT_MS = 6000;
+const TIMEOUT_MS = 7000;
 
 const RESPONSE_SCHEMA = {
   type: 'object',

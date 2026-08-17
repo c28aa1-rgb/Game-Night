@@ -189,8 +189,7 @@ async function requestAutomaticGrouping(room, { getMergeSetsImpl = getMergeSets 
   for (const mergeSet of mergeSets) Engine.mergeGroups(room, mergeSet.groupIds);
   room.reviewPending = false;
   room.reviewSuggestions = [];
-  setMoment(room, 'automatic_grouping_complete', { mergeCount: mergeSets.length, aiStatus: result.status });
-  revealRound(room);
+  revealRound(room, { mergeCount: mergeSets.length, aiStatus: result.status });
 }
 
 function privateState(room, player) {
@@ -270,10 +269,10 @@ function advanceAfterReveal(room) {
   beginRound(room);
 }
 
-function revealRound(room) {
+function revealRound(room, reviewResult = {}) {
   clearClock(room);
   Engine.scoreRound(room);
-  setMoment(room, 'round_reveal');
+  setMoment(room, 'round_reveal', reviewResult);
   startClock(room, REVEAL_MS, () => advanceAfterReveal(room));
   broadcast(room);
 }

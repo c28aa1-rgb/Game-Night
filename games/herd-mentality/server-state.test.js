@@ -86,6 +86,8 @@ test('validated AI grouping is applied automatically before reveal and scoring',
   assert.equal(room.groups.length, 3);
   assert.deepEqual(room.roundResult.awardedPlayerIds, ['p1', 'p2']);
   assert.equal(room.reviewPending, false);
+  assert.equal(room.moment.aiStatus, 'ok');
+  assert.equal(room.moment.mergeCount, 1);
   Server.dropRoom(room.code);
 });
 
@@ -107,6 +109,8 @@ test('AI failure falls back to conservative local groups and still reveals', asy
   assert.equal(room.phase, Engine.PHASES.REVEAL);
   assert.equal(room.groups.length, 4);
   assert.equal(room.roundResult.tied, true);
+  assert.equal(room.moment.aiStatus, 'timeout');
+  assert.equal(room.moment.mergeCount, 0);
   Server.dropRoom(room.code);
 });
 

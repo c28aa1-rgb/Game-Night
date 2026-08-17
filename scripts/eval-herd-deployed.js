@@ -127,8 +127,9 @@ async function main() {
           expected: entry.expectedGroups,
           actual,
           reviewMs,
+          aiStatus: state.moment?.aiStatus || 'unknown',
         });
-        console.log(`${passed ? 'PASS' : 'FAIL'} ${entry.id} (${results.length}/${evalCases.length}, ${reviewMs}ms)`);
+        console.log(`${passed ? 'PASS' : 'FAIL'} ${entry.id} (${results.length}/${evalCases.length}, ${reviewMs}ms, ${state.moment?.aiStatus || 'unknown'})`);
       }
 
       await splitMergedGroups(players[0], state);

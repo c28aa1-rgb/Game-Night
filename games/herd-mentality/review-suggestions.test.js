@@ -64,7 +64,7 @@ test('sends anonymous answers and parses a structured grouping response', async 
   assert.equal(request.model, MODEL);
   assert.equal(REASONING_EFFORT, 'low');
   assert.equal(request.reasoning.effort, REASONING_EFFORT);
-  assert.equal(TIMEOUT_MS, 6000);
+  assert.equal(TIMEOUT_MS, 7000);
   assert.match(request.input, /p1: Driving/);
   assert.match(request.input, /answers both fit the question is never evidence/);
   assert.doesNotMatch(request.input, /Maya|Leo/);
