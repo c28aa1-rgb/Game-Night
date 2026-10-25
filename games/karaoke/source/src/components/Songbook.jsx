@@ -66,8 +66,9 @@ export default function Songbook({ onPick, queued = () => 0, autoFocus = false }
 
   const searching = deferred.trim().length > 0;
   const bookKeys = useMemo(() => new Set(LIBRARY.map((s) => s.key)), [bookSize]);
-  // Songbook hits first; Apple's catalogue fills gaps (a few extras, or the full list if nothing matched).
-  const extra = searching && !showFavs ? catalog.songs.filter((s) => !bookKeys.has(s.key)).slice(0, songs.length ? 5 : 15) : [];
+  // Keep chart-songbook hits first, then expose every distinct Apple catalog match.
+  // The list is paged in the UI, so broad searches don't render hundreds of rows at once.
+  const extra = searching && !showFavs ? catalog.songs.filter((s) => !bookKeys.has(s.key)) : [];
   const bookHits = searching ? songs.slice(0, 60) : songs;
   const results = searching ? [...bookHits, ...extra] : songs;
   const shown = results.slice(0, limit);
@@ -146,7 +147,7 @@ export default function Songbook({ onPick, queued = () => 0, autoFocus = false }
         </div>
 
         {showFavs && results.length === 0 && <p className="hint">Nothing here yet. Tap the heart on any song to save it.</p>}
-        {searching && results.length === 0 && catalog.status !== "loading" && (
+        {searching && results.length === 0 && catalog.status === "idle" && (
           <p className="hint">No songs match “{deferred.trim()}”. Check the spelling, or try the artist's name.</p>
         )}
 
@@ -167,9 +168,9 @@ export default function Songbook({ onPick, queued = () => 0, autoFocus = false }
           <ul className="rows" key={`${filter}-${sort}-${deferred}`}>
             {shown.map((s, i) => (
               <Fragment key={s.key}>
-                {s.source === "catalog" && i === bookHits.length && bookHits.length > 0 && (
+                {s.source === "catalog" && i === bookHits.length && (
                   <li className="rows-divider" aria-hidden="true">
-                    Other matches
+                    More from Apple's song catalog
                   </li>
                 )}
                 <SongRow song={s} index={i % PAGE} queued={queued(s.key)} onPick={onPick} />
@@ -179,6 +180,7 @@ export default function Songbook({ onPick, queued = () => 0, autoFocus = false }
         )}
 
         {searching && catalog.status === "limited" && <p className="hint">Showing songbook results only. Apple's catalogue is busy, so try again in a minute.</p>}
+        {searching && catalog.status === "error" && <p className="hint">Showing songbook results only. The wider song catalogue couldn't be reached. Check your connection and try another search.</p>}
 
         {results.length > limit && (
           <motion.button className="btn btn--ghost more" onClick={() => setLimit((l) => l + PAGE)} whileTap={{ scale: 0.97 }}>

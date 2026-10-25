@@ -159,7 +159,9 @@ export async function searchCatalog(term) {
   const q = term.trim().toLowerCase();
   if (q.length < 2) return [];
   if (catalogCache.has(q)) return catalogCache.get(q);
-  const params = new URLSearchParams({ term: q, media: "music", entity: "song", limit: "40" });
+  // Apple allows up to 200 matches. Returning only 40 made broad artist searches
+  // miss catalog tracks that were just beyond the first page of relevance.
+  const params = new URLSearchParams({ term: q, media: "music", entity: "song", limit: "200" });
   const res = await fetch(`https://itunes.apple.com/search?${params}`);
   if (res.status === 403 || res.status === 429) throw new SearchError("Apple's catalogue is busy. Try again in a minute.", "limited");
   if (!res.ok) throw new SearchError("Apple's catalogue isn't responding.", "network");
@@ -183,7 +185,6 @@ export async function searchCatalog(term) {
       art: r.artworkUrl100?.replace("100x100", "200x200"),
       source: "catalog",
     });
-    if (songs.length >= 15) break;
   }
   catalogCache.set(q, songs);
   return songs;
