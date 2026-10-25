@@ -61,7 +61,6 @@ module.exports = [
     art: '/hub/art/mafia.png',
     basePath: '/mafia',
     type: 'node',
-    status: 'draft',
   },
   {
     id: 'hues-cues',
@@ -86,7 +85,6 @@ module.exports = [
     art: '/hub/art/wavelength.webp',
     basePath: '/wavelength',
     type: 'node',
-    status: 'draft',
   },
   {
     id: 'chameleon',
