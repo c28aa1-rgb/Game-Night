@@ -114,6 +114,18 @@ module.exports = [
     type: 'node',
   },
   {
+    id: 'karaoke',
+    name: 'Karaoke',
+    tagline: 'Pick a song, pass the mic, and own the room.',
+    players: '2+ singers · TV + phones',
+    age: 'All ages',
+    time: 'Flexible',
+    accent: '#F13A2F',
+    art: '/hub/art/karaoke.webp',
+    basePath: '/karaoke',
+    type: 'static',
+  },
+  {
     id: 'draft',
     name: 'Draft Night',
     tagline: 'Spin the wheel, split the room into two, three or four teams.',

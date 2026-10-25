@@ -1,0 +1,23 @@
+{
+  "name": "karaoke",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "node server/standalone.mjs",
+    "songbook": "node scripts/build-songbook.mjs",
+    "package": "node scripts/package.mjs"
+  },
+  "dependencies": {
+    "framer-motion": "^14.6.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "vite": "^8.3.5"
+  }
+}

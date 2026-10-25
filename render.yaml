@@ -23,3 +23,7 @@ services:
       # Without it, conservative local grouping still reveals every round.
       - key: OPENAI_API_KEY
         sync: false
+      # Karaoke searches YouTube from the server so this secret is never
+      # shipped to the browser bundle.
+      - key: YOUTUBE_API_KEY
+        sync: false
