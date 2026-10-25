@@ -20,6 +20,7 @@ mkdirSync(join(stage, "karaoke", "server"), { recursive: true });
 
 // 1. Drop-in folder: server module + prebuilt app. No npm dependencies needed on the host.
 copyFileSync(join(root, "server", "karaoke.mjs"), join(stage, "karaoke", "server", "karaoke.mjs"));
+copyFileSync(join(root, "server", "queue.mjs"), join(stage, "karaoke", "server", "queue.mjs"));
 cpSync(join(root, "dist"), join(stage, "karaoke", "app"), { recursive: true });
 
 // 2. Instructions.

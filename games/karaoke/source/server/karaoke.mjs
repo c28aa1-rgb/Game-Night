@@ -11,6 +11,7 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { extname, join, normalize, sep } from "node:path";
 import { randomBytes, randomUUID } from "node:crypto";
+import { shuffleQueue } from "./queue.mjs";
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -46,15 +47,6 @@ function cleanSong(raw) {
     year: Number.isInteger(raw.year) ? raw.year : null,
     art: /^https:\/\/is\d+(-ssl)?\.mzstatic\.com\//.test(art) ? art : null,
   };
-}
-
-function shuffle(list) {
-  const a = [...list];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = randomBytes(4).readUInt32BE() % (i + 1);
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
 }
 
 export function createKaraoke({ staticDir = null, basePath = "/karaoke", apiPath = "/karaoke-api" } = {}) {
@@ -136,7 +128,7 @@ export function createKaraoke({ staticDir = null, basePath = "/karaoke", apiPath
       }
       case "shuffle":
         host();
-        room.queue = shuffle(room.queue);
+        room.queue = shuffleQueue(room.queue, room.current?.singer);
         break;
       case "clear":
         host();

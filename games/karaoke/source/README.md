@@ -5,6 +5,7 @@ catalogue for anything else). The app finds a karaoke video for it on YouTube an
 on screen. Everyone joins from their phone with a QR code and adds songs to one queue; the TV plays them in turn.
 The TV can also monitor a microphone with a karaoke-style echo and reverb while a song is playing.
 The mic output mutes automatically during count-ins, pauses, and transitions.
+Randomize order separates each singer's turns whenever possible and minimizes consecutive repeats otherwise.
 Browser echo cancellation, noise suppression, filtering, and a safety limiter reduce speaker feedback.
 
 No audio is stored or processed. The songbook is just names, and playback is the official YouTube player.
