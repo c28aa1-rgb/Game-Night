@@ -21,7 +21,15 @@ export class MicFX {
   async start() {
     if (this.ctx) return;
     this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      audio: {
+        // Ask the browser/device DSP to remove sound coming from the TV.
+        // These are preferences, so older browsers can still provide a mic.
+        echoCancellation: { ideal: true },
+        noiseSuppression: { ideal: true },
+        // AGC can turn itself up during quiet moments and start a feedback loop.
+        autoGainControl: { ideal: false },
+        channelCount: { ideal: 1 },
+      },
     });
     const ctx = new AudioContext({ latencyHint: "interactive" });
     this.ctx = ctx;
@@ -29,26 +37,42 @@ export class MicFX {
 
     // Performance monitor: dry + slapback echo + room reverb. The stage owns
     // the master mute so transitions and paused video never feed the speakers.
+    const highpass = ctx.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.value = 90;
+    highpass.Q.value = 0.7;
+    const lowpass = ctx.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 12000;
+    lowpass.Q.value = 0.7;
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -18;
+    limiter.knee.value = 6;
+    limiter.ratio.value = 16;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.22;
     const master = ctx.createGain();
     master.gain.value = 0;
     const dry = ctx.createGain();
-    dry.gain.value = 0.9;
+    dry.gain.value = 0.78;
     const delay = ctx.createDelay(1);
     delay.delayTime.value = 0.16;
     const feedback = ctx.createGain();
-    feedback.gain.value = 0.28;
+    feedback.gain.value = 0.2;
     const wet = ctx.createGain();
-    wet.gain.value = 0.35;
+    wet.gain.value = 0.24;
     const verb = ctx.createConvolver();
     verb.buffer = makeImpulse(ctx);
     const verbGain = ctx.createGain();
-    verbGain.gain.value = 0.4;
+    verbGain.gain.value = 0.24;
 
-    src.connect(dry).connect(master);
-    src.connect(delay);
+    src.connect(highpass).connect(lowpass);
+    lowpass.connect(dry).connect(limiter);
+    lowpass.connect(delay);
     delay.connect(feedback).connect(delay);
-    delay.connect(wet).connect(master);
-    src.connect(verb).connect(verbGain).connect(master);
+    delay.connect(wet).connect(limiter);
+    lowpass.connect(verb).connect(verbGain).connect(limiter);
+    limiter.connect(master);
     master.connect(ctx.destination);
     this.out = master;
   }
@@ -56,7 +80,7 @@ export class MicFX {
   setMonitoring(on) {
     this.monitoring = on;
     if (!this.ctx) return;
-    this.out.gain.setTargetAtTime(on ? 1 : 0, this.ctx.currentTime, 0.05);
+    this.out.gain.setTargetAtTime(on ? 0.82 : 0, this.ctx.currentTime, 0.05);
   }
 
   stop() {
