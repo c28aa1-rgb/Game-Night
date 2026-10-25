@@ -52,6 +52,7 @@ function cleanSong(raw) {
 export function createKaraoke({ staticDir = null, basePath = "/karaoke", apiPath = "/karaoke-api" } = {}) {
   const rooms = new Map();
   const youtubeCache = new Map();
+  const catalogCache = new Map();
 
   function newCode() {
     for (let tries = 0; tries < 50; tries++) {
@@ -275,10 +276,63 @@ export function createKaraoke({ staticDir = null, basePath = "/karaoke", apiPath
     return safeResult;
   }
 
+  async function searchCatalog(body) {
+    const term = str(body.term, 100).replace(/\s+/g, " ");
+    if (term.length < 2) return { results: [] };
+
+    const key = term.toLowerCase();
+    const cached = catalogCache.get(key);
+    if (cached) return cached;
+
+    const params = new URLSearchParams({ term, media: "music", entity: "song", limit: "200" });
+    let response;
+    try {
+      response = await fetch(`https://itunes.apple.com/search?${params}`, {
+        signal: AbortSignal.timeout(8_000),
+      });
+    } catch {
+      throw Object.assign(new Error("Apple's catalogue couldn't be reached from the server."), {
+        status: 502,
+        kind: "network",
+      });
+    }
+
+    if (response.status === 403 || response.status === 429) {
+      throw Object.assign(new Error("Apple's catalogue is busy. Try again in a minute."), {
+        status: 429,
+        kind: "limited",
+      });
+    }
+    if (!response.ok) {
+      throw Object.assign(new Error("Apple's catalogue isn't responding."), { status: 502, kind: "network" });
+    }
+
+    const bodyData = await response.json().catch(() => null);
+    if (!bodyData || !Array.isArray(bodyData.results)) {
+      throw Object.assign(new Error("Apple returned an invalid catalogue response."), { status: 502, kind: "network" });
+    }
+
+    const result = {
+      results: bodyData.results.slice(0, 200).map((item) => ({
+        trackName: str(item.trackName, 300),
+        artistName: str(item.artistName, 200),
+        releaseDate: str(item.releaseDate, 20),
+        primaryGenreName: str(item.primaryGenreName, 100),
+        artworkUrl100: str(item.artworkUrl100, 500),
+      })),
+    };
+    catalogCache.set(key, result);
+    if (catalogCache.size > 200) catalogCache.delete(catalogCache.keys().next().value);
+    return result;
+  }
+
   async function api(req, res, path) {
     try {
       if (path === "/youtube/search" && req.method === "POST") {
         return json(res, 200, await searchYouTube(await readBody(req)));
+      }
+      if (path === "/catalog/search" && req.method === "POST") {
+        return json(res, 200, await searchCatalog(await readBody(req)));
       }
 
       if (path === "/rooms" && req.method === "POST") {

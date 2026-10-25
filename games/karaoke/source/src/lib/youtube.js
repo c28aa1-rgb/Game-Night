@@ -159,13 +159,14 @@ export async function searchCatalog(term) {
   const q = term.trim().toLowerCase();
   if (q.length < 2) return [];
   if (catalogCache.has(q)) return catalogCache.get(q);
-  // Apple allows up to 200 matches. Returning only 40 made broad artist searches
-  // miss catalog tracks that were just beyond the first page of relevance.
-  const params = new URLSearchParams({ term: q, media: "music", entity: "song", limit: "200" });
-  const res = await fetch(`https://itunes.apple.com/search?${params}`);
-  if (res.status === 403 || res.status === 429) throw new SearchError("Apple's catalogue is busy. Try again in a minute.", "limited");
-  if (!res.ok) throw new SearchError("Apple's catalogue isn't responding.", "network");
-  const body = await res.json();
+  // The server proxy keeps Apple's keyless catalog request same-origin and cached.
+  const res = await fetch("/karaoke-api/catalog/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ term: q }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new SearchError(body.error || "Apple's catalogue isn't responding.", body.kind || "network");
   const seen = new Set();
   const songs = [];
   for (const r of body.results || []) {

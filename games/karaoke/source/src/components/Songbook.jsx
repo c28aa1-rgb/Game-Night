@@ -55,8 +55,8 @@ export default function Songbook({ onPick, queued = () => 0, autoFocus = false }
     let live = true;
     const t = setTimeout(() => {
       searchCatalog(q)
-        .then((found) => live && setCatalog({ q, songs: found, status: "idle" }))
-        .catch((e) => live && setCatalog({ q, songs: [], status: e.kind === "limited" ? "limited" : "error" }));
+        .then((found) => live && setCatalog({ q, songs: found, status: "idle", error: "" }))
+        .catch((e) => live && setCatalog({ q, songs: [], status: e.kind === "limited" ? "limited" : "error", error: e.message }));
     }, 500);
     return () => {
       live = false;
@@ -180,7 +180,7 @@ export default function Songbook({ onPick, queued = () => 0, autoFocus = false }
         )}
 
         {searching && catalog.status === "limited" && <p className="hint">Showing songbook results only. Apple's catalogue is busy, so try again in a minute.</p>}
-        {searching && catalog.status === "error" && <p className="hint">Showing songbook results only. The wider song catalogue couldn't be reached. Check your connection and try another search.</p>}
+        {searching && catalog.status === "error" && <p className="hint">Showing songbook results only. {catalog.error || "The wider song catalogue couldn't be reached."}</p>}
 
         {results.length > limit && (
           <motion.button className="btn btn--ghost more" onClick={() => setLimit((l) => l + PAGE)} whileTap={{ scale: 0.97 }}>
