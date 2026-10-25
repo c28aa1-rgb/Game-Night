@@ -126,8 +126,8 @@ function Remote({ onLeave }) {
           <span className="vfd">{code}</span>
           {status !== "live" && <span className="phone-off">{status === "gone" ? "Party ended" : "Reconnecting…"}</span>}
         </div>
-        <button className="chip" onClick={onLeave}>
-          {name || "Set name"} · Leave
+        <button className="chip" onClick={onLeave} aria-label={`Leave party${name ? ` as ${name}` : ""}`}>
+          &larr; Leave party
         </button>
       </header>
 

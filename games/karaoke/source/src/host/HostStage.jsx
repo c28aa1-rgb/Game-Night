@@ -6,34 +6,15 @@ import { useMic } from "../lib/useMic.jsx";
 import { YTState, useYouTubePlayer } from "../lib/useYouTubePlayer.js";
 import { songCode } from "../lib/youtube.js";
 import { screen, spring, springSoft } from "../lib/motion.js";
-import MicButton, { MicMeter } from "../components/MicButton.jsx";
+import MicButton from "../components/MicButton.jsx";
 
 const BEAT = 0.75;
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
-function useHype(playing) {
-  const { status, level } = useMic();
-  const acc = useRef({ n: 0, sum: 0, active: 0 });
-  useEffect(() => {
-    if (!playing || status !== "on") return;
-    const t = setInterval(() => {
-      const v = level.get();
-      acc.current.n++;
-      acc.current.sum += v;
-      if (v > 0.28) acc.current.active++;
-    }, 100);
-    return () => clearInterval(t);
-  }, [playing, status, level]);
-  return () => {
-    const { n, sum, active } = acc.current;
-    if (n < 20) return null;
-    return Math.round(100 * (0.6 * (active / n) + 0.4 * Math.min(1, (sum / n) * 1.7)));
-  };
-}
-
 export default function HostStage({ v }) {
   const { state, send } = useRoom();
   const toast = useToast();
+  const { status: micStatus, setMonitoring } = useMic();
   const entry = state.current;
   const next = state.queue[0];
   const stageRef = useRef(null);
@@ -55,8 +36,14 @@ export default function HostStage({ v }) {
     },
   });
   const playing = player.state === YTState.PLAYING;
-  const getHype = useHype(playing);
-  finishRef.current = () => send("finish", { hype: getHype() }).catch((e) => toast(e.message));
+  finishRef.current = () => send("finish").catch((e) => toast(e.message));
+
+  // The mic is audible only during active playback. Count-ins, pauses,
+  // buffering, score screens, and queue transitions all mute it automatically.
+  useEffect(() => {
+    setMonitoring(micStatus === "on" && playing);
+    return () => setMonitoring(false);
+  }, [micStatus, playing, setMonitoring]);
 
   // Count-in once the video is ready, then roll. Restarts if the video version changes.
   useEffect(() => {
@@ -224,7 +211,7 @@ export default function HostStage({ v }) {
                 </motion.button>
               </div>
               <div className="controls-right">
-                <MicButton compact />
+                <MicButton compact active={playing} />
                 <button className="btn btn--ghost" onClick={fullscreen}>
                   Full screen
                 </button>
@@ -241,7 +228,6 @@ export default function HostStage({ v }) {
             <span style={{ width: `${pct}%` }} />
           </div>
           <span className="vfd">{player.time.duration ? fmt(player.time.duration) : "-:--"}</span>
-          <MicMeter />
         </div>
       </footer>
     </motion.main>

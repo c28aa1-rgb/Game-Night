@@ -14,9 +14,7 @@ export class MicFX {
   constructor() {
     this.ctx = null;
     this.stream = null;
-    this.analyser = null;
     this.out = null;
-    this.data = null;
     this.monitoring = false;
   }
 
@@ -29,12 +27,8 @@ export class MicFX {
     this.ctx = ctx;
     const src = ctx.createMediaStreamSource(this.stream);
 
-    this.analyser = ctx.createAnalyser();
-    this.analyser.fftSize = 1024;
-    this.data = new Float32Array(this.analyser.fftSize);
-    src.connect(this.analyser);
-
-    // Monitor chain: dry + slapback echo + room reverb → master (muted until enabled).
+    // Performance monitor: dry + slapback echo + room reverb. The stage owns
+    // the master mute so transitions and paused video never feed the speakers.
     const master = ctx.createGain();
     master.gain.value = 0;
     const dry = ctx.createGain();
@@ -65,23 +59,13 @@ export class MicFX {
     this.out.gain.setTargetAtTime(on ? 1 : 0, this.ctx.currentTime, 0.05);
   }
 
-  // 0..1, perceptually scaled RMS.
-  level() {
-    if (!this.analyser) return 0;
-    this.analyser.getFloatTimeDomainData(this.data);
-    let sum = 0;
-    for (let i = 0; i < this.data.length; i++) sum += this.data[i] * this.data[i];
-    const rms = Math.sqrt(sum / this.data.length);
-    const db = 20 * Math.log10(rms + 1e-8);
-    return Math.min(1, Math.max(0, (db + 55) / 45));
-  }
-
   stop() {
     this.stream?.getTracks().forEach((t) => t.stop());
     this.ctx?.close();
     this.ctx = null;
     this.stream = null;
-    this.analyser = null;
+    this.out = null;
+    this.monitoring = false;
   }
 }
 

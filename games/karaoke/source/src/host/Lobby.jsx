@@ -77,7 +77,12 @@ export default function Lobby() {
             a song.
           </Wipe>
         </h1>
-        <MicButton />
+        <div className="lobby-actions">
+          <a className="chip nav-back" href="/">
+            &larr; Game night
+          </a>
+          <MicButton />
+        </div>
       </div>
 
       <section className="lq" aria-labelledby="lq-title">
@@ -154,7 +159,6 @@ export default function Lobby() {
                 <span>
                   <strong>{h.singer}</strong> {h.song.title}
                 </span>
-                {h.hype != null && <span className="vfd">{h.hype}</span>}
               </li>
             ))}
           </ul>

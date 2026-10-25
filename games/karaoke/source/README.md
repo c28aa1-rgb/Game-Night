@@ -3,7 +3,8 @@
 A party karaoke game in the browser. Pick a song from the built-in songbook (or search Apple's music
 catalogue for anything else). The app finds a karaoke video for it on YouTube and plays it with the lyrics
 on screen. Everyone joins from their phone with a QR code and adds songs to one queue; the TV plays them in turn.
-The TV can also use a mic for echo and a hype score.
+The TV can also monitor a microphone with a karaoke-style echo and reverb while a song is playing.
+The mic output mutes automatically during count-ins, pauses, and transitions.
 
 No audio is stored or processed. The songbook is just names, and playback is the official YouTube player.
 

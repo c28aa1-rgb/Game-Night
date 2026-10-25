@@ -157,8 +157,7 @@ export function createKaraoke({ staticDir = null, basePath = "/karaoke", apiPath
       case "finish": {
         host();
         if (!room.current || room.phase !== "playing") break;
-        const hype = Number.isFinite(body.hype) ? Math.max(0, Math.min(100, Math.round(body.hype))) : null;
-        room.lastScore = { singer: room.current.singer, song: room.current.song, hype, at: Date.now() };
+        room.lastScore = { singer: room.current.singer, song: room.current.song, at: Date.now() };
         room.history.unshift(room.lastScore);
         room.history = room.history.slice(0, 50);
         room.phase = "score";

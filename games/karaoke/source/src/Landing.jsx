@@ -45,6 +45,9 @@ export default function Landing({ initialCode = "", onHost, onJoin }) {
   return (
     <motion.main className="landing" {...screen}>
       <header className="landing-head">
+        <a className="back-link" href={joining ? "/karaoke/" : "/"}>
+          &larr; {joining ? "Karaoke" : "Game night"}
+        </a>
         <span className="wordmark">
           <span className="wordmark-dots" aria-hidden="true">
             <i />
