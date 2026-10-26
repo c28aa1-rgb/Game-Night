@@ -22,8 +22,12 @@ export default function HostStage({ v }) {
   const [chrome, setChrome] = useState(true);
   const [count, setCount] = useState(4); // count-in dots left; 0 = rolling
   const [blocked, setBlocked] = useState(false);
+  const [videoMenu, setVideoMenu] = useState(false);
+  const [switchingVideo, setSwitchingVideo] = useState(false);
   const hideTimer = useRef();
   const finishRef = useRef(() => {});
+  const videoMenuOpen = useRef(false);
+  videoMenuOpen.current = videoMenu;
 
   const player = useYouTubePlayer(mountRef, v.video?.id, {
     onEnd: () => finishRef.current(),
@@ -75,7 +79,9 @@ export default function HostStage({ v }) {
   const wake = useCallback(() => {
     setChrome(true);
     clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => setChrome(false), 3000);
+    hideTimer.current = setTimeout(() => {
+      if (!videoMenuOpen.current) setChrome(false);
+    }, 3000);
   }, []);
   useEffect(() => {
     wake();
@@ -85,6 +91,19 @@ export default function HostStage({ v }) {
   const fullscreen = () => {
     if (document.fullscreenElement) document.exitFullscreen();
     else document.documentElement.requestFullscreen?.();
+  };
+
+  const chooseVideo = async (videoId) => {
+    setSwitchingVideo(true);
+    try {
+      await send("selectVideo", { videoId });
+      setVideoMenu(false);
+      wake();
+    } catch (error) {
+      toast(error.message);
+    } finally {
+      setSwitchingVideo(false);
+    }
   };
 
   useEffect(() => {
@@ -212,6 +231,30 @@ export default function HostStage({ v }) {
               </div>
               <div className="controls-right">
                 <MicButton compact active={playing} />
+                {state.videoChoices.length > 1 && (
+                  <div className="stage-video-picker">
+                    <button className="btn btn--ghost" aria-expanded={videoMenu} onClick={() => { setVideoMenu((open) => !open); wake(); }}>
+                      Change video
+                    </button>
+                    <AnimatePresence>
+                      {videoMenu && (
+                        <motion.div className="stage-video-menu" initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }}>
+                          <p className="stage-video-menu-title">Choose a karaoke version</p>
+                          <ul>
+                            {state.videoChoices.map((choice) => (
+                              <li key={choice.id}>
+                                <button className="stage-video-option" disabled={switchingVideo || state.videoId === choice.id} aria-current={state.videoId === choice.id ? "true" : undefined} onClick={() => chooseVideo(choice.id)}>
+                                  <span>{choice.title}</span>
+                                  <small>{state.videoId === choice.id ? "Playing now" : choice.channel || "YouTube"}</small>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
                 <button className="btn btn--ghost" onClick={fullscreen}>
                   Full screen
                 </button>
