@@ -127,9 +127,6 @@ function SingerControls({ state, deviceId, send, toast }) {
         <strong>{entry.song.title}</strong>
       </div>
       <div className="phone-singer-actions">
-        <button className="btn btn--ghost" disabled={busy} onClick={() => run("next", { from: "playing" })}>
-          Skip song
-        </button>
         <button className="btn btn--pink" disabled={busy} onClick={() => run("finish")}>
           End song
         </button>
