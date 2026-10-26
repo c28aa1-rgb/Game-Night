@@ -129,7 +129,7 @@ export default function Songbook({ onPick, queued = () => 0, autoFocus = false }
           <h2 className="book-count">
             {showFavs ? "Favourites" : searching ? "Results" : (filters.find((f) => f.id === filter)?.label ?? "Songbook")}{" "}
             <span className="vfd">{results.length.toLocaleString()}</span>
-            {searching && catalog.status === "loading" && <span className="book-busy">checking more songs…</span>}
+            {searching && catalog.status === "loading" && <span className="book-busy">Apple matches loading</span>}
           </h2>
           {!searching && !showFavs && (
             <div className="sort" role="radiogroup" aria-label="Sort songs">
@@ -145,6 +145,23 @@ export default function Songbook({ onPick, queued = () => 0, autoFocus = false }
             </div>
           )}
         </div>
+
+        {searching && catalog.status === "loading" && (
+          <div role="status" aria-label="Loading Apple song recommendations">
+            <p className="book-busy">Checking Apple's song catalog…</p>
+            <ul className="catalog-skeletons" aria-hidden="true">
+              {[0, 1, 2].map((n) => (
+                <li className="catalog-skeleton" key={n}>
+                  <span className="catalog-skeleton-art" />
+                  <span className="catalog-skeleton-copy">
+                    <span className="catalog-skeleton-line" />
+                    <span className="catalog-skeleton-line" />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {showFavs && results.length === 0 && <p className="hint">Nothing here yet. Tap the heart on any song to save it.</p>}
         {searching && results.length === 0 && catalog.status === "idle" && (

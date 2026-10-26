@@ -102,6 +102,95 @@ function QueueView({ me }) {
   );
 }
 
+function SingerControls({ state, deviceId, send, toast }) {
+  const [choosingVideo, setChoosingVideo] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const entry = state.current;
+  if (state.phase !== "playing" || entry?.deviceId !== deviceId) return null;
+
+  const run = async (action, payload = {}) => {
+    setBusy(true);
+    try {
+      await send(action, payload);
+      if (action === "selectVideo") setChoosingVideo(false);
+    } catch (error) {
+      toast(error.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="phone-singer-tools" aria-label="Now playing controls">
+      <div className="phone-singer-song">
+        <span className="label">You're singing</span>
+        <strong>{entry.song.title}</strong>
+      </div>
+      <div className="phone-singer-actions">
+        <button className="btn btn--ghost" disabled={busy} onClick={() => run("next", { from: "playing" })}>
+          Skip song
+        </button>
+        <button className="btn btn--pink" disabled={busy} onClick={() => run("finish")}>
+          End song
+        </button>
+      </div>
+      {state.videoChoices.length > 1 && (
+        <div className="phone-video-picker">
+          <button className="link" aria-expanded={choosingVideo} onClick={() => setChoosingVideo((open) => !open)}>
+            {choosingVideo ? "Hide videos" : "Choose a different video"}
+          </button>
+          {choosingVideo && (
+            <ul className="phone-video-options">
+              {state.videoChoices.map((choice) => (
+                <li key={choice.id}>
+                  <button
+                    className="phone-video-option"
+                    disabled={busy || state.videoId === choice.id}
+                    aria-current={state.videoId === choice.id ? "true" : undefined}
+                    onClick={() => run("selectVideo", { videoId: choice.id })}
+                  >
+                    <span>{choice.title}</span>
+                    <small>{state.videoId === choice.id ? "Playing now" : choice.channel || "YouTube"}</small>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function VideoFeedback({ state, deviceId, send, toast }) {
+  const [busy, setBusy] = useState(false);
+  const score = state.lastScore;
+  if (state.phase !== "score" || score?.deviceId !== deviceId || !score.videoId) return null;
+
+  if (score.videoRating) {
+    return <p className="phone-video-feedback phone-video-feedback--done">{score.videoRating === "no" ? "We won't recommend that video again." : "Thanks for the video feedback."}</p>;
+  }
+
+  const rate = async (liked) => {
+    setBusy(true);
+    try {
+      await send("rateVideo", { liked });
+    } catch (error) {
+      toast(error.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="phone-video-feedback" aria-label="Rate the karaoke video">
+      <span>Did you like this video?</span>
+      <button className="chip" disabled={busy} onClick={() => rate(true)}>Yes</button>
+      <button className="chip" disabled={busy} onClick={() => rate(false)}>No</button>
+    </section>
+  );
+}
+
 function Remote({ onLeave }) {
   const { code, state, status, send } = useRoom();
   const { deviceId, name } = useLocal();
@@ -145,6 +234,9 @@ function Remote({ onLeave }) {
           </button>
         ))}
       </nav>
+
+      <SingerControls state={state} deviceId={deviceId} send={send} toast={toast} />
+      <VideoFeedback state={state} deviceId={deviceId} send={send} toast={toast} />
 
       <AnimatePresence mode="wait" initial={false}>
         <motion.div key={tab} className="phone-body" initial={{ opacity: 0, x: tab === "queue" ? 30 : -30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: tab === "queue" ? 30 : -30 }} transition={springSoft}>

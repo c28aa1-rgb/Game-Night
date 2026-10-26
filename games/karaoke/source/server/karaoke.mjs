@@ -53,6 +53,7 @@ export function createKaraoke({ staticDir = null, basePath = "/karaoke", apiPath
   const rooms = new Map();
   const youtubeCache = new Map();
   const catalogCache = new Map();
+  const rejectedVideoIds = new Set();
 
   function newCode() {
     for (let tries = 0; tries < 50; tries++) {
@@ -69,6 +70,9 @@ export function createKaraoke({ staticDir = null, basePath = "/karaoke", apiPath
     queue: room.queue,
     current: room.current,
     lastScore: room.lastScore,
+    videoId: room.videoId,
+    videoChoices: room.videoChoices,
+    rejectedVideoIds: [...rejectedVideoIds],
     history: room.history.slice(0, 12),
     phones: room.listeners.size - room.hostListeners,
     rev: room.rev,
@@ -99,6 +103,12 @@ export function createKaraoke({ staticDir = null, basePath = "/karaoke", apiPath
     const pull = () => {
       room.current = room.queue.shift() || null;
       room.phase = room.current ? "upnext" : "lobby";
+      room.videoId = null;
+      room.videoChoices = [];
+    };
+    const currentSinger = () => room.current?.deviceId && room.current.deviceId === deviceId;
+    const currentOrHost = () => {
+      if (!isHost && !currentSinger()) throw Object.assign(new Error("Only the singer who's up can do that."), { status: 403 });
     };
 
     switch (body.action) {
@@ -148,25 +158,88 @@ export function createKaraoke({ staticDir = null, basePath = "/karaoke", apiPath
         break;
       }
       case "finish": {
-        host();
         if (!room.current || room.phase !== "playing") break;
-        room.lastScore = { singer: room.current.singer, song: room.current.song, at: Date.now() };
+        currentOrHost();
+        room.lastScore = {
+          singer: room.current.singer,
+          song: room.current.song,
+          deviceId: room.current.deviceId,
+          videoId: room.videoId,
+          videoRating: null,
+          at: Date.now(),
+        };
         room.history.unshift(room.lastScore);
         room.history = room.history.slice(0, 50);
         room.phase = "score";
         break;
       }
       case "next": // after the score, or to skip whoever is up
-        host();
         // `from` makes it idempotent: a double tap (or tap + auto-advance) can't skip an extra singer.
         if (body.from && body.from !== room.phase) break;
+        if (!isHost && !(room.phase === "playing" && currentSinger())) {
+          throw Object.assign(new Error("Only the singer who's up can skip this song."), { status: 403 });
+        }
         pull();
         break;
+      case "videoChoices": {
+        host();
+        if (!room.current || body.entryId !== room.current.id) break;
+        const seen = new Set();
+        room.videoChoices = (Array.isArray(body.items) ? body.items : []).slice(0, 20).flatMap((item) => {
+          const id = str(item?.id, 20);
+          if (!/^[\w-]{11}$/.test(id) || seen.has(id) || rejectedVideoIds.has(id)) return [];
+          seen.add(id);
+          return [{
+            id,
+            title: str(item.title, 300) || "YouTube video",
+            channel: str(item.channel, 200),
+            thumb: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+          }];
+        });
+        if (!room.videoChoices.some((item) => item.id === room.videoId)) room.videoId = room.videoChoices[0]?.id || null;
+        break;
+      }
+      case "selectVideo": {
+        if (!room.current || !["upnext", "playing"].includes(room.phase)) break;
+        currentOrHost();
+        const id = str(body.videoId, 20);
+        if (!room.videoChoices.some((item) => item.id === id) || rejectedVideoIds.has(id)) {
+          throw Object.assign(new Error("That video is no longer available. Choose another."), { status: 404 });
+        }
+        room.videoId = id;
+        break;
+      }
+      case "rateVideo": {
+        const score = room.lastScore;
+        if (room.phase !== "score" || !score?.videoId || score.deviceId !== deviceId) {
+          throw Object.assign(new Error("That video feedback is no longer available."), { status: 409 });
+        }
+        if (score.videoRating) break;
+        score.videoRating = body.liked === true ? "yes" : "no";
+        if (body.liked !== true) {
+          rejectedVideoIds.add(score.videoId);
+          while (rejectedVideoIds.size > 500) rejectedVideoIds.delete(rejectedVideoIds.values().next().value);
+          room.videoChoices = room.videoChoices.filter((item) => item.id !== score.videoId);
+        }
+        break;
+      }
+      case "rejectVideo": {
+        currentOrHost();
+        const id = str(body.videoId, 20);
+        if (!/^[\w-]{11}$/.test(id)) throw Object.assign(new Error("That video ID is invalid."), { status: 400 });
+        rejectedVideoIds.add(id);
+        while (rejectedVideoIds.size > 500) rejectedVideoIds.delete(rejectedVideoIds.values().next().value);
+        room.videoChoices = room.videoChoices.filter((item) => item.id !== id);
+        if (room.videoId === id) room.videoId = room.videoChoices[0]?.id || null;
+        break;
+      }
       case "stop": // back to the lobby; the current singer keeps their place at the front
         host();
         if (room.current) room.queue.unshift(room.current);
         room.current = null;
         room.phase = "lobby";
+        room.videoId = null;
+        room.videoChoices = [];
         break;
       default:
         throw Object.assign(new Error("Unknown action."), { status: 400 });
@@ -220,8 +293,16 @@ export function createKaraoke({ staticDir = null, basePath = "/karaoke", apiPath
 
     const cleanArtist = artist.split(/ ft\.? | feat\.? /i)[0];
     const query = `${title} ${cleanArtist} karaoke`;
+    const excludedIds = new Set(rejectedVideoIds);
+    if (Array.isArray(body.excludeVideoIds)) {
+      for (const id of body.excludeVideoIds.slice(0, 500)) {
+        const safeId = str(id, 20);
+        if (/^[\w-]{11}$/.test(safeId)) excludedIds.add(safeId);
+      }
+    }
+    const withoutExcluded = (result) => ({ items: result.items.filter((item) => !excludedIds.has(item.id.videoId)) });
     const cached = youtubeCache.get(query.toLowerCase());
-    if (cached) return cached;
+    if (cached) return withoutExcluded(cached);
 
     const params = new URLSearchParams({
       part: "snippet",
@@ -273,7 +354,7 @@ export function createKaraoke({ staticDir = null, basePath = "/karaoke", apiPath
     };
     youtubeCache.set(query.toLowerCase(), safeResult);
     if (youtubeCache.size > 400) youtubeCache.delete(youtubeCache.keys().next().value);
-    return safeResult;
+    return withoutExcluded(safeResult);
   }
 
   async function searchCatalog(body) {
@@ -345,6 +426,8 @@ export function createKaraoke({ staticDir = null, basePath = "/karaoke", apiPath
           phase: "lobby",
           queue: [],
           current: null,
+          videoId: null,
+          videoChoices: [],
           lastScore: null,
           history: [],
           listeners: new Set(),

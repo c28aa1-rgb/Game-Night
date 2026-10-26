@@ -1,6 +1,7 @@
 import { norm, songKey } from "./library.js";
 
 const CACHE_STORAGE = "nk.videoCache";
+const REJECTED_STORAGE = "nk.rejectedVideoIds";
 
 // Channels that reliably upload clean, well-timed karaoke tracks. Results from these sort first.
 const TRUSTED = [
@@ -28,6 +29,21 @@ function safeSet(key, value) {
   } catch {
     /* storage unavailable */
   }
+}
+
+function readRejectedVideos() {
+  try {
+    const ids = JSON.parse(safeGet(REJECTED_STORAGE) || "[]");
+    return new Set(Array.isArray(ids) ? ids.filter((id) => /^[\w-]{11}$/.test(id)) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+export function rememberUnplayableVideos(ids) {
+  const rejected = readRejectedVideos();
+  for (const id of ids || []) if (/^[\w-]{11}$/.test(id)) rejected.add(id);
+  safeSet(REJECTED_STORAGE, JSON.stringify([...rejected].slice(-500)));
 }
 
 export function decodeEntities(str) {
@@ -98,12 +114,14 @@ export class SearchError extends Error {
 export async function findKaraokeVideos(song, { refresh = false, code, hostToken } = {}) {
   const cache = readCache();
   const hit = cache[song.key];
-  if (hit && !refresh && hit.items.length) return hit.items;
+  const rejected = readRejectedVideos();
+  const cachedItems = hit?.items?.filter((item) => !rejected.has(item.id)) || [];
+  if (!refresh && cachedItems.length) return cachedItems;
 
   const res = await fetch("/karaoke-api/youtube/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code, hostToken, title: song.title, artist: song.artist }),
+    body: JSON.stringify({ code, hostToken, title: song.title, artist: song.artist, excludeVideoIds: [...rejected] }),
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -112,7 +130,7 @@ export async function findKaraokeVideos(song, { refresh = false, code, hostToken
 
   const titleWords = norm(song.title).split(" ").filter((w) => w.length > 2);
   const items = (body.items || [])
-    .filter((it) => it.id?.videoId)
+    .filter((it) => it.id?.videoId && !rejected.has(it.id.videoId))
     .map((it) => {
       const channel = decodeEntities(it.snippet.channelTitle || "");
       const raw = decodeEntities(it.snippet.title);
@@ -139,6 +157,7 @@ export async function findKaraokeVideos(song, { refresh = false, code, hostToken
 
 // Drop a video that refused to play so it's never picked again for this song.
 export function markUnplayable(songKeyValue, videoId) {
+  rememberUnplayableVideos([videoId]);
   const cache = readCache();
   const hit = cache[songKeyValue];
   if (!hit) return [];
