@@ -14,7 +14,7 @@ const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(
 export default function HostStage({ v }) {
   const { state, send } = useRoom();
   const toast = useToast();
-  const { status: micStatus, setMonitoring } = useMic();
+  const { status: micStatus, setMonitoring, settings: micSettings, updateSettings, latency } = useMic();
   const entry = state.current;
   const next = state.queue[0];
   const stageRef = useRef(null);
@@ -23,11 +23,14 @@ export default function HostStage({ v }) {
   const [count, setCount] = useState(4); // count-in dots left; 0 = rolling
   const [blocked, setBlocked] = useState(false);
   const [videoMenu, setVideoMenu] = useState(false);
+  const [audioMenu, setAudioMenu] = useState(false);
+  const [musicVolume, setMusicVolume] = useState(80);
+  const [musicMuted, setMusicMuted] = useState(false);
   const [switchingVideo, setSwitchingVideo] = useState(false);
   const hideTimer = useRef();
   const finishRef = useRef(() => {});
   const videoMenuOpen = useRef(false);
-  videoMenuOpen.current = videoMenu;
+  videoMenuOpen.current = videoMenu || audioMenu;
 
   const player = useYouTubePlayer(mountRef, v.video?.id, {
     onEnd: () => finishRef.current(),
@@ -41,6 +44,15 @@ export default function HostStage({ v }) {
   });
   const playing = player.state === YTState.PLAYING;
   finishRef.current = () => send("finish").catch((e) => toast(e.message));
+
+  useEffect(() => {
+    if (!player.ready) return;
+    if (musicMuted) player.mute();
+    else {
+      player.setVolume(musicVolume);
+      player.unMute();
+    }
+  }, [player.ready, musicMuted, musicVolume]);
 
   // The mic is audible only during active playback. Count-ins, pauses,
   // buffering, score screens, and queue transitions all mute it automatically.
@@ -231,6 +243,44 @@ export default function HostStage({ v }) {
               </div>
               <div className="controls-right">
                 <MicButton compact active={playing} />
+                <div className="stage-audio-picker">
+                  <button className="btn btn--ghost" aria-expanded={audioMenu} onClick={() => { setAudioMenu((open) => !open); wake(); }}>
+                    Audio &amp; volume
+                  </button>
+                  <AnimatePresence>
+                    {audioMenu && (
+                      <motion.div className="stage-audio-menu" initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }}>
+                        <div className="stage-audio-menu-title">
+                          <strong>Sound check</strong>
+                          <button className="stage-audio-close" aria-label="Close audio controls" onClick={() => setAudioMenu(false)}>×</button>
+                        </div>
+                        <label className="stage-audio-slider">
+                          <span><b>Song volume</b><output>{musicMuted ? "Muted" : `${musicVolume}%`}</output></span>
+                          <input type="range" min="0" max="100" step="1" value={musicVolume} onChange={(e) => { setMusicVolume(Number(e.target.value)); if (Number(e.target.value) > 0) setMusicMuted(false); }} />
+                        </label>
+                        <button className="btn btn--ghost stage-audio-mute" aria-pressed={musicMuted} onClick={() => setMusicMuted((muted) => !muted)}>
+                          {musicMuted ? "Unmute song" : "Mute song"}
+                        </button>
+                        <label className="stage-audio-slider">
+                          <span><b>Microphone monitor</b><output>{Math.round(micSettings.volume * 100)}%</output></span>
+                          <input type="range" min="0" max="1.5" step="0.05" value={micSettings.volume} onChange={(e) => updateSettings({ volume: Number(e.target.value) })} />
+                        </label>
+                        <label className="stage-audio-slider">
+                          <span><b>Mic echo</b><output>{Math.round(micSettings.echo * 100)}%</output></span>
+                          <input type="range" min="0" max="1" step="0.05" value={micSettings.echo} onChange={(e) => updateSettings({ echo: Number(e.target.value) })} />
+                        </label>
+                        <label className="stage-audio-slider">
+                          <span><b>Room reverb</b><output>{Math.round(micSettings.reverb * 100)}%</output></span>
+                          <input type="range" min="0" max="1" step="0.05" value={micSettings.reverb} onChange={(e) => updateSettings({ reverb: Number(e.target.value) })} />
+                        </label>
+                        <p className="stage-audio-note">
+                          {latency == null ? "Enable the mic to see the browser audio-path estimate." : `Browser audio path estimate: ~${latency} ms. This excludes microphone hardware and casting.`}
+                        </p>
+                        <p className="stage-audio-note">For the least mic delay, keep echo and reverb at 0. If only the mic lags, the mic route is the likely cause; if everything lags together, check casting or the TV connection.</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
                 {state.videoChoices.length > 1 && (
                   <div className="stage-video-picker">
                     <button className="btn btn--ghost" aria-expanded={videoMenu} onClick={() => { setVideoMenu((open) => !open); wake(); }}>

@@ -16,6 +16,8 @@ export class MicFX {
     this.stream = null;
     this.out = null;
     this.monitoring = false;
+    this.settings = { volume: 1, echo: 0, reverb: 0 };
+    this.nodes = null;
   }
 
   async start() {
@@ -60,11 +62,11 @@ export class MicFX {
     const feedback = ctx.createGain();
     feedback.gain.value = 0.2;
     const wet = ctx.createGain();
-    wet.gain.value = 0.24;
+    wet.gain.value = 0;
     const verb = ctx.createConvolver();
     verb.buffer = makeImpulse(ctx);
     const verbGain = ctx.createGain();
-    verbGain.gain.value = 0.24;
+    verbGain.gain.value = 0;
 
     src.connect(highpass).connect(lowpass);
     lowpass.connect(dry).connect(limiter);
@@ -75,12 +77,24 @@ export class MicFX {
     limiter.connect(master);
     master.connect(ctx.destination);
     this.out = master;
+    this.nodes = { master, dry, wet, verbGain };
+    this.configure(this.settings);
+    this.setMonitoring(this.monitoring);
+  }
+
+  configure(settings) {
+    this.settings = { ...this.settings, ...settings };
+    if (!this.ctx || !this.nodes) return;
+    const now = this.ctx.currentTime;
+    this.nodes.master.gain.setTargetAtTime(this.monitoring ? 0.82 * this.settings.volume : 0, now, 0.03);
+    this.nodes.wet.gain.setTargetAtTime(0.24 * this.settings.echo, now, 0.03);
+    this.nodes.verbGain.gain.setTargetAtTime(0.24 * this.settings.reverb, now, 0.03);
   }
 
   setMonitoring(on) {
     this.monitoring = on;
     if (!this.ctx) return;
-    this.out.gain.setTargetAtTime(on ? 0.82 : 0, this.ctx.currentTime, 0.05);
+    this.out.gain.setTargetAtTime(on ? 0.82 * this.settings.volume : 0, this.ctx.currentTime, 0.03);
   }
 
   stop() {
@@ -89,6 +103,7 @@ export class MicFX {
     this.ctx = null;
     this.stream = null;
     this.out = null;
+    this.nodes = null;
     this.monitoring = false;
   }
 }

@@ -90,6 +90,9 @@ export function useYouTubePlayer(mountRef, videoId, handlers) {
       playerRef.current?.playVideo();
     },
     seek: (s) => playerRef.current?.seekTo(s, true),
+    setVolume: (volume) => playerRef.current?.setVolume(Math.max(0, Math.min(100, volume))),
+    mute: () => playerRef.current?.mute(),
+    unMute: () => playerRef.current?.unMute(),
   };
 
   return { ready, state, time, ...api };
