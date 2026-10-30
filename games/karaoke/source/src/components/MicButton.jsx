@@ -2,10 +2,10 @@ import { motion } from "framer-motion";
 import { useMic } from "../lib/useMic.jsx";
 import { spring } from "../lib/motion.js";
 
-export default function MicButton({ compact = false, active = false }) {
+export default function MicButton({ compact = false }) {
   const { status, toggle } = useMic();
   const on = status === "on";
-  const label = status === "starting" ? "Connecting…" : on ? (active ? "Mic live" : "Mic ready") : status === "denied" ? "Mic blocked" : "Enable mic";
+  const label = status === "starting" ? "Connecting…" : on ? "Mic live" : status === "denied" ? "Mic blocked" : "Enable mic";
 
   return (
     <div className="mic">

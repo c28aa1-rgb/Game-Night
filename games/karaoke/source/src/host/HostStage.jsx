@@ -15,7 +15,7 @@ const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(
 export default function HostStage({ v }) {
   const { state, send } = useRoom();
   const toast = useToast();
-  const { status: micStatus, setMonitoring, settings: micSettings, updateSettings, latency, inputMode, chooseInputMode } = useMic();
+  const { status: micStatus, settings: micSettings, updateSettings, latency, inputMode, chooseInputMode } = useMic();
   const entry = state.current;
   const next = state.queue[0];
   const stageRef = useRef(null);
@@ -54,13 +54,6 @@ export default function HostStage({ v }) {
       player.unMute();
     }
   }, [player.ready, musicMuted, musicVolume]);
-
-  // The mic is audible only during active playback. Count-ins, pauses,
-  // buffering, score screens, and queue transitions all mute it automatically.
-  useEffect(() => {
-    setMonitoring(micStatus === "on" && playing);
-    return () => setMonitoring(false);
-  }, [micStatus, playing, setMonitoring]);
 
   // Count-in once the video is ready, then roll. Restarts if the video version changes.
   useEffect(() => {
@@ -243,7 +236,7 @@ export default function HostStage({ v }) {
                 </motion.button>
               </div>
               <div className="controls-right">
-                <MicButton compact active={playing} />
+                <MicButton compact />
                 <div className="stage-audio-picker">
                   <button className="btn btn--ghost" aria-expanded={audioMenu} onClick={() => { setAudioMenu((open) => !open); wake(); }}>
                     Audio &amp; volume

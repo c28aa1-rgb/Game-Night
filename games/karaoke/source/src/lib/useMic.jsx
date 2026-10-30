@@ -43,6 +43,7 @@ export function MicProvider({ children }) {
     setError("");
     try {
       await mic.start(deviceId, mode);
+      mic.setMonitoring(true);
       setStatus("on");
       await refreshDevices();
     } catch (cause) {
