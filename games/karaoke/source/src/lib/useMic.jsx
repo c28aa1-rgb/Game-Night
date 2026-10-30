@@ -9,7 +9,7 @@ function readSavedDevice() {
 
 export function MicProvider({ children }) {
   const [status, setStatus] = useState("off"); // off | starting | on | denied
-  const [settings, setSettings] = useState({ volume: 1, echo: 0, reverb: 0 });
+  const [settings, setSettings] = useState({ inputGain: 1, volume: 1, echo: 0, reverb: 0 });
   const [latency, setLatency] = useState(null);
   const [devices, setDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState(readSavedDevice);

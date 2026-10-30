@@ -263,6 +263,10 @@ export default function HostStage({ v }) {
                           {musicMuted ? "Unmute song" : "Mute song"}
                         </button>
                         <label className="stage-audio-slider">
+                          <span><b>Mic input gain</b><output>{Math.round(micSettings.inputGain * 100)}%</output></span>
+                          <input type="range" min="0" max="2" step="0.05" value={micSettings.inputGain} onChange={(e) => updateSettings({ inputGain: Number(e.target.value) })} />
+                        </label>
+                        <label className="stage-audio-slider">
                           <span><b>Microphone monitor</b><output>{Math.round(micSettings.volume * 100)}%</output></span>
                           <input type="range" min="0" max="1.5" step="0.05" value={micSettings.volume} onChange={(e) => updateSettings({ volume: Number(e.target.value) })} />
                         </label>

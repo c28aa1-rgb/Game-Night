@@ -16,7 +16,7 @@ export class MicFX {
     this.stream = null;
     this.out = null;
     this.monitoring = false;
-    this.settings = { volume: 1, echo: 0, reverb: 0 };
+    this.settings = { inputGain: 1, volume: 1, echo: 0, reverb: 0 };
     this.nodes = null;
   }
 
@@ -37,6 +37,8 @@ export class MicFX {
     const ctx = new AudioContext({ latencyHint: "interactive" });
     this.ctx = ctx;
     const src = ctx.createMediaStreamSource(this.stream);
+    const inputGain = ctx.createGain();
+    inputGain.gain.value = 1;
 
     // Performance monitor: dry + slapback echo + room reverb. The stage owns
     // the master mute so transitions and paused video never feed the speakers.
@@ -69,7 +71,7 @@ export class MicFX {
     const verbGain = ctx.createGain();
     verbGain.gain.value = 0;
 
-    src.connect(highpass).connect(lowpass);
+    src.connect(inputGain).connect(highpass).connect(lowpass);
     lowpass.connect(dry).connect(limiter);
     lowpass.connect(delay);
     delay.connect(feedback).connect(delay);
@@ -78,7 +80,7 @@ export class MicFX {
     limiter.connect(master);
     master.connect(ctx.destination);
     this.out = master;
-    this.nodes = { master, dry, wet, verbGain };
+    this.nodes = { inputGain, master, dry, wet, verbGain };
     this.configure(this.settings);
     this.setMonitoring(this.monitoring);
   }
@@ -87,6 +89,7 @@ export class MicFX {
     this.settings = { ...this.settings, ...settings };
     if (!this.ctx || !this.nodes) return;
     const now = this.ctx.currentTime;
+    this.nodes.inputGain.gain.setTargetAtTime(this.settings.inputGain, now, 0.03);
     this.nodes.master.gain.setTargetAtTime(this.monitoring ? 0.82 * this.settings.volume : 0, now, 0.03);
     this.nodes.wet.gain.setTargetAtTime(0.24 * this.settings.echo, now, 0.03);
     this.nodes.verbGain.gain.setTargetAtTime(0.24 * this.settings.reverb, now, 0.03);
