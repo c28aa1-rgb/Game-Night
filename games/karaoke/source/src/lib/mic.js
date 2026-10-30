@@ -20,19 +20,20 @@ export class MicFX {
     this.nodes = null;
   }
 
-  async start() {
+  async start(deviceId = "", inputMode = "feedback") {
     if (this.ctx) return;
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        // Ask the browser/device DSP to remove sound coming from the TV.
-        // These are preferences, so older browsers can still provide a mic.
-        echoCancellation: { ideal: true },
-        noiseSuppression: { ideal: true },
-        // AGC can turn itself up during quiet moments and start a feedback loop.
-        autoGainControl: { ideal: false },
-        channelCount: { ideal: 1 },
-      },
-    });
+    const audio = {
+      // Feedback mode lets browser DSP reduce speaker bleed. Low-latency mode
+      // bypasses that processing for live monitoring; use headphones or keep
+      // the mic well away from the speakers to avoid acoustic feedback.
+      echoCancellation: inputMode !== "low-latency",
+      noiseSuppression: inputMode !== "low-latency",
+      autoGainControl: false,
+      channelCount: { ideal: 1 },
+    };
+    if (deviceId) audio.deviceId = { exact: deviceId };
+    this.stream = await navigator.mediaDevices.getUserMedia({ audio });
+    this.inputDeviceId = this.stream.getAudioTracks()[0]?.getSettings?.().deviceId || deviceId || "";
     const ctx = new AudioContext({ latencyHint: "interactive" });
     this.ctx = ctx;
     const src = ctx.createMediaStreamSource(this.stream);
@@ -104,6 +105,7 @@ export class MicFX {
     this.stream = null;
     this.out = null;
     this.nodes = null;
+    this.inputDeviceId = "";
     this.monitoring = false;
   }
 }

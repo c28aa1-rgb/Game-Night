@@ -1078,6 +1078,36 @@ img {
 .mic-btn.is-on {
   box-shadow: inset 0 0 0 1.5px var(--pink);
 }
+.mic-input-select {
+  display: grid;
+  gap: 4px;
+  min-width: min(220px, 54vw);
+  color: var(--paper);
+  font-size: 0.78rem;
+}
+.mic-input-select label {
+  display: grid;
+  gap: 4px;
+}
+.mic-input-select select,
+.stage-audio-mode select {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--cdg-deep);
+  color: var(--paper);
+  font: inherit;
+}
+.mic-input-select select:disabled,
+.stage-audio-mode select:disabled {
+  opacity: 0.65;
+}
+.mic-input-select small {
+  color: var(--yellow);
+  line-height: 1.3;
+}
 
 .toasts {
   position: fixed;
@@ -1818,6 +1848,13 @@ img {
   min-height: 24px;
   accent-color: var(--pink);
   cursor: pointer;
+}
+.stage-audio-mode {
+  display: grid;
+  gap: 5px;
+  margin: 12px 0;
+  color: var(--paper);
+  font-size: 0.88rem;
 }
 .stage-audio-mute {
   min-height: 36px;

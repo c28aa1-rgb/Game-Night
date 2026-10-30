@@ -7,6 +7,7 @@ import { YTState, useYouTubePlayer } from "../lib/useYouTubePlayer.js";
 import { songCode } from "../lib/youtube.js";
 import { screen, spring, springSoft } from "../lib/motion.js";
 import MicButton from "../components/MicButton.jsx";
+import MicInputSelect from "../components/MicInputSelect.jsx";
 
 const BEAT = 0.75;
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -14,7 +15,7 @@ const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(
 export default function HostStage({ v }) {
   const { state, send } = useRoom();
   const toast = useToast();
-  const { status: micStatus, setMonitoring, settings: micSettings, updateSettings, latency } = useMic();
+  const { status: micStatus, setMonitoring, settings: micSettings, updateSettings, latency, inputMode, chooseInputMode } = useMic();
   const entry = state.current;
   const next = state.queue[0];
   const stageRef = useRef(null);
@@ -265,6 +266,15 @@ export default function HostStage({ v }) {
                           <span><b>Microphone monitor</b><output>{Math.round(micSettings.volume * 100)}%</output></span>
                           <input type="range" min="0" max="1.5" step="0.05" value={micSettings.volume} onChange={(e) => updateSettings({ volume: Number(e.target.value) })} />
                         </label>
+                        <MicInputSelect />
+                        <label className="stage-audio-mode">
+                          <span><b>Mic processing</b></span>
+                          <select value={inputMode} disabled={micStatus === "starting"} onChange={(e) => chooseInputMode(e.target.value)}>
+                            <option value="feedback">Feedback reduction</option>
+                            <option value="low-latency">Low latency</option>
+                          </select>
+                        </label>
+                        <p className="stage-audio-note">Low latency bypasses browser echo and noise reduction. Use headphones or keep the mic away from speakers to avoid feedback.</p>
                         <label className="stage-audio-slider">
                           <span><b>Mic echo</b><output>{Math.round(micSettings.echo * 100)}%</output></span>
                           <input type="range" min="0" max="1" step="0.05" value={micSettings.echo} onChange={(e) => updateSettings({ echo: Number(e.target.value) })} />

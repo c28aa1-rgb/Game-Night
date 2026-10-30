@@ -7,6 +7,7 @@ import Wipe from "../components/Wipe.jsx";
 import Songbook from "../components/Songbook.jsx";
 import AddSheet from "../components/AddSheet.jsx";
 import MicButton from "../components/MicButton.jsx";
+import MicInputSelect from "../components/MicInputSelect.jsx";
 import Portal from "../components/Portal.jsx";
 
 function QueueItem({ entry, index, onRemove }) {
@@ -82,6 +83,7 @@ export default function Lobby() {
             &larr; Game night
           </a>
           <MicButton />
+          <MicInputSelect />
         </div>
       </div>
 
