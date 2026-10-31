@@ -1,16 +1,16 @@
 .gn-tv-launcher {
   display: flex; align-items: center; justify-content: center; gap: 10px;
   width: fit-content; max-width: 100%; min-height: 44px; height: auto; margin: 16px auto;
-  padding: 10px 16px; border: 1px solid #7b8d9e; border-radius: 12px;
-  background: #222c37; color: #f5f7fa; box-shadow: none; cursor: pointer;
+  padding: 10px 16px; border: 1px solid var(--gn-tv-border, #7b8d9e); border-radius: 12px;
+  background: var(--gn-tv-bg, #222c37); color: var(--gn-tv-text, #f5f7fa); box-shadow: none; cursor: pointer;
   font: 600 14px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif;
   letter-spacing: 0; text-transform: none; text-shadow: none; text-decoration: none;
   transition: background .14s, border-color .14s;
 }
-.gn-tv-launcher > svg { flex: none; color: #b9e9d7; width: 20px; height: 20px; }
+.gn-tv-launcher > svg { flex: none; color: var(--gn-tv-accent, #b9e9d7); width: 20px; height: 20px; }
 .gn-tv-launcher > span:last-child { opacity: .7; }
-.gn-tv-launcher:hover { background: #34424f; color: #fff; border-color: #a9bdca; }
-.gn-tv-launcher:focus-visible { outline: 3px solid #72c7bc; outline-offset: 3px; }
+.gn-tv-launcher:hover { background: var(--gn-tv-hover, #34424f); color: var(--gn-tv-text, #fff); border-color: var(--gn-tv-hover-border, var(--gn-tv-accent, #a9bdca)); }
+.gn-tv-launcher:focus-visible { outline: 3px solid var(--gn-tv-accent, #72c7bc); outline-offset: 3px; }
 .gn-tv-launcher[aria-busy="true"] { cursor: progress; opacity: .65; }
 .gn-tv-error { display: block; margin: 8px; font: 500 13px/1.4 system-ui, sans-serif; color: #c37a5d; }
 .masthead .gn-tv-launcher { margin: 0 0 0 auto; }
@@ -20,4 +20,70 @@
 .pitch-foot .gn-tv-launcher { margin: 12px 0 0; }
 .start nav .gn-tv-launcher { width: 100%; margin: 0; }
 .roster-sheet > .gn-tv-launcher { width: 100%; margin: 8px 0 16px; }
+
+/* Launchers borrow each game's existing color tokens. The dialog has its own
+   neutral palette and does not consume these button-only variables. */
+html[data-tv-guide-theme="hitster"] .gn-tv-launcher {
+  --gn-tv-bg: var(--surface-hi, #e2ecf9);
+  --gn-tv-text: var(--text, #1b2a3f);
+  --gn-tv-border: var(--accent, #4a6fa5);
+  --gn-tv-accent: var(--accent, #4a6fa5);
+  --gn-tv-hover: var(--disc-2, #d4e4f7);
+}
+html[data-tv-guide-theme="hues-cues"] .gn-tv-launcher {
+  --gn-tv-bg: var(--bench, #111417);
+  --gn-tv-text: var(--chalk, #e9ecef);
+  --gn-tv-border: var(--graphite-dim, #565e66);
+  --gn-tv-accent: var(--chalk, #e9ecef);
+  --gn-tv-hover: var(--bench-hi, #181c21);
+}
+html[data-tv-guide-theme="mafia"] .gn-tv-launcher {
+  --gn-tv-bg: var(--velvet, #221a17);
+  --gn-tv-text: var(--bone, #ede3d0);
+  --gn-tv-border: var(--brass, #c9a227);
+  --gn-tv-accent: var(--bulb, #f0be5c);
+  --gn-tv-hover: var(--velvet-hi, #2e2320);
+}
+html[data-tv-guide-theme="wavelength"] .gn-tv-launcher {
+  --gn-tv-bg: var(--paper, #fffaf1);
+  --gn-tv-text: var(--ink, #273f55);
+  --gn-tv-border: var(--brass, #b88d51);
+  --gn-tv-accent: var(--blue, #47799e);
+  --gn-tv-hover: var(--paper-deep, #eee0cc);
+}
+html[data-tv-guide-theme="chameleon"] .gn-tv-launcher {
+  --gn-tv-bg: var(--scale, #151319);
+  --gn-tv-text: var(--chalk, #f5f0d8);
+  --gn-tv-border: var(--leaf, #98c93c);
+  --gn-tv-accent: var(--leaf, #98c93c);
+  --gn-tv-hover: var(--scale-2, #201d25);
+}
+html[data-tv-guide-theme="herd-mentality"] .gn-tv-launcher {
+  --gn-tv-bg: var(--barn-deep, #09111d);
+  --gn-tv-text: var(--paper, #fff9e7);
+  --gn-tv-border: var(--hay, #f6c95d);
+  --gn-tv-accent: var(--hay, #f6c95d);
+  --gn-tv-hover: var(--barn, #101b2a);
+}
+html[data-tv-guide-theme="codenames"] .gn-tv-launcher {
+  --gn-tv-bg: var(--table, #1b2530);
+  --gn-tv-text: var(--film, #e9e5db);
+  --gn-tv-border: var(--bevel, #2a3846);
+  --gn-tv-accent: var(--amber, #e8a33d);
+  --gn-tv-hover: var(--table-hi, #223040);
+}
+html[data-tv-guide-theme="draft"] .gn-tv-launcher {
+  --gn-tv-bg: var(--panel, #121a2d);
+  --gn-tv-text: var(--chalk, #eef2f9);
+  --gn-tv-border: var(--gold-lo, #8f6a18);
+  --gn-tv-accent: var(--gold, #e8b84b);
+  --gn-tv-hover: var(--panel-2, #0e1526);
+}
+html[data-tv-guide-theme="hub"] .gn-tv-launcher {
+  --gn-tv-bg: var(--raise, #131319);
+  --gn-tv-text: var(--text, #ededf2);
+  --gn-tv-border: #454552;
+  --gn-tv-accent: var(--text, #ededf2);
+  --gn-tv-hover: #23232b;
+}
 @media (prefers-reduced-motion: reduce) { .gn-tv-launcher { transition: none; } }

@@ -2,12 +2,12 @@
 .tvg-trigger {
   display: flex; align-items: center; justify-content: center; gap: 10px;
   min-height: 44px; padding: 8px 16px; border-radius: 12px;
-  color: #f5f7fa; background: #222c37;
-  box-shadow: inset 0 0 0 1px #7b8d9e;
+  color: var(--paper); background: var(--cdg-deep);
+  box-shadow: inset 0 0 0 1px var(--pink);
   font-size: .92rem; font-weight: 650; transition: background .14s;
 }
-.tvg-trigger:hover { background: #34424f; }
-.tvg-trigger > svg { color: #b9e9d7; flex: none; }
+.tvg-trigger:hover { background: var(--cdg-lift); }
+.tvg-trigger > svg { color: var(--yellow); flex: none; }
 .tvg-trigger-arrow { opacity: .65; margin-left: auto; }
 .tvg-trigger--compact { min-height: 38px; padding: 0 .95rem; border-radius: 999px; }
 .lobby-actions--tv { flex: 0 0 220px; }

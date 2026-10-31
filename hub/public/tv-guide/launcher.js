@@ -1,4 +1,7 @@
 (() => {
+  const game = location.pathname.split('/')[1];
+  const themedGames = ['hitster', 'hues-cues', 'mafia', 'wavelength', 'chameleon', 'herd-mentality', 'codenames', 'draft', 'karaoke'];
+  document.documentElement.dataset.tvGuideTheme = themedGames.includes(game) ? game : 'hub';
   let loading;
   function loadGuide() {
     if (!loading) {
