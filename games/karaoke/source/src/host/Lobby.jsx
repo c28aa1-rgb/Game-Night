@@ -9,6 +9,7 @@ import AddSheet from "../components/AddSheet.jsx";
 import MicButton from "../components/MicButton.jsx";
 import MicInputSelect from "../components/MicInputSelect.jsx";
 import Portal from "../components/Portal.jsx";
+import TVGuideButton from "../components/TVGuide.jsx";
 
 function QueueItem({ entry, index, onRemove }) {
   const controls = useDragControls();
@@ -78,10 +79,11 @@ export default function Lobby() {
             a song.
           </Wipe>
         </h1>
-        <div className="lobby-actions">
+        <div className="lobby-actions lobby-actions--tv">
           <a className="chip nav-back" href="/">
             &larr; Game night
           </a>
+          <TVGuideButton compact />
           <MicButton />
           <MicInputSelect />
         </div>

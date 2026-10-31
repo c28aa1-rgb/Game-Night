@@ -4,6 +4,7 @@ import { createRoom, roomExists } from "./lib/room.jsx";
 import { local, useLocal } from "./lib/local.js";
 import { rise, screen, springSoft, stagger } from "./lib/motion.js";
 import Wipe from "./components/Wipe.jsx";
+import TVGuideButton from "./components/TVGuide.jsx";
 
 export default function Landing({ initialCode = "", onHost, onJoin }) {
   const { name: savedName } = useLocal();
@@ -102,6 +103,7 @@ export default function Landing({ initialCode = "", onHost, onJoin }) {
             <motion.button className="btn btn--wide" onClick={host} disabled={busy === "host"} whileTap={{ scale: 0.97 }}>
               {busy === "host" ? "Starting…" : "Start a party"}
             </motion.button>
+            <TVGuideButton />
           </motion.section>
         )}
       </motion.div>
