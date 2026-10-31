@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "test": "node --test server/queue.test.mjs",
+    "test": "node --test server/queue.test.mjs src/lib/mic.test.js",
     "dev": "vite",
     "build": "vite build",
     "start": "node server/standalone.mjs",

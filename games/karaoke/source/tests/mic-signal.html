@@ -1,0 +1,38 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Microphone signal check</title></head>
+<body style="font:18px system-ui;background:#111;color:#eee;padding:40px"><h1>Microphone signal check</h1><p>Synthetic audio rendered offline. No microphone access or speaker output.</p><pre id="result">Running…</pre>
+<script type="module">
+// Open /tests/mic-signal.html on the Vite dev server for a real Web Audio check.
+// This dev-only entry is excluded from the production build.
+import { MicFX } from '../src/lib/mic.js';
+const levels = [0.025, 0.18, 0.6, 0.025];
+const rate = 48000;
+const context = new OfflineAudioContext(2, rate * levels.length, rate);
+const buffer = context.createBuffer(1, rate * levels.length, rate);
+const data = buffer.getChannelData(0);
+for (let i = 0; i < data.length; i++) data[i] = levels[Math.floor(i / rate)] * Math.sin(2 * Math.PI * 500 * i / rate);
+context.resume = async () => {};
+context.createMediaStreamSource = () => {
+  const source = context.createBufferSource(); source.buffer = buffer; source.start(); return source;
+};
+window.AudioContext = function () { return context; };
+Object.defineProperty(navigator, 'mediaDevices', { configurable:true, value: { getUserMedia: async () => {
+  const track = { contentHint:'', getSettings:() => ({deviceId:'synthetic'}), stop() {} };
+  return { getTracks:() => [track], getAudioTracks:() => [track] };
+} } });
+try {
+  const mic = new MicFX(); await mic.start(); mic.setMonitoring(true);
+  const rendered = await context.startRendering();
+  const output = rendered.getChannelData(0);
+  const measurements = levels.map((amplitude, index) => {
+    let min = Infinity, max = 0;
+    for (let start = (index + 0.25) * rate; start < (index + 0.9) * rate; start += 960) {
+      let power = 0;
+      for (let i = start; i < start + 960; i++) power += output[i] ** 2;
+      const ratio = Math.sqrt(power / 960) / (amplitude / Math.sqrt(2));
+      min = Math.min(min, ratio); max = Math.max(max, ratio);
+    }
+    return { input:amplitude, min: min.toFixed(4), max:max.toFixed(4), pass:min > 0.95 && max < 1.05 };
+  });
+  document.getElementById('result').textContent = JSON.stringify({pass:measurements.every(row => row.pass), measurements}, null, 2);
+} catch (error) { document.getElementById('result').textContent = String(error.stack || error); }
+</script></body></html>

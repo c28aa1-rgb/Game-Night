@@ -1108,6 +1108,11 @@ img {
   color: var(--yellow);
   line-height: 1.3;
 }
+.mic-processing {
+  width: 100%;
+  min-width: 0;
+}
+.mic-processing .stage-audio-note { margin: 6px 0 0; }
 
 .toasts {
   position: fixed;

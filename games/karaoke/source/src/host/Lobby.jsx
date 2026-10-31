@@ -8,6 +8,7 @@ import Songbook from "../components/Songbook.jsx";
 import AddSheet from "../components/AddSheet.jsx";
 import MicButton from "../components/MicButton.jsx";
 import MicInputSelect from "../components/MicInputSelect.jsx";
+import MicProcessingSelect from "../components/MicProcessingSelect.jsx";
 import Portal from "../components/Portal.jsx";
 import TVGuideButton from "../components/TVGuide.jsx";
 
@@ -86,6 +87,7 @@ export default function Lobby() {
           <TVGuideButton compact />
           <MicButton />
           <MicInputSelect />
+          <MicProcessingSelect />
         </div>
       </div>
 

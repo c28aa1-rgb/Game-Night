@@ -3,15 +3,17 @@ import { useMic } from "../lib/useMic.jsx";
 import { spring } from "../lib/motion.js";
 
 export default function MicButton({ compact = false }) {
-  const { status, toggle } = useMic();
+  const { status, toggle, audioState } = useMic();
   const on = status === "on";
-  const label = status === "starting" ? "Connecting…" : on ? "Mic live" : status === "denied" ? "Mic blocked" : "Enable mic";
+  const paused = on && audioState && audioState !== "running";
+  const label = status === "starting" ? "Connecting…" : paused ? "Mic paused" : on ? "Mic live" : status === "denied" ? "Retry mic" : "Enable mic";
 
   return (
     <div className="mic">
       <motion.button
         className={`chip mic-btn ${on ? "is-on" : ""}`}
         onClick={toggle}
+        disabled={status === "starting"}
         whileTap={{ scale: 0.94 }}
         transition={spring}
         aria-pressed={on}
