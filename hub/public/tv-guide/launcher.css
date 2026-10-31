@@ -1,0 +1,23 @@
+.gn-tv-launcher {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: fit-content; max-width: 100%; min-height: 44px; height: auto; margin: 16px auto;
+  padding: 10px 16px; border: 1px solid #7b8d9e; border-radius: 12px;
+  background: #222c37; color: #f5f7fa; box-shadow: none; cursor: pointer;
+  font: 600 14px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: 0; text-transform: none; text-shadow: none; text-decoration: none;
+  transition: background .14s, border-color .14s;
+}
+.gn-tv-launcher > svg { flex: none; color: #b9e9d7; width: 20px; height: 20px; }
+.gn-tv-launcher > span:last-child { opacity: .7; }
+.gn-tv-launcher:hover { background: #34424f; color: #fff; border-color: #a9bdca; }
+.gn-tv-launcher:focus-visible { outline: 3px solid #72c7bc; outline-offset: 3px; }
+.gn-tv-launcher[aria-busy="true"] { cursor: progress; opacity: .65; }
+.gn-tv-error { display: block; margin: 8px; font: 500 13px/1.4 system-ui, sans-serif; color: #c37a5d; }
+.masthead .gn-tv-launcher { margin: 0 0 0 auto; }
+.masthead:has(.gn-tv-launcher) { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; }
+.home-actions .gn-tv-launcher { width: 100%; margin: 0; }
+.start__actions .gn-tv-launcher { width: 100%; margin: 0; }
+.pitch-foot .gn-tv-launcher { margin: 12px 0 0; }
+.start nav .gn-tv-launcher { width: 100%; margin: 0; }
+.roster-sheet > .gn-tv-launcher { width: 100%; margin: 8px 0 16px; }
+@media (prefers-reduced-motion: reduce) { .gn-tv-launcher { transition: none; } }

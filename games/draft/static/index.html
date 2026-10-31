@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800;900&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="/hub/tv-guide/launcher.css" />
+  <script defer src="/hub/tv-guide/launcher.js"></script>
 </head>
 <body>
 
@@ -54,6 +56,8 @@
         <h2 class="sheet-title">Roster</h2>
         <span class="counter" id="rosterCount">00 entrants</span>
       </header>
+
+      <button class="gn-tv-launcher" type="button" data-tv-guide aria-haspopup="dialog"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="4" width="19" height="13.5" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M8 21h8M12 17.5V21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Show this game on a TV</span><span aria-hidden="true">↗</span></button>
 
       <form class="sheet-entry" id="nameForm" autocomplete="off">
         <span class="entry-num" id="entryNum">01</span>
